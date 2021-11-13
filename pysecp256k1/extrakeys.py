@@ -4,8 +4,9 @@ from pysecp256k1.low_level import (
     secp256k1_context_sign,
     secp256k1_context_verify,
 )
-c_char_array = ctypes.c_char * 32  # this is duplicate from __init__
-
+secp256k1_xonly_pubkey = ctypes.c_char * 64
+secp256k1_keypair = ctypes.c_char * 96
+secp256k1_pubkey = ctypes.c_char * 64  # this is duplicate from __init__
 
 # Parse a 32-byte sequence into a xonly_pubkey object.
 #
@@ -17,10 +18,10 @@ c_char_array = ctypes.c_char * 32  # this is duplicate from __init__
 #              parsed version of input. If not, it's set to an invalid value.
 # In: input32: pointer to a serialized xonly_pubkey.
 #
-def xonly_pubkey_parse(xonly_pubkey: bytes) -> c_char_array:
+def xonly_pubkey_parse(pubkey: bytes) -> secp256k1_xonly_pubkey:
     raw_pub = ctypes.create_string_buffer(64)
     result = lib.secp256k1_xonly_pubkey_parse(
-        secp256k1_context_verify, raw_pub, xonly_pubkey
+        secp256k1_context_verify, raw_pub, pubkey
     )
     if 1 != result:
         assert result == 0, f"Non-standard return code: {result}"
@@ -65,18 +66,19 @@ def xonly_pubkey_cmp():
 #                    the negation of the pubkey and set to 0 otherwise.
 # In:        pubkey: pointer to a public key that is converted.
 #
-def xonly_pubkey_from_pubkey():
+def xonly_pubkey_from_pubkey(raw_pubkey: secp256k1_pubkey) -> secp256k1_xonly_pubkey:
     out_xonly = ctypes.create_string_buffer(64)
 
     parity_ret = ctypes.c_int()
     parity_ret.value = -1
 
     result = lib.secp256k1_xonly_pubkey_from_pubkey(
-        secp256k1_context_verify, out_xonly, ctypes.byref(parity_ret), out
+        secp256k1_context_verify, out_xonly, ctypes.byref(parity_ret), raw_pubkey
     )
     if result != 1:
         assert result == 0
-        return None
+        raise ValueError
+    return out_xonly
 
 
 # Tweak an x-only public key by adding the generator multiplied with tweak32
@@ -138,7 +140,7 @@ def xonly_pubkey_tweak_add_check():
 # Out: keypair: pointer to the created keypair.
 # In:   seckey: pointer to a 32-byte secret key.
 #
-def keypair_create(seckey: bytes) -> c_char_array:
+def keypair_create(seckey: bytes) -> secp256k1_keypair:
     keypair_buf = ctypes.create_string_buffer(96)
 
     result = lib.secp256k1_keypair_create(
@@ -158,7 +160,7 @@ def keypair_create(seckey: bytes) -> c_char_array:
 # Out: seckey: pointer to a 32-byte buffer for the secret key.
 # In: keypair: pointer to a keypair.
 #
-def keypair_sec(keypair: c_char_array) -> c_char_array:  # TODO add to secp256k1
+def keypair_sec(keypair: secp256k1_keypair) -> bytes:  # TODO add to secp256k1
     pass
 
 
@@ -170,7 +172,7 @@ def keypair_sec(keypair: c_char_array) -> c_char_array:  # TODO add to secp256k1
 #              the keypair public key. If not, it's set to an invalid value.
 # In: keypair: pointer to a keypair.
 #
-def keypair_pub(keypair: c_char_array) -> c_char_array:  # TODO add to secp256k1
+def keypair_pub(keypair: secp256k1_keypair) -> secp256k1_pubkey:  # TODO add to secp256k1
     pass
 
 
@@ -188,7 +190,7 @@ def keypair_pub(keypair: c_char_array) -> c_char_array:  # TODO add to secp256k1
 #              pk_parity argument of secp256k1_xonly_pubkey_from_pubkey.
 # In: keypair: pointer to a keypair.
 #
-def keypair_xonly_pub():
+def keypair_xonly_pub(keypair: secp256k1_keypair) -> secp256k1_xonly_pubkey:
     pass
 
 
