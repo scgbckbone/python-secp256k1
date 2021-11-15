@@ -64,7 +64,7 @@ _ctypes_functype = getattr(ctypes, 'WINFUNCTYPE', getattr(ctypes, 'CFUNCTYPE'))
 
 @_ctypes_functype(ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p)
 def _secp256k1_illegal_callback_fn(error_str, _data):  # type: ignore
-    _LOGGER.error("{}".format({'code': -2, 'type': 'illegal_argument', 'message': str(error_str)}))
+    raise ValueError("{}".format({'code': -2, 'type': 'illegal_argument', 'message': str(error_str)}))
 
 
 def _check_ressecp256k1_void_p(val: int, _func: FunctionType,
@@ -182,6 +182,12 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
         _secp256k1.secp256k1_xonly_pubkey_serialize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
         _secp256k1.secp256k1_keypair_create.restype = ctypes.c_int
         _secp256k1.secp256k1_keypair_create.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+        _secp256k1.secp256k1_keypair_sec.restype = ctypes.c_int
+        _secp256k1.secp256k1_keypair_sec.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+        _secp256k1.secp256k1_keypair_pub.restype = ctypes.c_int
+        _secp256k1.secp256k1_keypair_pub.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+        _secp256k1.secp256k1_xonly_pubkey_cmp.restype = ctypes.c_int
+        _secp256k1.secp256k1_xonly_pubkey_cmp.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
         _secp256k1.secp256k1_keypair_xonly_pub.restype = ctypes.c_int
         _secp256k1.secp256k1_keypair_xonly_pub.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.c_char_p]
         _secp256k1.secp256k1_keypair_xonly_tweak_add.restype = ctypes.c_int

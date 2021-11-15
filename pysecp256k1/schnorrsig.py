@@ -1,5 +1,11 @@
 import ctypes
-from pysecp256k1.low_level import lib, secp256k1_context_sign
+from typing import Optional
+from pysecp256k1 import (
+    lib, secp256k1_context_sign, secp256k1_context_verify
+)
+from pysecp256k1.extrakeys import secp256k1_keypair, secp256k1_xonly_pubkey
+
+
 # Create a Schnorr signature.
 #
 # Does _not_ strictly follow BIP-340 because it does not verify the resulting
@@ -24,8 +30,20 @@ from pysecp256k1.low_level import lib, secp256k1_context_sign
 #               BIP-340 "Default Signing" for a full explanation of this
 #               argument and for guidance if randomness is expensive.
 #
-def schnorrsig_sign():
-    pass
+def schnorrsig_sign(keypair: secp256k1_keypair, msg: bytes, aux: Optional[bytes] = None) -> bytes:
+    if len(msg) != 32:
+        raise ValueError('Hash must be exactly 32 bytes long')
+    if aux is not None and len(aux) != 32:
+        raise ValueError('aux must be exactly 32 bytes long')
+    sig_buf = ctypes.create_string_buffer(64)
+    result = lib.secp256k1_schnorrsig_sign(
+        secp256k1_context_sign, sig_buf, msg, keypair, aux
+    )
+
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise RuntimeError('secp256k1_schnorrsig_sign returned failure')
+    return sig_buf.raw
 
 
 # Create a Schnorr signature with a more flexible API.
@@ -55,5 +73,18 @@ def schnorrsig_sign_custom():
 #       msglen: length of the message
 #       pubkey: pointer to an x-only public key to verify with (cannot be NULL)
 #
-def schnorrsig_verify():
-    pass
+def schnorrsig_verify(sig: bytes, msg: bytes, xonly_pubkey: secp256k1_xonly_pubkey) -> bool:
+    # it seems that msg does not need to be 32 bytes and this API
+    # can be more flexible - for now keeping the limit 32
+    if len(msg) != 32:
+        raise ValueError('Message must be exactly 32 bytes long')
+    if len(sig) != 64:
+        raise ValueError('Signature must be exactly 64 bytes long')
+
+    result = lib.secp256k1_schnorrsig_verify(
+        secp256k1_context_verify, sig, msg, 32, xonly_pubkey
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        return False
+    return True

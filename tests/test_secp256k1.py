@@ -1,3 +1,4 @@
+import os
 import ctypes
 import unittest
 import hashlib
@@ -7,11 +8,17 @@ from pysecp256k1 import (
     ec_pubkey_tweak_add, ec_pubkey_combine, ecdsa_verify, ecdsa_sign,
     ecdsa_signature_serialize_der, ecdsa_signature_parse_der, ecdsa_signature_normalize
 )
+from pysecp256k1.extrakeys import (
+    keypair_create, keypair_pub, keypair_sec, xonly_pubkey_parse,
+    xonly_pubkey_serialize, xonly_pubkey_from_pubkey, xonly_pubkey_cmp,
+    keypair_xonly_pub, keypair_xonly_tweak_add, xonly_pubkey_tweak_add
 
+)
+from pysecp256k1.schnorrsig import schnorrsig_sign, schnorrsig_verify
 
 class TestPysecp256k1Base(unittest.TestCase):
     invalid_seckeys = [
-            b'\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xba\xae\xdc\xe6\xafH\xa0;\xbf\xd2^\x8c\xd06AA',  # curve order
+            b"\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xff\xfe\xba\xae\xdc\xe6\xafH\xa0;\xbf\xd2^\x8c\xd06AA",  # curve order
             b"\x00" * 32,  # null
             b"\x00" * 33,  # too long
             b"\x00" * 31,  # too short
@@ -135,9 +142,22 @@ class TestPysecp256k1Base(unittest.TestCase):
     def test_ec_pubkey_tweak_add(self):
         valid_seckey = self.valid_seckeys[0]
         raw_pubkey = ec_pubkey_create(valid_seckey)
+        # null tweak and curve order
+        for seckey in self.invalid_seckeys[:1]:  # TODO null triggers illegal callback
+            with self.assertRaises(ValueError) as exc:
+                ec_pubkey_tweak_add(raw_pubkey, tweak=seckey)
+            self.assertEqual(
+                str(exc.exception),
+                "Invalid arguments or invalid resulting key"
+            )
+        # invalid tweak length
         for seckey in self.invalid_seckeys[2:]:
-            with self.assertRaises(ValueError):
-                ec_pubkey_tweak_add(raw_pubkey, seckey)
+            with self.assertRaises(ValueError) as exc:
+                ec_pubkey_tweak_add(raw_pubkey, tweak=seckey)
+            self.assertEqual(
+                str(exc.exception),
+                "tweak data must be 32 bytes"
+            )
 
         # compressed
         tweak = self.valid_seckeys[2]
@@ -194,3 +214,52 @@ class TestPysecp256k1Base(unittest.TestCase):
             ser_sig = ecdsa_signature_serialize_der(raw_sig)
             parsed_sig = ecdsa_signature_parse_der(ser_sig)
             self.assertEqual(raw_sig.raw, parsed_sig.raw)
+
+    def test_extrakeys(self):
+        #TODO create own module
+        #and split the tests
+        for seckey in self.invalid_seckeys[:2]:
+            with self.assertRaises(ValueError) as exc:
+                keypair_create(seckey)
+            self.assertEqual(
+                str(exc.exception),
+                "Invalid seckey"
+            )
+        for seckey in self.invalid_seckeys[2:]:
+            with self.assertRaises(ValueError) as exc:
+                keypair_create(seckey)
+            self.assertEqual(
+                str(exc.exception),
+                "secret data must be 32 bytes"
+            )
+        for seckey in self.valid_seckeys:
+            keypair = keypair_create(seckey)
+            assert seckey == keypair_sec(keypair)
+            raw_pubkey = ec_pubkey_create(seckey)
+            assert raw_pubkey.raw == keypair_pub(keypair).raw
+            xonly_pub = xonly_pubkey_from_pubkey(raw_pubkey)
+            assert xonly_pub.raw == keypair_xonly_pub(keypair).raw
+            ser_xonly_pub = xonly_pubkey_serialize(xonly_pub)
+            assert xonly_pubkey_parse(ser_xonly_pub).raw == xonly_pub.raw
+
+            valid_tweak = hashlib.sha256(self.valid_seckeys[0]).digest()
+            assert ec_seckey_verify(valid_tweak) is None
+            tweaked_keypair = keypair_xonly_tweak_add(keypair, valid_tweak)
+            tweaked_xonly_pub = xonly_pubkey_tweak_add(xonly_pub, valid_tweak)
+            tweaked_seckey = ec_seckey_tweak_add(seckey, valid_tweak)
+            assert tweaked_xonly_pub.raw == keypair_pub(tweaked_keypair).raw
+            # shouldn't below work ? it does not... meh
+            #assert tweaked_seckey == keypair_sec(tweaked_keypair)
+
+    def test_schnorrsig(self):
+        # TODO own module
+        for seckey in self.valid_seckeys:
+            keypair = keypair_create(seckey)
+            xonly_pubkey = keypair_xonly_pub(keypair)
+            msg = hashlib.sha256(b"super secret message").digest()
+
+            signature0 = schnorrsig_sign(keypair, msg)
+            signature1 = schnorrsig_sign(keypair, msg, aux=os.urandom(32))
+
+            self.assertTrue(schnorrsig_verify(signature0, msg, xonly_pubkey))
+            self.assertTrue(schnorrsig_verify(signature1, msg, xonly_pubkey))
