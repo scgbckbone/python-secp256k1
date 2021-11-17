@@ -63,7 +63,7 @@ def xonly_pubkey_serialize(xonly_pubkey: secp256k1_xonly_pubkey) -> bytes:
 #       pubkey2:  second public key to compare
 #
 def xonly_pubkey_cmp(xonly_pubkey0: secp256k1_xonly_pubkey, xonly_pubkey1: secp256k1_xonly_pubkey) -> int:
-    return lib.secp256k1_xonly_pubkey_serialize(
+    return lib.secp256k1_xonly_pubkey_cmp(
         secp256k1_context_sign, xonly_pubkey0, xonly_pubkey1
     )
 
@@ -124,7 +124,8 @@ def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak: bytes) -
 
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
-        raise ValueError("invalid or the resulting public key would be invalid")
+        raise ValueError("arguments areinvalid or the resulting public key "
+                         "would be invalid")
     return out
 
 # Checks that a tweaked pubkey is the result of calling

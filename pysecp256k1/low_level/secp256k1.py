@@ -27,7 +27,8 @@ import ctypes
 import ctypes.util
 import logging
 from types import FunctionType
-from typing import Any, Optional, cast
+from typing import Any, Optional, cast, Dict, Union
+from contextvars import ContextVar
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -62,15 +63,50 @@ SECP256K1_EC_UNCOMPRESSED = (SECP256K1_FLAGS_TYPE_COMPRESSION)
 _ctypes_functype = getattr(ctypes, 'WINFUNCTYPE', getattr(ctypes, 'CFUNCTYPE'))
 
 
+class ContextVarsCompat:
+    _context_vars_storage__: Dict[str, 'ContextVar[Any]']
+
+    def __init__(self, **kwargs: Any):
+        assert self.__class__ is not ContextVarsCompat, \
+            "ContextVarsCompat should always be subclassed"
+        vardict = {name: ContextVar(name, default=default_value)
+                   for name, default_value in kwargs.items()}
+        object.__setattr__(self, '_context_vars_storage__', vardict)
+
+    def __getattr__(self, name: str) -> Any:
+        if name not in self._context_vars_storage__:
+            raise AttributeError
+        return self._context_vars_storage__[name].get()
+
+    def __setattr__(self, name: str, value: Any) -> None:
+        if name not in self._context_vars_storage__:
+            raise AttributeError(
+                f'context variable {name} was not specified on '
+                f'{self.__class__.__name__} creation')
+        self._context_vars_storage__[name].set(value)
+
+
+class Secp256k1LastErrorContextVar(ContextVarsCompat):
+    last_error: Optional[Dict[str, Union[int, str]]]
+
+
+_secp256k1_error_storage = Secp256k1LastErrorContextVar(last_error=None)
+
+
 @_ctypes_functype(ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p)
 def _secp256k1_illegal_callback_fn(error_str, _data):  # type: ignore
-    raise ValueError("{}".format({'code': -2, 'type': 'illegal_argument', 'message': str(error_str)}))
+    _secp256k1_error_storage.last_error = {'code': -2, 'type': 'illegal_argument', 'message': str(error_str)}
 
 
 def _check_ressecp256k1_void_p(val: int, _func: FunctionType,
                                _args: Any) -> ctypes.c_void_p:
     if val == 0:
-        raise Libsecp256k1Exception("Check console logs for more info")
+        err = getattr(_secp256k1_error_storage, 'last_error', None)
+        if err is None:
+            raise Libsecp256k1Exception(
+                -3, ('error handling callback function was not called, '
+                     'error is not known'))
+        raise Libsecp256k1Exception(err['code'], err['message'])
     return ctypes.c_void_p(val)
 
 
@@ -138,14 +174,23 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
     _secp256k1.secp256k1_ecdsa_verify.restype = ctypes.c_int
     _secp256k1.secp256k1_ecdsa_verify.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
 
+    _secp256k1.secp256k1_ec_pubkey_cmp.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_cmp.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
     _secp256k1.secp256k1_ec_pubkey_parse.restype = ctypes.c_int
     _secp256k1.secp256k1_ec_pubkey_parse.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
 
     _secp256k1.secp256k1_ec_pubkey_tweak_add.restype = ctypes.c_int
     _secp256k1.secp256k1_ec_pubkey_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
 
+    _secp256k1.secp256k1_ec_pubkey_tweak_mul.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_tweak_mul.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
     _secp256k1.secp256k1_ec_seckey_tweak_add.restype = ctypes.c_int
     _secp256k1.secp256k1_ec_seckey_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_seckey_tweak_mul.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_seckey_tweak_mul.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
 
     _secp256k1.secp256k1_ec_pubkey_serialize.restype = ctypes.c_int
     _secp256k1.secp256k1_ec_pubkey_serialize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_char_p, ctypes.c_uint]

@@ -6,7 +6,8 @@ from pysecp256k1 import (
     ec_seckey_verify, ec_pubkey_create, secp256k1_pubkey, ec_pubkey_serialize,
     ec_pubkey_parse, ec_seckey_negate, ec_pubkey_negate, ec_seckey_tweak_add,
     ec_pubkey_tweak_add, ec_pubkey_combine, ecdsa_verify, ecdsa_sign,
-    ecdsa_signature_serialize_der, ecdsa_signature_parse_der, ecdsa_signature_normalize
+    ecdsa_signature_serialize_der, ecdsa_signature_parse_der, ecdsa_signature_normalize,
+    ec_pubkey_tweak_mul, ec_seckey_tweak_mul,
 )
 from pysecp256k1.extrakeys import (
     keypair_create, keypair_pub, keypair_sec, xonly_pubkey_parse,
@@ -143,7 +144,8 @@ class TestPysecp256k1Base(unittest.TestCase):
         valid_seckey = self.valid_seckeys[0]
         raw_pubkey = ec_pubkey_create(valid_seckey)
         # null tweak and curve order
-        for seckey in self.invalid_seckeys[:1]:  # TODO null triggers illegal callback
+        # TODO null triggers illegal callback
+        for seckey in self.invalid_seckeys[:1]:
             with self.assertRaises(ValueError) as exc:
                 ec_pubkey_tweak_add(raw_pubkey, tweak=seckey)
             self.assertEqual(
@@ -263,3 +265,84 @@ class TestPysecp256k1Base(unittest.TestCase):
 
             self.assertTrue(schnorrsig_verify(signature0, msg, xonly_pubkey))
             self.assertTrue(schnorrsig_verify(signature1, msg, xonly_pubkey))
+
+    def test_tweak_mul(self):
+        # TODO invalid csaes
+        for seckey in self.valid_seckeys:
+            tweak = hashlib.sha256(seckey).digest()
+            assert ec_seckey_verify(tweak) is None
+            raw_pubkey = ec_pubkey_create(seckey)
+            tweaked_pk0 = ec_pubkey_tweak_mul(raw_pubkey, tweak)
+            tweaked_sk = ec_seckey_tweak_mul(seckey, tweak)
+            tweaked_pk1 = ec_pubkey_create(tweaked_sk)
+            self.assertEqual(tweaked_pk0.raw, tweaked_pk1.raw)
+
+    # ec_pubkey_tweak_mul and ec_seckey_tweak_mul do raise for NULL tweak
+    def test_pubkey_mul_null_tweak(self):
+        tweak_null = 32 * b"\x00"
+        with self.assertRaises(ValueError):
+            ec_seckey_verify(tweak_null)  # this means tweak is invalid
+        seckey = self.valid_seckeys[0]
+        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        raw_pubkey = ec_pubkey_create(seckey)
+        with self.assertRaises(ValueError) as exc:
+            ec_pubkey_tweak_mul(raw_pubkey, tweak_null)  # this raises
+        self.assertEqual(
+            str(exc.exception),
+            "Invalid arguments or invalid resulting key"
+        )
+
+    def test_seckey_mul_null_tweak(self):
+        tweak_null = 32 * b"\x00"
+        with self.assertRaises(ValueError):
+            ec_seckey_verify(tweak_null)  # this means tweak is invalid
+        seckey = self.valid_seckeys[0]
+        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        with self.assertRaises(ValueError) as exc:
+            ec_seckey_tweak_mul(seckey, tweak_null)  # this raises
+        self.assertEqual(
+            str(exc.exception),
+            "Invalid arguments"
+        )
+
+    # ec_pubkey_tweak_add, ec_seckey_tweak_add, xonly_pubkey_tweak_add,
+    # keypair_xonly_tweak_add do NOT raise for NULL tweak
+    def test_pubkey_add_null_tweak(self):
+        tweak_null = 32 * b"\x00"
+        with self.assertRaises(ValueError):
+            ec_seckey_verify(tweak_null)  # this means tweak is invalid
+        seckey = self.valid_seckeys[0]
+        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        raw_pubkey = ec_pubkey_create(seckey)
+        res = ec_pubkey_tweak_add(raw_pubkey, tweak_null)  # this should raise but won't
+        assert res.raw == raw_pubkey.raw  # instead pubkey is untweaked
+
+    def test_seckey_add_null_tweak(self):
+        tweak_null = 32 * b"\x00"
+        with self.assertRaises(ValueError):
+            ec_seckey_verify(tweak_null)  # this means tweak is invalid
+        seckey = self.valid_seckeys[0]
+        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        res = ec_seckey_tweak_add(seckey, tweak_null)  # this should raise but won't
+        assert res == seckey  # instead seckey is untweaked
+
+    def test_xonly_pubkey_add_null_tweak(self):
+        tweak_null = 32 * b"\x00"
+        with self.assertRaises(ValueError):
+            ec_seckey_verify(tweak_null)  # this means tweak is invalid
+        seckey = self.valid_seckeys[0]
+        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        raw_pubkey = ec_pubkey_create(seckey)
+        xonly_pubkey = xonly_pubkey_from_pubkey(raw_pubkey)
+        res = xonly_pubkey_tweak_add(xonly_pubkey, tweak_null)  # this should raise but won't
+        assert res.raw == xonly_pubkey.raw  # instead xonly pubkey is untweaked
+
+    def test_keypair_xonly_add_null_tweak(self):
+        tweak_null = 32 * b"\x00"
+        with self.assertRaises(ValueError):
+            ec_seckey_verify(tweak_null)  # this means tweak is invalid
+        seckey = self.valid_seckeys[0]
+        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        keypair = keypair_create(seckey)
+        res = keypair_xonly_tweak_add(keypair, tweak_null)  # this should raise but won't
+        assert res.raw == keypair.raw  # instead keypair is untweaked

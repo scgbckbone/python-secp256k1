@@ -215,8 +215,10 @@ def ec_pubkey_serialize(raw_pubkey: secp256k1_pubkey, compressed: bool = True) -
 # In:   pubkey1:  first public key to compare
 #       pubkey2:  second public key to compare
 #
-def ec_pubkey_cmp():
-    pass
+def ec_pubkey_cmp(raw_pubkey0: secp256k1_pubkey, raw_pubkey1: secp256k1_pubkey) -> int:
+    return lib.secp256k1_ec_pubkey_cmp(
+        secp256k1_context_sign, raw_pubkey0, raw_pubkey1
+    )
 
 
 # Parse an ECDSA signature in compact (64 bytes) format.
@@ -591,8 +593,20 @@ def ec_pubkey_tweak_add(raw_pubkey: secp256k1_pubkey, tweak: bytes) -> secp256k1
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
-def ec_seckey_tweak_mul():
-    pass
+def ec_seckey_tweak_mul(seckey: bytes, tweak: bytes) -> bytes:
+    if len(seckey) != 32:
+        raise ValueError("secret data must be 32 bytes")
+    if len(tweak) != 32:
+        raise ValueError("tweak data must be 32 bytes")
+    result_data = ctypes.create_string_buffer(seckey)
+    result = lib.secp256k1_ec_seckey_tweak_mul(
+        secp256k1_context_sign, result_data, tweak
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise ValueError("Invalid arguments")
+    # TODO should I also check if the key was zeroized and raise if it was?
+    return result_data.raw[:32]
 
 
 # Tweak a public key by multiplying it by a tweak value.
@@ -606,8 +620,16 @@ def ec_seckey_tweak_mul():
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
-def ec_pubkey_tweak_mul():
-    pass
+def ec_pubkey_tweak_mul(raw_pubkey: secp256k1_pubkey, tweak: bytes) -> secp256k1_pubkey:
+    if len(tweak) != 32:
+        raise ValueError("tweak data must be 32 bytes")
+    result = lib.secp256k1_ec_pubkey_tweak_mul(
+        secp256k1_context_verify, raw_pubkey, tweak
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise ValueError("Invalid arguments or invalid resulting key")
+    return raw_pubkey
 
 
 #  Updates the context randomization to protect against side-channel leakage.
