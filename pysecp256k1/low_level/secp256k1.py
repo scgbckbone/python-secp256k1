@@ -137,6 +137,9 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
         _secp256k1.secp256k1_ecdsa_signature_serialize_compact.restype = ctypes.c_int
         _secp256k1.secp256k1_ecdsa_signature_serialize_compact.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
 
+        _secp256k1.secp256k1_ecdsa_signature_parse_compact.restype = ctypes.c_int
+        _secp256k1.secp256k1_ecdsa_signature_parse_compact.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
         _secp256k1.secp256k1_ecdsa_recover.restype = ctypes.c_int
         _secp256k1.secp256k1_ecdsa_recover.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
 
@@ -152,6 +155,9 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
 
     _secp256k1.secp256k1_context_set_illegal_callback.restype = None
     _secp256k1.secp256k1_context_set_illegal_callback.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+
+    _secp256k1.secp256k1_tagged_sha256.restype = ctypes.c_int
+    _secp256k1.secp256k1_tagged_sha256.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t]
 
     _secp256k1.secp256k1_ecdsa_sign.restype = ctypes.c_int
     _secp256k1.secp256k1_ecdsa_sign.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p]

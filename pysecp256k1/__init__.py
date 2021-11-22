@@ -9,6 +9,8 @@ from pysecp256k1.low_level import (
     PUBLIC_KEY_SIZE,
     COMPRESSED_PUBLIC_KEY_SIZE,
     SIGNATURE_SIZE,
+    SECP256K1_CONTEXT_VERIFY,
+    SECP256K1_CONTEXT_SIGN,
 )
 # DEPRECATED function are not added by design
 # ec_privkey_negate
@@ -18,9 +20,11 @@ from pysecp256k1.low_level import (
 # also scratch space related functions should be ignored imo
 
 # Opaque secp256k1 data structures
+secp256k1_context = ctypes.c_void_p
 secp256k1_pubkey = ctypes.c_char * 64
 secp256k1_ecdsa_signature = ctypes.c_char * 64
 secp256k1_ecdsa_recoverable_signature = ctypes.c_char * 64
+
 
 # Create a secp256k1 context object (in dynamically allocated memory).
 #
@@ -33,8 +37,18 @@ secp256k1_ecdsa_recoverable_signature = ctypes.c_char * 64
 #
 # See also secp256k1_context_randomize.
 #
-def context_create():
-    pass
+def context_create(flags: int) -> secp256k1_context:
+    if flags not in (SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY,
+                     (SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY)):
+        raise ValueError(
+            'Value for flags is unexpected. '
+            'Must be either SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY, '
+            'or a combination of these two'
+        )
+    ctx = lib.secp256k1_context_create(flags)
+    if ctx is None:
+        raise RuntimeError('secp256k1_context_create() returned None')
+    return ctx
 
 
 # Copy a secp256k1 context object (into dynamically allocated memory).
@@ -46,7 +60,7 @@ def context_create():
 # Returns: a newly created context object.
 # Args:    ctx: an existing context to copy
 #
-def context_clone():
+def context_clone(ctx: secp256k1_context) -> secp256k1_context:
     pass
 
 
@@ -63,7 +77,7 @@ def context_clone():
 # Args:   ctx: an existing context to destroy, constructed using
 #              secp256k1_context_create or secp256k1_context_clone
 #
-def context_destroy():
+def context_destroy(ctx: secp256k1_context) -> None:
     pass
 
 
@@ -236,8 +250,17 @@ def ec_pubkey_cmp(raw_pubkey0: secp256k1_pubkey, raw_pubkey1: secp256k1_pubkey) 
 # S are zero, the resulting sig value is guaranteed to fail validation for any
 # message and public key.
 #
-def ecdsa_signature_parse_compact():
-    pass
+def ecdsa_signature_parse_compact(sig: bytes) -> secp256k1_ecdsa_signature:
+    if len(sig) != 64:
+        raise ValueError("Compact signature must be 64 bytes")
+    res_sig = ctypes.create_string_buffer(64)
+    result = lib.secp256k1_ecdsa_signature_parse_compact(
+        secp256k1_context_verify, res_sig, sig
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise ValueError("Signature could not be parsed")
+    return res_sig
 
 
 # Parse a DER ECDSA signature.
@@ -305,8 +328,13 @@ def ecdsa_signature_serialize_der(raw_sig: secp256k1_ecdsa_signature) -> bytes:
 #
 # See secp256k1_ecdsa_signature_parse_compact for details about the encoding.
 #
-def ecdsa_signature_serialize_compact():
-    pass
+def ecdsa_signature_serialize_compact(raw_sig: secp256k1_ecdsa_signature) -> bytes:
+    compact_sig_serialization = ctypes.create_string_buffer(64)
+    result = lib.secp256k1_ecdsa_signature_serialize_compact(
+        secp256k1_context_verify, compact_sig_serialization, raw_sig
+    )
+    assert result == 1, f"Non-standard return code: {result}"
+    return compact_sig_serialization.raw[:64]
 
 
 # Verify an ECDSA signature.
@@ -657,8 +685,12 @@ def ec_pubkey_tweak_mul(raw_pubkey: secp256k1_pubkey, tweak: bytes) -> secp256k1
 # secp256k1_context_clone (and secp256k1_context_preallocated_create or
 # secp256k1_context_clone, resp.), and you may call this repeatedly afterwards.
 #
-def context_randomize():
-    pass
+def context_randomize(ctx: secp256k1_context, seed: bytes) -> secp256k1_context:
+    result = lib.secp256k1_context_randomize(ctx, seed)
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise RuntimeError("secp256k1 context randomization failed")
+    return ctx
 
 
 # Add a number of public keys together.
@@ -708,5 +740,12 @@ def ec_pubkey_combine(pubkeys: List[secp256k1_pubkey]) -> secp256k1_pubkey:
 #          msg: pointer to an array containing the message
 #       msglen: length of the message array
 #
-def tagged_sha256():
-    pass
+def tagged_sha256(tag: bytes, msg: bytes) -> bytes:
+    res_hash = ctypes.create_string_buffer(32)
+    result = lib.secp256k1_tagged_sha256(
+        secp256k1_context_verify, res_hash, tag, len(tag), msg, len(msg)
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise ValueError("Invalid arguments")
+    return res_hash.raw[:32]

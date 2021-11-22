@@ -7,7 +7,8 @@ from pysecp256k1 import (
     ec_pubkey_parse, ec_seckey_negate, ec_pubkey_negate, ec_seckey_tweak_add,
     ec_pubkey_tweak_add, ec_pubkey_combine, ecdsa_verify, ecdsa_sign,
     ecdsa_signature_serialize_der, ecdsa_signature_parse_der, ecdsa_signature_normalize,
-    ec_pubkey_tweak_mul, ec_seckey_tweak_mul,
+    ec_pubkey_tweak_mul, ec_seckey_tweak_mul, tagged_sha256,
+    ecdsa_signature_parse_compact, ecdsa_signature_serialize_compact,
 )
 from pysecp256k1.extrakeys import (
     keypair_create, keypair_pub, keypair_sec, xonly_pubkey_parse,
@@ -356,3 +357,19 @@ class TestPysecp256k1Base(unittest.TestCase):
         keypair = keypair_create(seckey)
         res = keypair_xonly_tweak_add(keypair, tweak_null)  # this should raise but won't
         assert res.raw == keypair.raw  # instead keypair is untweaked
+
+    def test_tagged_sha256(self):
+        msg = b"moremoremoremore"
+        tag = b"TapLeaf"
+        res = tagged_sha256(tag, msg)
+        res0 = hashlib.sha256((hashlib.sha256(tag).digest() * 2) + msg).digest()
+        assert res == res0
+
+    def test_ecdsa_compact_sig(self):
+        for seckey in self.valid_seckeys:
+            msg = hashlib.sha256(seckey).digest()
+            raw_sig = ecdsa_sign(seckey, msg)
+            raw_sig = ecdsa_signature_normalize(raw_sig)
+            compact_ser_sig = ecdsa_signature_serialize_compact(raw_sig)
+            compact_parsed_sig = ecdsa_signature_parse_compact(compact_ser_sig)
+            self.assertEqual(raw_sig.raw, compact_parsed_sig.raw)
