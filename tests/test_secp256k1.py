@@ -17,7 +17,9 @@ from pysecp256k1.extrakeys import (
     xonly_pubkey_tweak_add_check,
 
 )
-from pysecp256k1.schnorrsig import schnorrsig_sign, schnorrsig_verify
+from pysecp256k1.schnorrsig import schnorrsig_sign, schnorrsig_verify, schnorrsig_sign_custom
+from pysecp256k1.ecdh import ecdh
+
 
 class TestPysecp256k1Base(unittest.TestCase):
     invalid_seckeys = [
@@ -270,12 +272,18 @@ class TestPysecp256k1Base(unittest.TestCase):
             keypair = keypair_create(seckey)
             xonly_pubkey, parity = keypair_xonly_pub(keypair)
             msg = hashlib.sha256(b"super secret message").digest()
+            var_length_msg = msg + msg  # 64 bytes
 
             signature0 = schnorrsig_sign(keypair, msg)
+            signature0_custom = schnorrsig_sign_custom(keypair, msg)
+            self.assertEqual(signature0, signature0_custom)
             signature1 = schnorrsig_sign(keypair, msg, aux=os.urandom(32))
 
             self.assertTrue(schnorrsig_verify(signature0, msg, xonly_pubkey))
             self.assertTrue(schnorrsig_verify(signature1, msg, xonly_pubkey))
+
+            signature1_custom = schnorrsig_sign_custom(keypair, var_length_msg)
+            self.assertTrue(schnorrsig_verify(signature1_custom, var_length_msg, xonly_pubkey))
 
     def test_tweak_mul(self):
         # TODO invalid csaes
@@ -373,3 +381,12 @@ class TestPysecp256k1Base(unittest.TestCase):
             compact_ser_sig = ecdsa_signature_serialize_compact(raw_sig)
             compact_parsed_sig = ecdsa_signature_parse_compact(compact_ser_sig)
             self.assertEqual(raw_sig.raw, compact_parsed_sig.raw)
+
+    def test_ecdh(self):
+        alice_seckey = self.valid_seckeys[0]
+        bob_seckey = self.valid_seckeys[1]
+        alice_pubkey = ec_pubkey_create(alice_seckey)
+        bob_pubkey = ec_pubkey_create(bob_seckey)
+        shared_key0 = ecdh(alice_seckey, bob_pubkey)
+        shared_key1 = ecdh(bob_seckey, alice_pubkey)
+        self.assertEqual(shared_key0, shared_key1)

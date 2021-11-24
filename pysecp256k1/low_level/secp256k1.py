@@ -217,7 +217,7 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
     if getattr(_secp256k1, 'secp256k1_ecdh', None):
         secp256k1_has_ecdh = True
         _secp256k1.secp256k1_ecdh.restype = ctypes.c_int
-        _secp256k1.secp256k1_ecdh.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p]
+        _secp256k1.secp256k1_ecdh.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p]
 
     if getattr(_secp256k1, 'secp256k1_xonly_pubkey_parse', None):
         secp256k1_has_xonly_pubkeys = True
@@ -261,6 +261,8 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
         _secp256k1.secp256k1_schnorrsig_verify.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p]
         _secp256k1.secp256k1_schnorrsig_sign.restype = ctypes.c_int
         _secp256k1.secp256k1_schnorrsig_sign.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+        _secp256k1.secp256k1_schnorrsig_sign_custom.restype = ctypes.c_int
+        _secp256k1.secp256k1_schnorrsig_sign_custom.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_void_p]
 
 
 class _secp256k1_context:

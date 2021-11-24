@@ -1,3 +1,8 @@
+import ctypes
+from pysecp256k1 import lib, secp256k1_context_sign
+from pysecp256k1 import secp256k1_pubkey
+
+
 # Compute an EC Diffie-Hellman secret in constant time
 #
 # Returns: 1: exponentiation was successful
@@ -12,5 +17,14 @@
 #          data:       arbitrary data pointer that is passed through to hashfp
 #                      (can be NULL for secp256k1_ecdh_hash_function_sha256).
 #
-def ecdh():
-    pass
+def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
+    if len(seckey) != 32:
+        raise ValueError("secret data must be 32 bytes")
+    output = ctypes.create_string_buffer(32)
+    result = lib.secp256k1_ecdh(
+        secp256k1_context_sign, output, pubkey, seckey, None, None
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise RuntimeError("scalar was invalid (zero or overflow) or hashfp returned 0")
+    return output.raw

@@ -23,7 +23,6 @@ from pysecp256k1.low_level import (
 secp256k1_context = ctypes.c_void_p
 secp256k1_pubkey = ctypes.c_char * 64
 secp256k1_ecdsa_signature = ctypes.c_char * 64
-secp256k1_ecdsa_recoverable_signature = ctypes.c_char * 64
 
 
 # Create a secp256k1 context object (in dynamically allocated memory).

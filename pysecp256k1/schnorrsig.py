@@ -59,8 +59,15 @@ def schnorrsig_sign(keypair: secp256k1_keypair, msg: bytes, aux: Optional[bytes]
 #      msglen: length of the message
 # extraparams: pointer to a extraparams object (can be NULL)
 #
-def schnorrsig_sign_custom():
-    pass
+def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
+    sig_buf = ctypes.create_string_buffer(64)
+    result = lib.secp256k1_schnorrsig_sign_custom(
+        secp256k1_context_sign, sig_buf, msg, len(msg), keypair, None
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise RuntimeError('secp256k1_schnorrsig_sign_custom returned failure')
+    return sig_buf.raw
 
 
 # Verify a Schnorr signature.
@@ -74,15 +81,10 @@ def schnorrsig_sign_custom():
 #       pubkey: pointer to an x-only public key to verify with (cannot be NULL)
 #
 def schnorrsig_verify(sig: bytes, msg: bytes, xonly_pubkey: secp256k1_xonly_pubkey) -> bool:
-    # it seems that msg does not need to be 32 bytes and this API
-    # can be more flexible - for now keeping the limit 32
-    if len(msg) != 32:
-        raise ValueError('Message must be exactly 32 bytes long')
     if len(sig) != 64:
         raise ValueError('Signature must be exactly 64 bytes long')
-
     result = lib.secp256k1_schnorrsig_verify(
-        secp256k1_context_verify, sig, msg, 32, xonly_pubkey
+        secp256k1_context_verify, sig, msg, len(msg), xonly_pubkey
     )
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
