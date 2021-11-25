@@ -19,7 +19,11 @@ from pysecp256k1.extrakeys import (
 )
 from pysecp256k1.schnorrsig import schnorrsig_sign, schnorrsig_verify, schnorrsig_sign_custom
 from pysecp256k1.ecdh import ecdh
-
+from pysecp256k1.recovery import (
+    ecdsa_recover, ecdsa_sign_recoverable, ecdsa_recoverable_signature_convert,
+    ecdsa_recoverable_signature_parse_compact,
+    ecdsa_recoverable_signature_serialize_compact,
+)
 
 class TestPysecp256k1Base(unittest.TestCase):
     invalid_seckeys = [
@@ -390,3 +394,27 @@ class TestPysecp256k1Base(unittest.TestCase):
         shared_key0 = ecdh(alice_seckey, bob_pubkey)
         shared_key1 = ecdh(bob_seckey, alice_pubkey)
         self.assertEqual(shared_key0, shared_key1)
+
+    def test_recovery(self):
+        msg = b"moremoremoremore"
+        tag = b"TapLeaf"
+        msg_hash = tagged_sha256(tag, msg)
+        for seckey in self.invalid_seckeys:
+            with self.assertRaises(ValueError):
+                ecdsa_sign_recoverable(seckey, msg_hash)
+        for seckey in self.valid_seckeys:
+            pubkey = ec_pubkey_create(seckey)
+            rec_sig = ecdsa_sign_recoverable(seckey, msg_hash)
+            converted_rec_sig = ecdsa_recoverable_signature_convert(rec_sig)
+            sig = ecdsa_sign(seckey, msg_hash)
+            self.assertEqual(converted_rec_sig.raw, sig.raw)
+            compact_sig_ser = ecdsa_signature_serialize_compact(sig)
+            compact_rec_sig_ser, recid = ecdsa_recoverable_signature_serialize_compact(rec_sig)
+            rec_sig_parsed = ecdsa_recoverable_signature_parse_compact(compact_rec_sig_ser, recid)
+            self.assertEqual(rec_sig_parsed.raw, rec_sig.raw)
+            self.assertEqual(compact_rec_sig_ser, compact_sig_ser)
+            self.assertTrue(recid in (0, 1, 2, 3))
+            rec_pubkey = ecdsa_recover(rec_sig, msg_hash)
+            self.assertEqual(pubkey.raw, rec_pubkey.raw)
+
+

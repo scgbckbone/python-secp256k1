@@ -1,5 +1,5 @@
 import ctypes
-
+from pysecp256k1 import lib, secp256k1_context_sign, secp256k1_context_verify, secp256k1_pubkey, secp256k1_ecdsa_signature
 
 secp256k1_ecdsa_recoverable_signature = ctypes.c_char * 65
 
@@ -18,8 +18,18 @@ secp256k1_ecdsa_recoverable_signature = ctypes.c_char * 65
 #    const unsigned char *input64,
 #    int recid
 #) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
-def ecdsa_recoverable_signature_parse_compact():
-    pass
+def ecdsa_recoverable_signature_parse_compact(sig: bytes, recid: int) -> secp256k1_ecdsa_recoverable_signature:
+    if len(sig) != 64:
+        raise ValueError("Compact signature must be 64 bytes")
+    rec_sig = ctypes.create_string_buffer(65)
+
+    result = lib.secp256k1_ecdsa_recoverable_signature_parse_compact(
+        secp256k1_context_verify, rec_sig, sig, recid)
+
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise ValueError("signature could not be parsed")
+    return rec_sig
 
 
 # Convert a recoverable signature into a normal signature.
@@ -34,8 +44,13 @@ def ecdsa_recoverable_signature_parse_compact():
 #    secp256k1_ecdsa_signature* sig,
 #    const secp256k1_ecdsa_recoverable_signature* sigin
 #) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3);
-def ecdsa_recoverable_signature_convert():
-    pass
+def ecdsa_recoverable_signature_convert(sig: secp256k1_ecdsa_recoverable_signature) -> secp256k1_ecdsa_signature:
+    res_sig = ctypes.create_string_buffer(64)
+    result = lib.secp256k1_ecdsa_recoverable_signature_convert(
+        secp256k1_context_verify, res_sig, sig
+    )
+    assert result == 1, f"Non-standard return code: {result}"
+    return res_sig
 
 
 # Serialize an ECDSA signature in compact format (64 bytes + recovery id).
@@ -52,8 +67,17 @@ def ecdsa_recoverable_signature_convert():
 #    int *recid,
 #    const secp256k1_ecdsa_recoverable_signature* sig
 #) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
-def ecdsa_recoverable_signature_serialize_compact():
-    pass
+def ecdsa_recoverable_signature_serialize_compact(sig: secp256k1_ecdsa_recoverable_signature):
+    recid = ctypes.c_int()
+    recid.value = 0
+    output = ctypes.create_string_buffer(64)
+    result = lib.secp256k1_ecdsa_recoverable_signature_serialize_compact(
+        secp256k1_context_sign, output, ctypes.byref(recid), sig
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise RuntimeError('secp256k1_ecdsa_recoverable_signature_serialize_compact returned failure')
+    return output.raw, recid.value
 
 
 # Create a recoverable ECDSA signature.
@@ -77,8 +101,19 @@ def ecdsa_recoverable_signature_serialize_compact():
 #    secp256k1_nonce_function noncefp,
 #    const void *ndata
 #) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
-def ecdsa_sign_recoverable():
-    pass
+def ecdsa_sign_recoverable(seckey: bytes, msg: bytes) -> secp256k1_ecdsa_recoverable_signature:
+    if len(seckey) != 32:
+        raise ValueError("secret data must be 32 bytes")
+    if len(msg) != 32:
+        raise ValueError('Hash must be exactly 32 bytes long')
+    recoverable_sig = ctypes.create_string_buffer(65)
+    result = lib.secp256k1_ecdsa_sign_recoverable(
+        secp256k1_context_sign, recoverable_sig, msg, seckey, None, None
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise ValueError("the nonce generation function failed, or the secret key was invalid")
+    return recoverable_sig
 
 
 # Recover an ECDSA public key from a signature.
@@ -96,5 +131,12 @@ def ecdsa_sign_recoverable():
 #    const secp256k1_ecdsa_recoverable_signature *sig,
 #    const unsigned char *msghash32
 #) SECP256K1_ARG_NONNULL(1) SECP256K1_ARG_NONNULL(2) SECP256K1_ARG_NONNULL(3) SECP256K1_ARG_NONNULL(4);
-def ecdsa_recover():
-    pass
+def ecdsa_recover(sig: secp256k1_ecdsa_recoverable_signature, msg: bytes) -> secp256k1_pubkey:
+    raw_pubkey = ctypes.create_string_buffer(64)
+    result = lib.secp256k1_ecdsa_recover(
+        secp256k1_context_verify, raw_pubkey, sig, msg
+    )
+    if result != 1:
+        assert result == 0, f"Non-standard return code: {result}"
+        raise RuntimeError("ecdsa_recover returned failure")
+    return raw_pubkey

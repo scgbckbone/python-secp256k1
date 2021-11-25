@@ -457,14 +457,14 @@ def ecdsa_signature_normalize(raw_sig: secp256k1_ecdsa_signature) -> secp256k1_e
 # The created signature is always in lower-S form. See
 # secp256k1_ecdsa_signature_normalize for more details.
 #
-def ecdsa_sign(seckey: bytes, a_hash: bytes) -> secp256k1_ecdsa_signature:
+def ecdsa_sign(seckey: bytes, msg: bytes) -> secp256k1_ecdsa_signature:
     if len(seckey) != 32:
         raise ValueError("secret data must be 32 bytes")
-    if len(a_hash) != 32:
+    if len(msg) != 32:
         raise ValueError('Hash must be exactly 32 bytes long')
     raw_sig = ctypes.create_string_buffer(64)
     result = lib.secp256k1_ecdsa_sign(
-        secp256k1_context_sign, raw_sig, a_hash, seckey, None, None
+        secp256k1_context_sign, raw_sig, msg, seckey, None, None
     )
     if 1 != result:
         assert (result == 0), f"Non-standard return code: {result}"
