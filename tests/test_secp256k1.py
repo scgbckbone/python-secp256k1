@@ -128,11 +128,11 @@ class TestPysecp256k1Base(unittest.TestCase):
             with self.assertRaises(ValueError) as exc:
                 # invalid seckey
                 ec_seckey_tweak_add(seckey, valid_tweak)
-            self.assertEqual(str(exc.exception), "secret data must be 32 bytes")
+            self.assertEqual(str(exc.exception), "'seckey' must be exactly 32 bytes")
             with self.assertRaises(ValueError) as exc:
                 # invalid tweak
                 ec_seckey_tweak_add(valid_tweak, seckey)
-            self.assertEqual(str(exc.exception), "tweak data must be 32 bytes")
+            self.assertEqual(str(exc.exception), "'tweak32' must be exactly 32 bytes")
 
         for seckey in self.valid_seckeys:
             # TODO shouldn't this fail as we tweak with itself?
@@ -155,7 +155,7 @@ class TestPysecp256k1Base(unittest.TestCase):
         # TODO null triggers illegal callback
         for seckey in self.invalid_seckeys[:1]:
             with self.assertRaises(ValueError) as exc:
-                ec_pubkey_tweak_add(raw_pubkey, tweak=seckey)
+                ec_pubkey_tweak_add(raw_pubkey, tweak32=seckey)
             self.assertEqual(
                 str(exc.exception),
                 "Invalid arguments or invalid resulting key"
@@ -163,10 +163,10 @@ class TestPysecp256k1Base(unittest.TestCase):
         # invalid tweak length
         for seckey in self.invalid_seckeys[2:]:
             with self.assertRaises(ValueError) as exc:
-                ec_pubkey_tweak_add(raw_pubkey, tweak=seckey)
+                ec_pubkey_tweak_add(raw_pubkey, tweak32=seckey)
             self.assertEqual(
                 str(exc.exception),
-                "tweak data must be 32 bytes"
+                "'tweak32' must be exactly 32 bytes"
             )
 
         # compressed
@@ -240,7 +240,7 @@ class TestPysecp256k1Base(unittest.TestCase):
                 keypair_create(seckey)
             self.assertEqual(
                 str(exc.exception),
-                "secret data must be 32 bytes"
+                "'seckey' must be exactly 32 bytes"
             )
         for seckey in self.valid_seckeys:
             keypair = keypair_create(seckey)
@@ -281,7 +281,7 @@ class TestPysecp256k1Base(unittest.TestCase):
             signature0 = schnorrsig_sign(keypair, msg)
             signature0_custom = schnorrsig_sign_custom(keypair, msg)
             self.assertEqual(signature0, signature0_custom)
-            signature1 = schnorrsig_sign(keypair, msg, aux=os.urandom(32))
+            signature1 = schnorrsig_sign(keypair, msg, aux_rand32=os.urandom(32))
 
             self.assertTrue(schnorrsig_verify(signature0, msg, xonly_pubkey))
             self.assertTrue(schnorrsig_verify(signature1, msg, xonly_pubkey))

@@ -2,6 +2,7 @@ import ctypes
 from typing import List
 from pysecp256k1.low_level import (
     lib,
+    enforce_type,
     secp256k1_context_sign,
     secp256k1_context_verify,
     SECP256K1_EC_UNCOMPRESSED,
@@ -179,15 +180,16 @@ def scratch_space_destroy():
 # 0x03), uncompressed (65 bytes, header byte 0x04), or hybrid (65 bytes, header
 # byte 0x06 or 0x07) format public keys.
 #
-def ec_pubkey_parse(pubkey: bytes) -> secp256k1_pubkey:
-    raw_pubkey = ctypes.create_string_buffer(64)
+def ec_pubkey_parse(pubkey_bytes: bytes) -> secp256k1_pubkey:
+    enforce_type(pubkey_bytes, bytes, "pubkey", length=[33, 65])
+    pubkey = ctypes.create_string_buffer(64)
     result = lib.secp256k1_ec_pubkey_parse(
-        secp256k1_context_verify, raw_pubkey, pubkey, len(pubkey)
+        secp256k1_context_verify, pubkey, pubkey_bytes, len(pubkey_bytes)
     )
     if 1 != result:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError("public key could not be parsed or is invalid")
-    return raw_pubkey
+    return pubkey
 
 
 # Serialize a pubkey object into a serialized byte sequence.
@@ -205,18 +207,17 @@ def ec_pubkey_parse(pubkey: bytes) -> secp256k1_pubkey:
 #         flags:      SECP256K1_EC_COMPRESSED if serialization should be in
 #                     compressed format, otherwise SECP256K1_EC_UNCOMPRESSED.
 #
-def ec_pubkey_serialize(raw_pubkey: secp256k1_pubkey, compressed: bool = True) -> bytes:
-    if len(raw_pubkey) != 64:
-        raise ValueError("raw pubkey must be 64 bytes")
+def ec_pubkey_serialize(pubkey: secp256k1_pubkey, compressed: bool = True) -> bytes:
+    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
     pub_size = ctypes.c_size_t()
     pub_size.value = COMPRESSED_PUBLIC_KEY_SIZE if compressed else PUBLIC_KEY_SIZE
-    pub = ctypes.create_string_buffer(pub_size.value)
+    pubkey_bytes = ctypes.create_string_buffer(pub_size.value)
 
     lib.secp256k1_ec_pubkey_serialize(
-        secp256k1_context_verify, pub, ctypes.byref(pub_size), raw_pubkey,
+        secp256k1_context_verify, pubkey_bytes, ctypes.byref(pub_size), pubkey,
         SECP256K1_EC_COMPRESSED if compressed else SECP256K1_EC_UNCOMPRESSED
     )
-    return pub.raw
+    return pubkey_bytes.raw
 
 
 # Compare two public keys using lexicographic (of compressed serialization) order
@@ -228,9 +229,11 @@ def ec_pubkey_serialize(raw_pubkey: secp256k1_pubkey, compressed: bool = True) -
 # In:   pubkey1:  first public key to compare
 #       pubkey2:  second public key to compare
 #
-def ec_pubkey_cmp(raw_pubkey0: secp256k1_pubkey, raw_pubkey1: secp256k1_pubkey) -> int:
+def ec_pubkey_cmp(pubkey0: secp256k1_pubkey, pubkey1: secp256k1_pubkey) -> int:
+    enforce_type(pubkey0, secp256k1_pubkey, "pubkey0")
+    enforce_type(pubkey1, secp256k1_pubkey, "pubkey1")
     return lib.secp256k1_ec_pubkey_cmp(
-        secp256k1_context_sign, raw_pubkey0, raw_pubkey1
+        secp256k1_context_sign, pubkey0, pubkey1
     )
 
 
@@ -249,17 +252,16 @@ def ec_pubkey_cmp(raw_pubkey0: secp256k1_pubkey, raw_pubkey1: secp256k1_pubkey) 
 # S are zero, the resulting sig value is guaranteed to fail validation for any
 # message and public key.
 #
-def ecdsa_signature_parse_compact(sig: bytes) -> secp256k1_ecdsa_signature:
-    if len(sig) != 64:
-        raise ValueError("Compact signature must be 64 bytes")
-    res_sig = ctypes.create_string_buffer(64)
+def ecdsa_signature_parse_compact(compact_sig: bytes) -> secp256k1_ecdsa_signature:
+    enforce_type(compact_sig, bytes, "compact_sig", length=64)
+    sig = ctypes.create_string_buffer(64)
     result = lib.secp256k1_ecdsa_signature_parse_compact(
-        secp256k1_context_verify, res_sig, sig
+        secp256k1_context_verify, sig, compact_sig
     )
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError("Signature could not be parsed")
-    return res_sig
+    return sig
 
 
 # Parse a DER ECDSA signature.
@@ -277,17 +279,16 @@ def ecdsa_signature_parse_compact(sig: bytes) -> secp256k1_ecdsa_signature:
 # encoded numbers are out of range, signature validation with it is
 # guaranteed to fail for every message and public key.
 #
-def ecdsa_signature_parse_der(sig: bytes) -> secp256k1_ecdsa_signature:
-    if not sig:
-        raise ValueError("Signature is empty.")
-    raw_sig = ctypes.create_string_buffer(64)
+def ecdsa_signature_parse_der(der_sig: bytes) -> secp256k1_ecdsa_signature:
+    enforce_type(der_sig, bytes, "der_sig")
+    sig = ctypes.create_string_buffer(64)
     result = lib.secp256k1_ecdsa_signature_parse_der(
-        secp256k1_context_verify, raw_sig, sig, len(sig))
+        secp256k1_context_verify, sig, der_sig, len(der_sig))
 
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError("Signature could not be parsed")
-    return raw_sig
+    return sig
 
 
 # Serialize an ECDSA signature in DER format.
@@ -301,13 +302,14 @@ def ecdsa_signature_parse_der(sig: bytes) -> secp256k1_ecdsa_signature:
 #                    if 0 was returned).
 # In:     sig:       a pointer to an initialized signature object
 #
-def ecdsa_signature_serialize_der(raw_sig: secp256k1_ecdsa_signature) -> bytes:
+def ecdsa_signature_serialize_der(sig: secp256k1_ecdsa_signature) -> bytes:
+    enforce_type(sig, secp256k1_ecdsa_signature, "sig")
     sig_size = ctypes.c_size_t()
     sig_size.value = SIGNATURE_SIZE
-    mb_sig = ctypes.create_string_buffer(SIGNATURE_SIZE)
+    der_sig = ctypes.create_string_buffer(SIGNATURE_SIZE)
 
     result = lib.secp256k1_ecdsa_signature_serialize_der(
-        secp256k1_context_sign, mb_sig, ctypes.byref(sig_size), raw_sig)
+        secp256k1_context_sign, der_sig, ctypes.byref(sig_size), sig)
     if 1 != result:
         assert result == 0, f"Non-standard return code: {result}"
         raise RuntimeError(
@@ -315,7 +317,7 @@ def ecdsa_signature_serialize_der(raw_sig: secp256k1_ecdsa_signature) -> bytes:
         )
     # secp256k1 creates signatures already in lower-S form, no further
     # conversion needed.
-    return mb_sig.raw[:sig_size.value]
+    return der_sig.raw[:sig_size.value]
 
 
 # Serialize an ECDSA signature in compact (64 byte) format.
@@ -327,13 +329,14 @@ def ecdsa_signature_serialize_der(raw_sig: secp256k1_ecdsa_signature) -> bytes:
 #
 # See secp256k1_ecdsa_signature_parse_compact for details about the encoding.
 #
-def ecdsa_signature_serialize_compact(raw_sig: secp256k1_ecdsa_signature) -> bytes:
-    compact_sig_serialization = ctypes.create_string_buffer(64)
+def ecdsa_signature_serialize_compact(sig: secp256k1_ecdsa_signature) -> bytes:
+    enforce_type(sig, secp256k1_ecdsa_signature, "sig")
+    compact_sig = ctypes.create_string_buffer(64)
     result = lib.secp256k1_ecdsa_signature_serialize_compact(
-        secp256k1_context_verify, compact_sig_serialization, raw_sig
+        secp256k1_context_verify, compact_sig, sig
     )
     assert result == 1, f"Non-standard return code: {result}"
-    return compact_sig_serialization.raw[:64]
+    return compact_sig.raw[:64]
 
 
 # Verify an ECDSA signature.
@@ -361,17 +364,14 @@ def ecdsa_signature_serialize_compact(raw_sig: secp256k1_ecdsa_signature) -> byt
 #
 # For details, see the comments for that function.
 #
-def ecdsa_verify(raw_sig: secp256k1_ecdsa_signature, raw_pubkey: secp256k1_pubkey, a_hash: bytes) -> bool:
-    if not isinstance(raw_sig, secp256k1_ecdsa_signature):
-        raise ValueError("raw_sig must be of type secp256k1_ecdsa_signature")
-    if not isinstance(raw_pubkey, secp256k1_pubkey):
-        raise ValueError("raw_pubkey must be of type secp256k1_pubkey")
-    if not isinstance(a_hash, bytes):
-        raise ValueError("a_hash must be of type bytes")
-    if len(a_hash) != 32:
+def ecdsa_verify(sig: secp256k1_ecdsa_signature, pubkey: secp256k1_pubkey, msghash32: bytes) -> bool:
+    enforce_type(sig, secp256k1_ecdsa_signature, "sig")
+    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
+    enforce_type(msghash32, bytes, "msghash32", length=32)
+    if len(msghash32) != 32:
         raise ValueError('Hash must be exactly 32 bytes long')
     result = lib.secp256k1_ecdsa_verify(
-        secp256k1_context_verify, raw_sig, a_hash, raw_pubkey
+        secp256k1_context_verify, sig, msghash32, pubkey
     )
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
@@ -421,22 +421,12 @@ def ecdsa_verify(raw_sig: secp256k1_ecdsa_signature, raw_pubkey: secp256k1_pubke
 # signatures come from a system that cannot enforce this property,
 # secp256k1_ecdsa_signature_normalize must be called before verification.
 #
-def ecdsa_signature_normalize(raw_sig: secp256k1_ecdsa_signature) -> secp256k1_ecdsa_signature:
+def ecdsa_signature_normalize(sig: secp256k1_ecdsa_signature) -> secp256k1_ecdsa_signature:
+    enforce_type(sig, secp256k1_ecdsa_signature, "sig")
     lib.secp256k1_ecdsa_signature_normalize(
-        secp256k1_context_verify, raw_sig, raw_sig
+        secp256k1_context_verify, sig, sig
     )
-    return raw_sig
-
-
-# TODO this will probably need to be implemented
-# An implementation of RFC6979 (using HMAC-SHA256) as nonce generation function.
-# If a data pointer is passed, it is assumed to be a pointer to 32 bytes of
-# extra entropy.
-#
-#SECP256K1_API extern const secp256k1_nonce_function secp256k1_nonce_function_rfc6979;
-
-# A default safe nonce generation function (currently equal to secp256k1_nonce_function_rfc6979).
-#SECP256K1_API extern const secp256k1_nonce_function secp256k1_nonce_function_default;
+    return sig
 
 
 # Create an ECDSA signature.
@@ -457,19 +447,17 @@ def ecdsa_signature_normalize(raw_sig: secp256k1_ecdsa_signature) -> secp256k1_e
 # The created signature is always in lower-S form. See
 # secp256k1_ecdsa_signature_normalize for more details.
 #
-def ecdsa_sign(seckey: bytes, msg: bytes) -> secp256k1_ecdsa_signature:
-    if len(seckey) != 32:
-        raise ValueError("secret data must be 32 bytes")
-    if len(msg) != 32:
-        raise ValueError('Hash must be exactly 32 bytes long')
-    raw_sig = ctypes.create_string_buffer(64)
+def ecdsa_sign(seckey: bytes, msghash32: bytes) -> secp256k1_ecdsa_signature:
+    enforce_type(seckey, bytes, "seckey", length=32)
+    enforce_type(msghash32, bytes, "msghash32", length=32)
+    sig = ctypes.create_string_buffer(64)
     result = lib.secp256k1_ecdsa_sign(
-        secp256k1_context_sign, raw_sig, msg, seckey, None, None
+        secp256k1_context_sign, sig, msghash32, seckey, None, None
     )
     if 1 != result:
         assert (result == 0), f"Non-standard return code: {result}"
         raise RuntimeError('secp256k1_ecdsa_sign returned failure')
-    return raw_sig
+    return sig
 
 
 # Verify an ECDSA secret key.
@@ -485,17 +473,8 @@ def ecdsa_sign(seckey: bytes, msg: bytes) -> secp256k1_ecdsa_signature:
 # In:      seckey: pointer to a 32-byte secret key.
 #
 def ec_seckey_verify(seckey: bytes) -> None:
-    """
-    Takes in 32 random bytes and verifies that it is valid. Otherwise raises
-    ValueError.
-    :param seckey:
-    :return: None
-    """
-    if len(seckey) != 32:
-        raise ValueError("secret data must be 32 bytes")
-
+    enforce_type(seckey, bytes, "seckey", length=32)
     result = lib.secp256k1_ec_seckey_verify(secp256k1_context_sign, seckey)
-
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError('Invalid private key data')
@@ -510,15 +489,15 @@ def ec_seckey_verify(seckey: bytes) -> None:
 # In:      seckey: pointer to a 32-byte secret key.
 #
 def ec_pubkey_create(seckey: bytes) -> secp256k1_pubkey:
-    raw_pubkey = ctypes.create_string_buffer(64)
+    enforce_type(seckey, bytes, "seckey", length=32)
+    pubkey = ctypes.create_string_buffer(64)
     result = lib.secp256k1_ec_pubkey_create(
-        secp256k1_context_sign, raw_pubkey, seckey
+        secp256k1_context_sign, pubkey, seckey
     )
-
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError('Cannot construct public key from private key')
-    return raw_pubkey
+    return pubkey
 
 
 # Negates a secret key in place.
@@ -532,12 +511,13 @@ def ec_pubkey_create(seckey: bytes) -> secp256k1_pubkey:
 #                 seckey will be set to some unspecified value.
 #
 def ec_seckey_negate(seckey: bytes) -> bytes:
-    key_buf = ctypes.create_string_buffer(seckey)
-    result = lib.secp256k1_ec_seckey_negate(secp256k1_context_sign, key_buf)
+    enforce_type(seckey, bytes, "seckey", length=32)
+    negated_seckey = ctypes.create_string_buffer(seckey)
+    result = lib.secp256k1_ec_seckey_negate(secp256k1_context_sign, negated_seckey)
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise RuntimeError('secp256k1_ec_seckey_negate returned failure')
-    return key_buf.raw[:32]  # we care only about first 32 bytes
+    return negated_seckey.raw[:32]  # we care only about first 32 bytes
 
 
 # Negates a public key in place.
@@ -546,9 +526,10 @@ def ec_seckey_negate(seckey: bytes) -> bytes:
 # Args:   ctx:        pointer to a context object
 # In/Out: pubkey:     pointer to the public key to be negated.
 #
-def ec_pubkey_negate(raw_pubkey: secp256k1_pubkey) -> secp256k1_pubkey:
-    lib.secp256k1_ec_pubkey_negate(secp256k1_context_verify, raw_pubkey)
-    return raw_pubkey
+def ec_pubkey_negate(pubkey: secp256k1_pubkey) -> secp256k1_pubkey:
+    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
+    lib.secp256k1_ec_pubkey_negate(secp256k1_context_verify, pubkey)
+    return pubkey
 
 
 # Tweak a secret key by adding tweak to it.
@@ -566,20 +547,18 @@ def ec_pubkey_negate(raw_pubkey: secp256k1_pubkey) -> secp256k1_pubkey:
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
-def ec_seckey_tweak_add(seckey: bytes, tweak: bytes) -> bytes:
-    if len(seckey) != 32:
-        raise ValueError("secret data must be 32 bytes")
-    if len(tweak) != 32:
-        raise ValueError("tweak data must be 32 bytes")
-    result_data = ctypes.create_string_buffer(seckey)
+def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
+    enforce_type(seckey, bytes, "seckey", length=32)
+    enforce_type(tweak32, bytes, "tweak32", length=32)
+    tweaked_seckey = ctypes.create_string_buffer(seckey)
     result = lib.secp256k1_ec_seckey_tweak_add(
-        secp256k1_context_sign, result_data, tweak
+        secp256k1_context_sign, tweaked_seckey, tweak32
     )
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError("Invalid arguments or invalid resulting key")
     # TODO should I also check if the key was zeroized and raise if it was?
-    return result_data.raw[:32]
+    return tweaked_seckey.raw[:32]
 
 
 # Tweak a public key by adding tweak times the generator to it.
@@ -595,16 +574,16 @@ def ec_seckey_tweak_add(seckey: bytes, tweak: bytes) -> bytes:
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
-def ec_pubkey_tweak_add(raw_pubkey: secp256k1_pubkey, tweak: bytes) -> secp256k1_pubkey:
-    if len(tweak) != 32:
-        raise ValueError("tweak data must be 32 bytes")
+def ec_pubkey_tweak_add(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_pubkey:
+    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
+    enforce_type(tweak32, bytes, "tweak32", length=32)
     result = lib.secp256k1_ec_pubkey_tweak_add(
-        secp256k1_context_verify, raw_pubkey, tweak
+        secp256k1_context_verify, pubkey, tweak32
     )
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError("Invalid arguments or invalid resulting key")
-    return raw_pubkey
+    return pubkey
 
 
 # Tweak a secret key by multiplying it by a tweak.
@@ -620,20 +599,17 @@ def ec_pubkey_tweak_add(raw_pubkey: secp256k1_pubkey, tweak: bytes) -> secp256k1
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
-def ec_seckey_tweak_mul(seckey: bytes, tweak: bytes) -> bytes:
-    if len(seckey) != 32:
-        raise ValueError("secret data must be 32 bytes")
-    if len(tweak) != 32:
-        raise ValueError("tweak data must be 32 bytes")
-    result_data = ctypes.create_string_buffer(seckey)
+def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
+    enforce_type(seckey, bytes, "seckey", length=32)
+    enforce_type(tweak32, bytes, "tweak32", length=32)
+    tweaked_seckey = ctypes.create_string_buffer(seckey)
     result = lib.secp256k1_ec_seckey_tweak_mul(
-        secp256k1_context_sign, result_data, tweak
+        secp256k1_context_sign, tweaked_seckey, tweak32
     )
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError("Invalid arguments")
-    # TODO should I also check if the key was zeroized and raise if it was?
-    return result_data.raw[:32]
+    return tweaked_seckey.raw[:32]
 
 
 # Tweak a public key by multiplying it by a tweak value.
@@ -647,16 +623,16 @@ def ec_seckey_tweak_mul(seckey: bytes, tweak: bytes) -> bytes:
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
-def ec_pubkey_tweak_mul(raw_pubkey: secp256k1_pubkey, tweak: bytes) -> secp256k1_pubkey:
-    if len(tweak) != 32:
-        raise ValueError("tweak data must be 32 bytes")
+def ec_pubkey_tweak_mul(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_pubkey:
+    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
+    enforce_type(tweak32, bytes, "tweak32", length=32)
     result = lib.secp256k1_ec_pubkey_tweak_mul(
-        secp256k1_context_verify, raw_pubkey, tweak
+        secp256k1_context_verify, pubkey, tweak32
     )
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError("Invalid arguments or invalid resulting key")
-    return raw_pubkey
+    return pubkey
 
 
 #  Updates the context randomization to protect against side-channel leakage.
@@ -704,10 +680,8 @@ def context_randomize(ctx: secp256k1_context, seed: bytes) -> secp256k1_context:
 def ec_pubkey_combine(pubkeys: List[secp256k1_pubkey]) -> secp256k1_pubkey:
     if len(pubkeys) <= 1:
         raise ValueError('number of pubkeys to combine must be more than one')
-    if not all(isinstance(p, secp256k1_pubkey) for p in pubkeys):
-        raise ValueError(
-            "each supplied pubkey must be an instance of 'secp256k1_pubkey'"
-        )
+    for p in pubkeys:
+        enforce_type(p, secp256k1_pubkey, "pubkey")
     pubkey_arr = (ctypes.c_char_p * len(pubkeys))()
     for i, p in enumerate(pubkeys):
         pubkey_arr[i] = p.raw
@@ -740,11 +714,13 @@ def ec_pubkey_combine(pubkeys: List[secp256k1_pubkey]) -> secp256k1_pubkey:
 #       msglen: length of the message array
 #
 def tagged_sha256(tag: bytes, msg: bytes) -> bytes:
-    res_hash = ctypes.create_string_buffer(32)
+    enforce_type(tag, bytes, "tag")
+    enforce_type(msg, bytes, "msg")
+    hash32 = ctypes.create_string_buffer(32)
     result = lib.secp256k1_tagged_sha256(
-        secp256k1_context_verify, res_hash, tag, len(tag), msg, len(msg)
+        secp256k1_context_verify, hash32, tag, len(tag), msg, len(msg)
     )
     if result != 1:
         assert result == 0, f"Non-standard return code: {result}"
         raise ValueError("Invalid arguments")
-    return res_hash.raw[:32]
+    return hash32.raw[:32]

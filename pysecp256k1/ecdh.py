@@ -1,5 +1,5 @@
 import ctypes
-from pysecp256k1 import lib, secp256k1_context_sign
+from pysecp256k1 import lib, secp256k1_context_sign, enforce_type
 from pysecp256k1 import secp256k1_pubkey
 
 
@@ -18,8 +18,8 @@ from pysecp256k1 import secp256k1_pubkey
 #                      (can be NULL for secp256k1_ecdh_hash_function_sha256).
 #
 def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
-    if len(seckey) != 32:
-        raise ValueError("secret data must be 32 bytes")
+    enforce_type(seckey, bytes, "seckey", length=32)
+    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
     output = ctypes.create_string_buffer(32)
     result = lib.secp256k1_ecdh(
         secp256k1_context_sign, output, pubkey, seckey, None, None
