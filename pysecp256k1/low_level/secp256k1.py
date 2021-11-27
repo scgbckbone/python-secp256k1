@@ -25,39 +25,17 @@
 import os
 import ctypes
 import ctypes.util
-import logging
 from types import FunctionType
 from typing import Any, Optional, cast, Dict, Union
 from contextvars import ContextVar
 
-
-_LOGGER = logging.getLogger(__name__)
-
-
-PUBLIC_KEY_SIZE             = 65
-COMPRESSED_PUBLIC_KEY_SIZE  = 33
-SIGNATURE_SIZE              = 72
-COMPACT_SIGNATURE_SIZE      = 65
+from pysecp256k1.low_level.constants import (
+    SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY
+)
 
 
 class Libsecp256k1Exception(EnvironmentError):
     pass
-
-
-SECP256K1_FLAGS_TYPE_CONTEXT = (1 << 0)
-SECP256K1_FLAGS_BIT_CONTEXT_SIGN = (1 << 9)
-SECP256K1_FLAGS_BIT_CONTEXT_VERIFY = (1 << 8)
-
-SECP256K1_CONTEXT_SIGN = \
-    (SECP256K1_FLAGS_TYPE_CONTEXT | SECP256K1_FLAGS_BIT_CONTEXT_SIGN)
-SECP256K1_CONTEXT_VERIFY = \
-    (SECP256K1_FLAGS_TYPE_CONTEXT | SECP256K1_FLAGS_BIT_CONTEXT_VERIFY)
-
-SECP256K1_FLAGS_TYPE_COMPRESSION = (1 << 1)
-SECP256K1_FLAGS_BIT_COMPRESSION = (1 << 8)
-
-SECP256K1_EC_COMPRESSED = (SECP256K1_FLAGS_TYPE_COMPRESSION | SECP256K1_FLAGS_BIT_COMPRESSION)
-SECP256K1_EC_UNCOMPRESSED = (SECP256K1_FLAGS_TYPE_COMPRESSION)
 
 
 _ctypes_functype = getattr(ctypes, 'WINFUNCTYPE', getattr(ctypes, 'CFUNCTYPE'))
@@ -336,27 +314,20 @@ def load_secp256k1_library(path: Optional[str] = None) -> ctypes.CDLL:
     return handle
 
 
-# the handle is not exported purposefully: ctypes interface is low-level,
-# you are basically calling the C functions directly.
-# Anyone that uses it directly should know that they are doing.
 lib = load_secp256k1_library()
 
-secp256k1_context_sign = secp256k1_create_and_init_context(lib, SECP256K1_CONTEXT_SIGN)
-secp256k1_context_verify = secp256k1_create_and_init_context(lib, SECP256K1_CONTEXT_VERIFY)
+secp256k1_context_sign = secp256k1_create_and_init_context(
+    lib, SECP256K1_CONTEXT_SIGN
+)
+secp256k1_context_verify = secp256k1_create_and_init_context(
+    lib, SECP256K1_CONTEXT_VERIFY
+)
 
 
 __all__ = (
     'lib',
     'secp256k1_context_sign',
     'secp256k1_context_verify',
-    'SIGNATURE_SIZE',
-    'COMPACT_SIGNATURE_SIZE',
-    'PUBLIC_KEY_SIZE',
-    'COMPRESSED_PUBLIC_KEY_SIZE',
-    'SECP256K1_EC_COMPRESSED',
-    'SECP256K1_EC_UNCOMPRESSED',
-    'SECP256K1_CONTEXT_SIGN',
-    'SECP256K1_CONTEXT_VERIFY',
     'secp256k1_has_pubkey_recovery',
     'secp256k1_has_seckey_negate',
     'secp256k1_has_pubkey_negate',

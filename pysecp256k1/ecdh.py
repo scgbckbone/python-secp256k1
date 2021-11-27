@@ -1,6 +1,6 @@
 import ctypes
-from pysecp256k1 import lib, secp256k1_context_sign, enforce_type
-from pysecp256k1 import secp256k1_pubkey
+from pysecp256k1 import lib, secp256k1_context_sign, enforce_type, assert_zero_return_code
+from pysecp256k1.low_level.constants import secp256k1_pubkey, SECKEY_SIZE
 
 
 # Compute an EC Diffie-Hellman secret in constant time
@@ -18,13 +18,13 @@ from pysecp256k1 import secp256k1_pubkey
 #                      (can be NULL for secp256k1_ecdh_hash_function_sha256).
 #
 def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
-    enforce_type(seckey, bytes, "seckey", length=32)
+    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
     enforce_type(pubkey, secp256k1_pubkey, "pubkey")
-    output = ctypes.create_string_buffer(32)
+    output = ctypes.create_string_buffer(SECKEY_SIZE)
     result = lib.secp256k1_ecdh(
         secp256k1_context_sign, output, pubkey, seckey, None, None
     )
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise RuntimeError("scalar was invalid (zero or overflow) or hashfp returned 0")
     return output.raw

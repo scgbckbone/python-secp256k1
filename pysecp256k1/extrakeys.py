@@ -1,14 +1,17 @@
 import ctypes
 from typing import Tuple
-from pysecp256k1 import secp256k1_pubkey
 from pysecp256k1.low_level import (
     lib,
     enforce_type,
+    assert_zero_return_code,
     secp256k1_context_sign,
     secp256k1_context_verify,
 )
-secp256k1_xonly_pubkey = ctypes.c_char * 64
-secp256k1_keypair = ctypes.c_char * 96
+from pysecp256k1.low_level.constants import (
+    secp256k1_pubkey, secp256k1_xonly_pubkey, secp256k1_keypair,
+    INTERNAL_PUBKEY_SIZE, INTERNAL_KEYPAIR_SIZE, XONLY_PUBKEY_SIZE, SECKEY_SIZE,
+    HASH32
+)
 
 
 # Parse a 32-byte sequence into a xonly_pubkey object.
@@ -21,14 +24,14 @@ secp256k1_keypair = ctypes.c_char * 96
 #              parsed version of input. If not, it's set to an invalid value.
 # In: input32: pointer to a serialized xonly_pubkey.
 #
-def xonly_pubkey_parse(xonly_pubkey_bytes: bytes) -> secp256k1_xonly_pubkey:
-    enforce_type(xonly_pubkey_bytes, bytes, "xonly_pubkey_bytes", length=32)
-    xonly_pubkey = ctypes.create_string_buffer(64)
+def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> secp256k1_xonly_pubkey:
+    enforce_type(xonly_pubkey_ser, bytes, "xonly_pubkey_ser", length=XONLY_PUBKEY_SIZE)
+    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
     result = lib.secp256k1_xonly_pubkey_parse(
-        secp256k1_context_verify, xonly_pubkey, xonly_pubkey_bytes
+        secp256k1_context_verify, xonly_pubkey, xonly_pubkey_ser
     )
-    if 1 != result:
-        assert result == 0, f"Non-standard return code: {result}"
+    if result != 1:
+        assert_zero_return_code(result)
         raise RuntimeError('secp256k1_xonly_pubkey_parse returned failure')
     return xonly_pubkey
 
@@ -43,14 +46,14 @@ def xonly_pubkey_parse(xonly_pubkey_bytes: bytes) -> secp256k1_xonly_pubkey:
 #
 def xonly_pubkey_serialize(xonly_pubkey: secp256k1_xonly_pubkey) -> bytes:
     enforce_type(xonly_pubkey, secp256k1_xonly_pubkey, "xonly_pubkey")
-    xonly_pubkey_bytes = ctypes.create_string_buffer(32)
+    xonly_pubkey_ser = ctypes.create_string_buffer(XONLY_PUBKEY_SIZE)
     result = lib.secp256k1_xonly_pubkey_serialize(
-        secp256k1_context_sign, xonly_pubkey_bytes, xonly_pubkey
+        secp256k1_context_sign, xonly_pubkey_ser, xonly_pubkey
     )
-    if 1 != result:
-        assert result == 0, f"Non-standard return code: {result}"
+    if result != 1:
+        assert_zero_return_code(result)
         raise RuntimeError('secp256k1_xonly_pubkey_serialize returned failure')
-    return xonly_pubkey_bytes.raw[:32]
+    return xonly_pubkey_ser.raw[:XONLY_PUBKEY_SIZE]
 
 
 # Compare two x-only public keys using lexicographic order
@@ -84,18 +87,18 @@ def xonly_pubkey_cmp(xonly_pubkey0: secp256k1_xonly_pubkey, xonly_pubkey1: secp2
 #
 def xonly_pubkey_from_pubkey(pubkey: secp256k1_pubkey) -> Tuple[secp256k1_xonly_pubkey, int]:
     enforce_type(pubkey, secp256k1_pubkey, "pubkey")
-    xonly_pubkey = ctypes.create_string_buffer(64)
+    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
 
-    parity_ret = ctypes.c_int()
-    parity_ret.value = -1
+    pk_parity = ctypes.c_int()
+    pk_parity.value = -1
 
     result = lib.secp256k1_xonly_pubkey_from_pubkey(
-        secp256k1_context_verify, xonly_pubkey, ctypes.byref(parity_ret), pubkey
+        secp256k1_context_verify, xonly_pubkey, ctypes.byref(pk_parity), pubkey
     )
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise RuntimeError("secp256k1_xonly_pubkey_from_pubkey failed")
-    return xonly_pubkey, parity_ret.value
+    return xonly_pubkey, pk_parity.value
 
 
 # Tweak an x-only public key by adding the generator multiplied with tweak32
@@ -121,12 +124,12 @@ def xonly_pubkey_from_pubkey(pubkey: secp256k1_pubkey) -> Tuple[secp256k1_xonly_
 def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> secp256k1_xonly_pubkey:
     enforce_type(xonly_pubkey, secp256k1_xonly_pubkey, "xonly_pubkey")
     enforce_type(tweak32, bytes, "tweak32")
-    tweaked_xonly_pubkey = ctypes.create_string_buffer(64)
+    tweaked_xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
     result = lib.secp256k1_xonly_pubkey_tweak_add(
         secp256k1_context_verify, tweaked_xonly_pubkey, xonly_pubkey, tweak32
     )
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise ValueError("arguments areinvalid or the resulting public key "
                          "would be invalid")
     return tweaked_xonly_pubkey
@@ -155,19 +158,19 @@ def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes)
 #      internal_pubkey: pointer to an x-only public key object to apply the tweak to.
 #              tweak32: pointer to a 32-byte tweak.
 #
-def xonly_pubkey_tweak_add_check(tweaked_pubkey32: bytes, tweaked_parity: int, internal_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> bool:
-    enforce_type(tweaked_pubkey32, bytes, "tweaked_pubkey32", length=32)
+def xonly_pubkey_tweak_add_check(tweaked_pubkey32: bytes, tweaked_pk_parity: int, internal_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> bool:
+    enforce_type(tweaked_pubkey32, bytes, "tweaked_pubkey32", length=XONLY_PUBKEY_SIZE)
     enforce_type(internal_pubkey, secp256k1_xonly_pubkey, "internal_pubkey")
-    enforce_type(tweak32, bytes, "tweak32", length=32)
+    enforce_type(tweak32, bytes, "tweak32", length=HASH32)
     result = lib.secp256k1_xonly_pubkey_tweak_add_check(
-        secp256k1_context_verify, tweaked_pubkey32, tweaked_parity,
+        secp256k1_context_verify, tweaked_pubkey32, tweaked_pk_parity,
         internal_pubkey, tweak32
     )
     # TODO can return just bool(result) - is it necessary to check for status
     # codes everywhere - is it even possible that secp will return anything
     # else than 0,1 ?
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         return False
     return True
 
@@ -181,14 +184,14 @@ def xonly_pubkey_tweak_add_check(tweaked_pubkey32: bytes, tweaked_parity: int, i
 # In:   seckey: pointer to a 32-byte secret key.
 #
 def keypair_create(seckey: bytes) -> secp256k1_keypair:
-    enforce_type(seckey, bytes, "seckey", length=32)
-    keypair = ctypes.create_string_buffer(96)
+    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
+    keypair = ctypes.create_string_buffer(INTERNAL_KEYPAIR_SIZE)
     result = lib.secp256k1_keypair_create(
         secp256k1_context_sign, keypair, seckey
     )
 
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise ValueError("Invalid seckey")
     return keypair
 
@@ -202,12 +205,12 @@ def keypair_create(seckey: bytes) -> secp256k1_keypair:
 #
 def keypair_sec(keypair: secp256k1_keypair) -> bytes:
     enforce_type(keypair, secp256k1_keypair, "keypair")
-    seckey = ctypes.create_string_buffer(32)
+    seckey = ctypes.create_string_buffer(SECKEY_SIZE)
     result = lib.secp256k1_keypair_sec(secp256k1_context_verify, seckey, keypair)
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise ValueError("arguments are invalid")
-    return seckey.raw[:32]
+    return seckey.raw[:SECKEY_SIZE]
 
 
 # Get the public key from a keypair.
@@ -220,10 +223,10 @@ def keypair_sec(keypair: secp256k1_keypair) -> bytes:
 #
 def keypair_pub(keypair: secp256k1_keypair) -> secp256k1_pubkey:
     enforce_type(keypair, secp256k1_keypair, "keypair")
-    pubkey = ctypes.create_string_buffer(64)
+    pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
     result = lib.secp256k1_keypair_pub(secp256k1_context_verify, pubkey, keypair)
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise ValueError("arguments are invalid")
     return pubkey
 
@@ -244,17 +247,17 @@ def keypair_pub(keypair: secp256k1_keypair) -> secp256k1_pubkey:
 #
 def keypair_xonly_pub(keypair: secp256k1_keypair) -> Tuple[secp256k1_xonly_pubkey, int]:
     enforce_type(keypair, secp256k1_keypair, "keypair")
-    xonly_pubkey = ctypes.create_string_buffer(64)
-    parity_ret = ctypes.c_int()
-    parity_ret.value = -1
+    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    pk_parity = ctypes.c_int()
+    pk_parity.value = -1
 
     result = lib.secp256k1_keypair_xonly_pub(
-        secp256k1_context_verify, xonly_pubkey, ctypes.byref(parity_ret), keypair
+        secp256k1_context_verify, xonly_pubkey, ctypes.byref(pk_parity), keypair
     )
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise ValueError("arguments are invalid")
-    return xonly_pubkey, parity_ret.value
+    return xonly_pubkey, pk_parity.value
 
 
 # Tweak a keypair by adding tweak32 to the secret key and updating the public
@@ -282,6 +285,6 @@ def keypair_xonly_tweak_add(keypair: secp256k1_keypair, tweak: bytes):
         secp256k1_context_verify, keypair, tweak
     )
     if result != 1:
-        assert result == 0, f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise ValueError("arguments are invalid")
     return keypair

@@ -11,9 +11,9 @@ tweaked -> tweaked_seckey
 public key:
 
 secp256k1_pubkey (this is the parsed version) -> pubkey
-serialization (compressed, uncompressed, hybrid) -> pubkey_bytes ?? meh
+serialization (compressed, uncompressed, hybrid) -> pubkey_ser
 xonly -> xonly_pubkey
-xonly serialization -> xonly_pubkey_bytes    meeeh ser?
+xonly serialization -> xonly_pubkey_ser
 tweaked  -> tweaked_xonly_pubkey
 
 SIGNATURES:
@@ -35,3 +35,11 @@ if return code is zero - raise Something ele than builtin python exceptions
 
 
 unify imports - now it is a mess
+
+
+DEPRECATED function are not added by design
+ec_privkey_negate
+ec_privkey_tweak_add
+ec_privkey_tweak_mul
+
+also scratch space related functions should be ignored imo
