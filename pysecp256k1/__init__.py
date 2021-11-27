@@ -2,11 +2,8 @@ import os
 import ctypes
 from typing import List
 from pysecp256k1.low_level import (
-    lib,
-    enforce_type,
-    assert_zero_return_code,
-    secp256k1_context_sign,
-    secp256k1_context_verify,
+    lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
+    assert_zero_return_code
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_context, secp256k1_pubkey, secp256k1_ecdsa_signature,
@@ -133,27 +130,6 @@ def context_set_illegal_callback():
 # See also secp256k1_context_set_illegal_callback.
 #
 def context_set_error_callback():
-    pass
-
-
-# Create a secp256k1 scratch space object.
-#
-# Returns: a newly created scratch space.
-# Args: ctx:  an existing context object.
-# In:   size: amount of memory to be available as scratch space. Some extra
-#             (<100 bytes) will be allocated for extra accounting.
-#
-def scratch_space_create():
-    pass
-
-
-# Destroy a secp256k1 scratch space.
-#
-# The pointer may not be used afterwards.
-# Args:       ctx: a secp256k1 context object.
-#         scratch: space to destroy
-#
-def scratch_space_destroy():
     pass
 
 
@@ -547,7 +523,6 @@ def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
     if result != 1:
         assert_zero_return_code(result)
         raise ValueError("Invalid arguments or invalid resulting key")
-    # TODO should I also check if the key was zeroized and raise if it was?
     return tweaked_seckey.raw[:SECKEY_SIZE]
 
 
@@ -716,3 +691,33 @@ def tagged_sha256(tag: bytes, msg: bytes) -> bytes:
         assert_zero_return_code(result)
         raise ValueError("Invalid arguments")
     return hash32.raw[:HASH32]
+
+
+__all__ = (
+    "context_create",
+    "context_clone",
+    "context_destroy",
+    "context_set_illegal_callback",
+    "context_set_error_callback",
+    "ec_pubkey_parse",
+    "ec_pubkey_serialize",
+    "ec_pubkey_cmp",
+    "ecdsa_signature_parse_compact",
+    "ecdsa_signature_parse_der",
+    "ecdsa_signature_serialize_der",
+    "ecdsa_signature_serialize_compact",
+    "ecdsa_verify",
+    "ecdsa_signature_normalize",
+    "ecdsa_sign",
+    "ec_seckey_verify",
+    "ec_pubkey_create",
+    "ec_seckey_negate",
+    "ec_pubkey_negate",
+    "ec_seckey_tweak_add",
+    "ec_pubkey_tweak_add",
+    "ec_seckey_tweak_mul",
+    "ec_pubkey_tweak_mul",
+    "context_randomize",
+    "ec_pubkey_combine",
+    "tagged_sha256",
+)

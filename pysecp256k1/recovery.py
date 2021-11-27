@@ -1,7 +1,7 @@
 import ctypes
-from pysecp256k1 import (
-    lib, enforce_type, assert_zero_return_code, secp256k1_context_sign,
-    secp256k1_context_verify,
+from pysecp256k1.low_level import (
+    lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
+    assert_zero_return_code, has_secp256k1_recovery
 )
 from pysecp256k1.low_level.constants import (
     COMPACT_SIGNATURE_SIZE, INTERNAL_RECOVERABLE_SIGNATURE_SIZE,
@@ -9,6 +9,12 @@ from pysecp256k1.low_level.constants import (
     secp256k1_ecdsa_recoverable_signature, secp256k1_pubkey,
     secp256k1_ecdsa_signature,
 )
+
+if not has_secp256k1_recovery:
+    raise RuntimeError(
+        "secp256k1 is not compiled with module 'recovery'. "
+        "Use '--enable-module-recovery' during ./configure"
+    )
 
 
 # Parse a compact ECDSA signature (64 bytes + recovery id).
@@ -115,3 +121,12 @@ def ecdsa_recover(rec_sig: secp256k1_ecdsa_recoverable_signature, msghash32: byt
         assert_zero_return_code(result)
         raise RuntimeError("ecdsa_recover returned failure")
     return pubkey
+
+
+_all__ = (
+    "ecdsa_recoverable_signature_parse_compact",
+    "ecdsa_recoverable_signature_convert",
+    "ecdsa_recoverable_signature_serialize_compact",
+    "ecdsa_sign_recoverable",
+    "ecdsa_recover"
+)

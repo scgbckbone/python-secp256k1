@@ -1,12 +1,19 @@
 import ctypes
 from typing import Optional
-from pysecp256k1 import (
+from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code,
+    assert_zero_return_code, has_secp256k1_schnorrsig
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_keypair, secp256k1_xonly_pubkey, COMPACT_SIGNATURE_SIZE, HASH32
 )
+
+if not has_secp256k1_schnorrsig:
+    raise RuntimeError(
+        "secp256k1 is not compiled with module 'schnorrsig'. "
+        "use '--enable-module-schnorrsig' together with '--enable-experimental'"
+        " during ./configure"
+    )
 
 
 # Create a Schnorr signature.
@@ -95,3 +102,10 @@ def schnorrsig_verify(compact_sig: bytes, msg: bytes, xonly_pubkey: secp256k1_xo
         assert_zero_return_code(result)
         return False
     return True
+
+
+__all__ = (
+    "schnorrsig_sign",
+    "schnorrsig_sign_custom",
+    "schnorrsig_verify"
+)

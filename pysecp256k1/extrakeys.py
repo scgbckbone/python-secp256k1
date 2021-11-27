@@ -1,17 +1,21 @@
 import ctypes
 from typing import Tuple
 from pysecp256k1.low_level import (
-    lib,
-    enforce_type,
-    assert_zero_return_code,
-    secp256k1_context_sign,
-    secp256k1_context_verify,
+    lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
+    assert_zero_return_code, has_secp256k1_extrakeys
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_pubkey, secp256k1_xonly_pubkey, secp256k1_keypair,
     INTERNAL_PUBKEY_SIZE, INTERNAL_KEYPAIR_SIZE, XONLY_PUBKEY_SIZE, SECKEY_SIZE,
     HASH32
 )
+
+if not has_secp256k1_extrakeys:
+    raise RuntimeError(
+        "secp256k1 is not compiled with module 'extrakeys'. "
+        "use '--enable-module-extrakeys' together with '--enable-experimental'"
+        " during ./configure"
+    )
 
 
 # Parse a 32-byte sequence into a xonly_pubkey object.
@@ -288,3 +292,18 @@ def keypair_xonly_tweak_add(keypair: secp256k1_keypair, tweak: bytes):
         assert_zero_return_code(result)
         raise ValueError("arguments are invalid")
     return keypair
+
+
+__all__ = (
+    "xonly_pubkey_parse",
+    "xonly_pubkey_serialize",
+    "xonly_pubkey_cmp",
+    "xonly_pubkey_from_pubkey",
+    "xonly_pubkey_tweak_add",
+    "xonly_pubkey_tweak_add_check",
+    "keypair_create",
+    "keypair_sec",
+    "keypair_pub",
+    "keypair_xonly_pub",
+    "keypair_xonly_tweak_add"
+)

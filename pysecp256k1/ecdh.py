@@ -1,6 +1,15 @@
 import ctypes
-from pysecp256k1 import lib, secp256k1_context_sign, enforce_type, assert_zero_return_code
+from pysecp256k1.low_level import (
+    lib, secp256k1_context_sign, enforce_type, assert_zero_return_code,
+    has_secp256k1_ecdh
+)
 from pysecp256k1.low_level.constants import secp256k1_pubkey, SECKEY_SIZE
+
+if not has_secp256k1_ecdh:
+    raise RuntimeError(
+        "secp256k1 is not compiled with module 'ecdh'. "
+        "Use '--enable-module-ecdh' during ./configure"
+    )
 
 
 # Compute an EC Diffie-Hellman secret in constant time
@@ -27,4 +36,9 @@ def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
     if result != 1:
         assert_zero_return_code(result)
         raise RuntimeError("scalar was invalid (zero or overflow) or hashfp returned 0")
-    return output.raw
+    return output.raw[:SECKEY_SIZE]
+
+
+__all__ = (
+    "ecdh"
+)
