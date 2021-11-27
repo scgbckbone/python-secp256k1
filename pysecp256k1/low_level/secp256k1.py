@@ -26,12 +26,19 @@ import os
 import ctypes
 import ctypes.util
 from types import FunctionType
-from typing import Any, Optional, cast, Dict, Union
+from typing import Any, Optional, Dict, Union
 from contextvars import ContextVar
 
 from pysecp256k1.low_level.constants import (
-    SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY
+    SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY, secp256k1_context
 )
+from pysecp256k1.low_level.util import assert_zero_return_code
+
+
+has_secp256k1_recovery = False
+has_secp256k1_ecdh = False
+has_secp256k1_extrakeys = False
+has_secp256k1_schnorrsig = False
 
 
 class Libsecp256k1Exception(EnvironmentError):
@@ -88,24 +95,89 @@ def _check_ressecp256k1_void_p(val: int, _func: FunctionType,
     return ctypes.c_void_p(val)
 
 
-secp256k1_has_pubkey_recovery = False
-secp256k1_has_seckey_negate = False
-secp256k1_has_pubkey_negate = False
-secp256k1_has_ecdh = False
-secp256k1_has_xonly_pubkeys = False
-secp256k1_has_schnorrsig = False
-
-
 def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
-    global secp256k1_has_pubkey_recovery
-    global secp256k1_has_seckey_negate
-    global secp256k1_has_pubkey_negate
-    global secp256k1_has_ecdh
-    global secp256k1_has_xonly_pubkeys
-    global secp256k1_has_schnorrsig
+    global has_secp256k1_recovery
+    global has_secp256k1_extrakeys
+    global has_secp256k1_schnorrsig
+    global has_secp256k1_ecdh
+
+    _secp256k1.secp256k1_context_create.restype = ctypes.c_void_p
+    _secp256k1.secp256k1_context_create.errcheck = _check_ressecp256k1_void_p  # type: ignore
+    _secp256k1.secp256k1_context_create.argtypes = [ctypes.c_uint]
+
+    # context clone
+    # context destroy
+
+    _secp256k1.secp256k1_context_set_illegal_callback.restype = None
+    _secp256k1.secp256k1_context_set_illegal_callback.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+
+    # context set error callback
+
+    _secp256k1.secp256k1_ec_pubkey_parse.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_parse.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
+
+    _secp256k1.secp256k1_ec_pubkey_serialize.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_serialize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_char_p, ctypes.c_uint]
+
+    _secp256k1.secp256k1_ec_pubkey_cmp.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_cmp.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ecdsa_signature_parse_compact.restype = ctypes.c_int
+    _secp256k1.secp256k1_ecdsa_signature_parse_compact.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ecdsa_signature_parse_der.restype = ctypes.c_int
+    _secp256k1.secp256k1_ecdsa_signature_parse_der.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
+
+    _secp256k1.secp256k1_ecdsa_signature_serialize_der.restype = ctypes.c_int
+    _secp256k1.secp256k1_ecdsa_signature_serialize_der.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ecdsa_signature_serialize_compact.restype = ctypes.c_int
+    _secp256k1.secp256k1_ecdsa_signature_serialize_compact.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ecdsa_verify.restype = ctypes.c_int
+    _secp256k1.secp256k1_ecdsa_verify.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ecdsa_signature_normalize.restype = ctypes.c_int
+    _secp256k1.secp256k1_ecdsa_signature_normalize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ecdsa_sign.restype = ctypes.c_int
+    _secp256k1.secp256k1_ecdsa_sign.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p]
+
+    _secp256k1.secp256k1_ec_seckey_verify.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_seckey_verify.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_pubkey_create.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_create.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_seckey_negate.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_seckey_negate.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_pubkey_negate.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_negate.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_seckey_tweak_add.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_seckey_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_pubkey_tweak_add.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_seckey_tweak_mul.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_seckey_tweak_mul.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_pubkey_tweak_mul.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_tweak_mul.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_context_randomize.restype = ctypes.c_int
+    _secp256k1.secp256k1_context_randomize.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
+
+    _secp256k1.secp256k1_ec_pubkey_combine.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_combine.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_int]
+
+    _secp256k1.secp256k1_tagged_sha256.restype = ctypes.c_int
+    _secp256k1.secp256k1_tagged_sha256.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t]
 
     if getattr(_secp256k1, 'secp256k1_ecdsa_sign_recoverable', None):
-        secp256k1_has_pubkey_recovery = True
+        has_secp256k1_recovery = True
         _secp256k1.secp256k1_ecdsa_recoverable_signature_parse_compact.restype = ctypes.c_int
         _secp256k1.secp256k1_ecdsa_recoverable_signature_parse_compact.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int]
 
@@ -121,137 +193,61 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
         _secp256k1.secp256k1_ecdsa_recover.restype = ctypes.c_int
         _secp256k1.secp256k1_ecdsa_recover.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
 
-    _secp256k1.secp256k1_context_create.restype = ctypes.c_void_p
-    _secp256k1.secp256k1_context_create.errcheck = _check_ressecp256k1_void_p  # type: ignore
-    _secp256k1.secp256k1_context_create.argtypes = [ctypes.c_uint]
-
-    _secp256k1.secp256k1_context_randomize.restype = ctypes.c_int
-    _secp256k1.secp256k1_context_randomize.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_context_set_illegal_callback.restype = None
-    _secp256k1.secp256k1_context_set_illegal_callback.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
-
-    _secp256k1.secp256k1_tagged_sha256.restype = ctypes.c_int
-    _secp256k1.secp256k1_tagged_sha256.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_size_t]
-
-    _secp256k1.secp256k1_ecdsa_signature_serialize_compact.restype = ctypes.c_int
-    _secp256k1.secp256k1_ecdsa_signature_serialize_compact.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ecdsa_signature_parse_compact.restype = ctypes.c_int
-    _secp256k1.secp256k1_ecdsa_signature_parse_compact.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ecdsa_sign.restype = ctypes.c_int
-    _secp256k1.secp256k1_ecdsa_sign.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p]
-
-    _secp256k1.secp256k1_ecdsa_signature_serialize_der.restype = ctypes.c_int
-    _secp256k1.secp256k1_ecdsa_signature_serialize_der.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_pubkey_create.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_pubkey_create.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_seckey_verify.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_seckey_verify.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ecdsa_signature_parse_der.restype = ctypes.c_int
-    _secp256k1.secp256k1_ecdsa_signature_parse_der.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
-
-    _secp256k1.secp256k1_ecdsa_signature_normalize.restype = ctypes.c_int
-    _secp256k1.secp256k1_ecdsa_signature_normalize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ecdsa_verify.restype = ctypes.c_int
-    _secp256k1.secp256k1_ecdsa_verify.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_pubkey_cmp.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_pubkey_cmp.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_pubkey_parse.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_pubkey_parse.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
-
-    _secp256k1.secp256k1_ec_pubkey_tweak_add.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_pubkey_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_pubkey_tweak_mul.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_pubkey_tweak_mul.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_seckey_tweak_add.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_seckey_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_seckey_tweak_mul.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_seckey_tweak_mul.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_pubkey_serialize.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_pubkey_serialize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_size_t), ctypes.c_char_p, ctypes.c_uint]
-
-    if getattr(_secp256k1, 'secp256k1_ec_pubkey_negate', None):
-        secp256k1_has_pubkey_negate = True
-        _secp256k1.secp256k1_ec_pubkey_negate.restype = ctypes.c_int
-        _secp256k1.secp256k1_ec_pubkey_negate.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-
-    if getattr(_secp256k1, 'secp256k1_ec_seckey_negate', None):
-        secp256k1_has_seckey_negate = True
-        _secp256k1.secp256k1_ec_seckey_negate.restype = ctypes.c_int
-        _secp256k1.secp256k1_ec_seckey_negate.argtypes = [ctypes.c_void_p, ctypes.c_char_p]
-
-    _secp256k1.secp256k1_ec_pubkey_combine.restype = ctypes.c_int
-    _secp256k1.secp256k1_ec_pubkey_combine.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_char_p), ctypes.c_int]
-
     if getattr(_secp256k1, 'secp256k1_ecdh', None):
-        secp256k1_has_ecdh = True
+        has_secp256k1_ecdh = True
         _secp256k1.secp256k1_ecdh.restype = ctypes.c_int
         _secp256k1.secp256k1_ecdh.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_void_p, ctypes.c_void_p]
 
     if getattr(_secp256k1, 'secp256k1_xonly_pubkey_parse', None):
-        secp256k1_has_xonly_pubkeys = True
+        has_secp256k1_extrakeys = True
         _secp256k1.secp256k1_xonly_pubkey_parse.restype = ctypes.c_int
         _secp256k1.secp256k1_xonly_pubkey_parse.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-        _secp256k1.secp256k1_xonly_pubkey_tweak_add_check.restype = ctypes.c_int
-        _secp256k1.secp256k1_xonly_pubkey_tweak_add_check.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_char_p]
-        _secp256k1.secp256k1_xonly_pubkey_tweak_add.restype = ctypes.c_int
-        _secp256k1.secp256k1_xonly_pubkey_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
-        _secp256k1.secp256k1_xonly_pubkey_from_pubkey.restype = ctypes.c_int
-        _secp256k1.secp256k1_xonly_pubkey_from_pubkey.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.c_char_p]
+
         _secp256k1.secp256k1_xonly_pubkey_serialize.restype = ctypes.c_int
         _secp256k1.secp256k1_xonly_pubkey_serialize.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-        _secp256k1.secp256k1_keypair_create.restype = ctypes.c_int
-        _secp256k1.secp256k1_keypair_create.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-        _secp256k1.secp256k1_keypair_sec.restype = ctypes.c_int
-        _secp256k1.secp256k1_keypair_sec.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
-        _secp256k1.secp256k1_keypair_pub.restype = ctypes.c_int
-        _secp256k1.secp256k1_keypair_pub.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
         _secp256k1.secp256k1_xonly_pubkey_cmp.restype = ctypes.c_int
         _secp256k1.secp256k1_xonly_pubkey_cmp.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+        _secp256k1.secp256k1_xonly_pubkey_from_pubkey.restype = ctypes.c_int
+        _secp256k1.secp256k1_xonly_pubkey_from_pubkey.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.c_char_p]
+
+        _secp256k1.secp256k1_xonly_pubkey_tweak_add.restype = ctypes.c_int
+        _secp256k1.secp256k1_xonly_pubkey_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+
+        _secp256k1.secp256k1_xonly_pubkey_tweak_add_check.restype = ctypes.c_int
+        _secp256k1.secp256k1_xonly_pubkey_tweak_add_check.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p, ctypes.c_char_p]
+
+        _secp256k1.secp256k1_keypair_create.restype = ctypes.c_int
+        _secp256k1.secp256k1_keypair_create.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+        _secp256k1.secp256k1_keypair_sec.restype = ctypes.c_int
+        _secp256k1.secp256k1_keypair_sec.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
+        _secp256k1.secp256k1_keypair_pub.restype = ctypes.c_int
+        _secp256k1.secp256k1_keypair_pub.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
+
         _secp256k1.secp256k1_keypair_xonly_pub.restype = ctypes.c_int
         _secp256k1.secp256k1_keypair_xonly_pub.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.POINTER(ctypes.c_int), ctypes.c_char_p]
+
         _secp256k1.secp256k1_keypair_xonly_tweak_add.restype = ctypes.c_int
         _secp256k1.secp256k1_keypair_xonly_tweak_add.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p]
 
-    # Note that we check specifically for secp256k1_schnorrsig_sign_custom
-    # to avoid incompatibility with earlier version of libsecp256k1.
-    # Before secp256k1_schnorrsig_sign_custom was itroduced,
-    # secp256k1_schnorrsig_sign had different signature, and using it
-    # with this signature will result in segfault.
-    # Supporting older versions of libsecp256k1 will be burdensome, and given
-    # that currently schnorrsig module is experimental, even the current
-    # signature can change unexpectedly. Such is the woes of being lightweight
-    # in linking C libraries, as we cannot look into C headers as CFFI would
-    # do. We will need to wait for libsecp256k1 ABI stabilization for this
-    # potential problem go go away.
-    if getattr(_secp256k1, 'secp256k1_schnorrsig_sign_custom', None):
-        secp256k1_has_schnorrsig = True
-        _secp256k1.secp256k1_schnorrsig_verify.restype = ctypes.c_int
-        _secp256k1.secp256k1_schnorrsig_verify.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p]
+    if getattr(_secp256k1, 'secp256k1_schnorrsig_sign', None):
+        has_secp256k1_schnorrsig = True
+
         _secp256k1.secp256k1_schnorrsig_sign.restype = ctypes.c_int
         _secp256k1.secp256k1_schnorrsig_sign.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p]
+
         _secp256k1.secp256k1_schnorrsig_sign_custom.restype = ctypes.c_int
         _secp256k1.secp256k1_schnorrsig_sign_custom.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t, ctypes.c_char_p, ctypes.c_void_p]
 
-
-class _secp256k1_context:
-    """dummy type for typecheck purposes"""
+        _secp256k1.secp256k1_schnorrsig_verify.restype = ctypes.c_int
+        _secp256k1.secp256k1_schnorrsig_verify.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_int, ctypes.c_char_p]
 
 
 def secp256k1_create_and_init_context(_secp256k1: ctypes.CDLL, flags: int
-                                      ) -> _secp256k1_context:
+                                      ) -> secp256k1_context:
     if flags not in (SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY,
                      (SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY)):
         raise ValueError(
@@ -263,22 +259,15 @@ def secp256k1_create_and_init_context(_secp256k1: ctypes.CDLL, flags: int
     if ctx is None:
         raise RuntimeError('secp256k1_context_create() returned None')
 
-    _secp256k1.secp256k1_context_set_illegal_callback(ctx, _secp256k1_illegal_callback_fn, 0)
-
+    _secp256k1.secp256k1_context_set_illegal_callback(
+        ctx, _secp256k1_illegal_callback_fn, 0
+    )
     seed = os.urandom(32)
-    # secp256k1 commit 6198375218b8132f016b701ef049fb295ca28c95 comment
-    # says that "non-signing contexts may use randomization in the future"
-    # so we always call randomize, but check for success only for
-    # signing context, because older lib versions return 0 for non-signing ctx.
-    res = _secp256k1.secp256k1_context_randomize(ctx, seed)
-    if res != 1:
-        assert res == 0
-        if (flags & SECP256K1_CONTEXT_SIGN) == SECP256K1_CONTEXT_SIGN:
-            raise RuntimeError("secp256k1 context randomization failed")
-        elif flags != SECP256K1_CONTEXT_VERIFY:
-            raise AssertionError('unexpected value for flags')
-
-    return cast(_secp256k1_context, ctx)
+    result = _secp256k1.secp256k1_context_randomize(ctx, seed)
+    if result != 1:
+        assert_zero_return_code(result)
+        raise RuntimeError("secp256k1 context randomization failed")
+    return ctx
 
 
 def load_secp256k1_library(path: Optional[str] = None) -> ctypes.CDLL:
@@ -325,13 +314,11 @@ secp256k1_context_verify = secp256k1_create_and_init_context(
 
 
 __all__ = (
-    'lib',
-    'secp256k1_context_sign',
-    'secp256k1_context_verify',
-    'secp256k1_has_pubkey_recovery',
-    'secp256k1_has_seckey_negate',
-    'secp256k1_has_pubkey_negate',
-    'secp256k1_has_ecdh',
-    'secp256k1_has_xonly_pubkeys',
-    'secp256k1_has_schnorrsig',
+    "lib",
+    "secp256k1_context_sign",
+    "secp256k1_context_verify",
+    "has_secp256k1_schnorrsig",
+    "has_secp256k1_extrakeys",
+    "has_secp256k1_recovery",
+    "has_secp256k1_ecdh",
 )

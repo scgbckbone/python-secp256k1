@@ -1,3 +1,4 @@
+import os
 import ctypes
 from typing import List
 from pysecp256k1.low_level import (
@@ -649,7 +650,9 @@ def ec_pubkey_tweak_mul(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_p
 # secp256k1_context_clone (and secp256k1_context_preallocated_create or
 # secp256k1_context_clone, resp.), and you may call this repeatedly afterwards.
 #
-def context_randomize(ctx: secp256k1_context, seed32: bytes) -> secp256k1_context:
+def context_randomize(ctx: secp256k1_context, seed32: bytes = None) -> secp256k1_context:
+    if seed32 is None:
+        seed32 = os.urandom(32)
     result = lib.secp256k1_context_randomize(ctx, seed32)
     if result != 1:
         assert_zero_return_code(result)
