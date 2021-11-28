@@ -2,7 +2,7 @@ import ctypes
 from typing import Optional
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, has_secp256k1_schnorrsig
+    assert_zero_return_code, has_secp256k1_schnorrsig, Libsecp256k1Exception
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_keypair, secp256k1_xonly_pubkey, COMPACT_SIGNATURE_SIZE, HASH32
@@ -51,7 +51,9 @@ def schnorrsig_sign(keypair: secp256k1_keypair, msghash32: bytes, aux_rand32: Op
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise RuntimeError('secp256k1_schnorrsig_sign returned failure')
+        raise Libsecp256k1Exception(
+            "secp256k1_schnorrsig_sign returned failure"
+        )
     return compact_sig.raw[:COMPACT_SIGNATURE_SIZE]
 
 
@@ -77,7 +79,9 @@ def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise RuntimeError('secp256k1_schnorrsig_sign_custom returned failure')
+        raise Libsecp256k1Exception(
+            "secp256k1_schnorrsig_sign_custom returned failure"
+        )
     return compact_sig.raw[:COMPACT_SIGNATURE_SIZE]
 
 

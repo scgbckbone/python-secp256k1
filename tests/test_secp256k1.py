@@ -2,8 +2,10 @@ import os
 import ctypes
 import unittest
 import hashlib
+from pysecp256k1.low_level import Libsecp256k1Exception
+from pysecp256k1.low_level.constants import secp256k1_pubkey
 from pysecp256k1 import (
-    ec_seckey_verify, ec_pubkey_create, secp256k1_pubkey, ec_pubkey_serialize,
+    ec_seckey_verify, ec_pubkey_create, ec_pubkey_serialize,
     ec_pubkey_parse, ec_seckey_negate, ec_pubkey_negate, ec_seckey_tweak_add,
     ec_pubkey_tweak_add, ec_pubkey_combine, ecdsa_verify, ecdsa_sign,
     ecdsa_signature_serialize_der, ecdsa_signature_parse_der, ecdsa_signature_normalize,
@@ -24,6 +26,7 @@ from pysecp256k1.recovery import (
     ecdsa_recoverable_signature_parse_compact,
     ecdsa_recoverable_signature_serialize_compact,
 )
+
 
 class TestPysecp256k1Base(unittest.TestCase):
     invalid_seckeys = [
@@ -51,7 +54,11 @@ class TestPysecp256k1Base(unittest.TestCase):
 
     def test_ec_seckey_verify(self):
         # INVALID KEY
-        for seckey in self.invalid_seckeys:
+        for seckey in self.invalid_seckeys[:2]:
+            with self.assertRaises(Libsecp256k1Exception):
+                ec_seckey_verify(seckey)
+
+        for seckey in self.invalid_seckeys[2:]:
             with self.assertRaises(ValueError):
                 ec_seckey_verify(seckey)
 
@@ -60,7 +67,11 @@ class TestPysecp256k1Base(unittest.TestCase):
             assert ec_seckey_verify(seckey) is None
 
     def test_ec_pubkey_create(self):
-        for seckey in self.invalid_seckeys:
+        for seckey in self.invalid_seckeys[:2]:
+            with self.assertRaises(Libsecp256k1Exception):
+                ec_pubkey_create(seckey)
+
+        for seckey in self.invalid_seckeys[2:]:
             with self.assertRaises(ValueError):
                 ec_pubkey_create(seckey)
 
@@ -110,19 +121,21 @@ class TestPysecp256k1Base(unittest.TestCase):
     def test_ec_seckey_tweak_add(self):
         valid_tweak = self.valid_seckeys[0]
         for seckey in self.invalid_seckeys[:1]:  # TODO github issue - ignoring zero tweak for now
-            with self.assertRaises(ValueError) as exc:
+            with self.assertRaises(Libsecp256k1Exception) as exc:
                 # invalid seckey
                 ec_seckey_tweak_add(seckey, valid_tweak)
             self.assertEqual(
                 str(exc.exception),
-                "Invalid arguments or invalid resulting key"
+                "arguments are invalid or the resulting secret key would be invalid"
+                " (only when the tweak is the negation of the secret key)"
             )
-            with self.assertRaises(ValueError) as exc:
+            with self.assertRaises(Libsecp256k1Exception) as exc:
                 # invalid tweak
                 ec_seckey_tweak_add(valid_tweak, seckey)
             self.assertEqual(
                 str(exc.exception),
-                "Invalid arguments or invalid resulting key"
+                "arguments are invalid or the resulting secret key would be invalid"
+                " (only when the tweak is the negation of the secret key)"
             )
         for seckey in self.invalid_seckeys[2:]:
             with self.assertRaises(ValueError) as exc:
@@ -154,11 +167,12 @@ class TestPysecp256k1Base(unittest.TestCase):
         # null tweak and curve order
         # TODO null triggers illegal callback
         for seckey in self.invalid_seckeys[:1]:
-            with self.assertRaises(ValueError) as exc:
+            with self.assertRaises(Libsecp256k1Exception) as exc:
                 ec_pubkey_tweak_add(raw_pubkey, tweak32=seckey)
             self.assertEqual(
                 str(exc.exception),
-                "Invalid arguments or invalid resulting key"
+                "arguments are invalid or the resulting public key would be invalid"
+                " (only when the tweak is the negation of the corresponding secret key)"
             )
         # invalid tweak length
         for seckey in self.invalid_seckeys[2:]:
@@ -229,11 +243,11 @@ class TestPysecp256k1Base(unittest.TestCase):
         #TODO create own module
         #and split the tests
         for seckey in self.invalid_seckeys[:2]:
-            with self.assertRaises(ValueError) as exc:
+            with self.assertRaises(Libsecp256k1Exception) as exc:
                 keypair_create(seckey)
             self.assertEqual(
                 str(exc.exception),
-                "Invalid seckey"
+                "secret key is invalid"
             )
         for seckey in self.invalid_seckeys[2:]:
             with self.assertRaises(ValueError) as exc:
@@ -303,36 +317,36 @@ class TestPysecp256k1Base(unittest.TestCase):
     # ec_pubkey_tweak_mul and ec_seckey_tweak_mul do raise for NULL tweak
     def test_pubkey_mul_null_tweak(self):
         tweak_null = 32 * b"\x00"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = self.valid_seckeys[0]
         assert ec_seckey_verify(seckey) is None  # this means seckey is valid
         raw_pubkey = ec_pubkey_create(seckey)
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(Libsecp256k1Exception) as exc:
             ec_pubkey_tweak_mul(raw_pubkey, tweak_null)  # this raises
         self.assertEqual(
             str(exc.exception),
-            "Invalid arguments or invalid resulting key"
+            "invalid arguments"
         )
 
     def test_seckey_mul_null_tweak(self):
         tweak_null = 32 * b"\x00"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = self.valid_seckeys[0]
         assert ec_seckey_verify(seckey) is None  # this means seckey is valid
-        with self.assertRaises(ValueError) as exc:
+        with self.assertRaises(Libsecp256k1Exception) as exc:
             ec_seckey_tweak_mul(seckey, tweak_null)  # this raises
         self.assertEqual(
             str(exc.exception),
-            "Invalid arguments"
+            "invalid arguments"
         )
 
     # ec_pubkey_tweak_add, ec_seckey_tweak_add, xonly_pubkey_tweak_add,
     # keypair_xonly_tweak_add do NOT raise for NULL tweak
     def test_pubkey_add_null_tweak(self):
         tweak_null = 32 * b"\x00"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = self.valid_seckeys[0]
         assert ec_seckey_verify(seckey) is None  # this means seckey is valid
@@ -342,7 +356,7 @@ class TestPysecp256k1Base(unittest.TestCase):
 
     def test_seckey_add_null_tweak(self):
         tweak_null = 32 * b"\x00"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = self.valid_seckeys[0]
         assert ec_seckey_verify(seckey) is None  # this means seckey is valid
@@ -351,7 +365,7 @@ class TestPysecp256k1Base(unittest.TestCase):
 
     def test_xonly_pubkey_add_null_tweak(self):
         tweak_null = 32 * b"\x00"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = self.valid_seckeys[0]
         assert ec_seckey_verify(seckey) is None  # this means seckey is valid
@@ -362,7 +376,7 @@ class TestPysecp256k1Base(unittest.TestCase):
 
     def test_keypair_xonly_add_null_tweak(self):
         tweak_null = 32 * b"\x00"
-        with self.assertRaises(ValueError):
+        with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = self.valid_seckeys[0]
         assert ec_seckey_verify(seckey) is None  # this means seckey is valid
@@ -399,7 +413,10 @@ class TestPysecp256k1Base(unittest.TestCase):
         msg = b"moremoremoremore"
         tag = b"TapLeaf"
         msg_hash = tagged_sha256(tag, msg)
-        for seckey in self.invalid_seckeys:
+        for seckey in self.invalid_seckeys[:2]:
+            with self.assertRaises(Libsecp256k1Exception):
+                ecdsa_sign_recoverable(seckey, msg_hash)
+        for seckey in self.invalid_seckeys[2:]:
             with self.assertRaises(ValueError):
                 ecdsa_sign_recoverable(seckey, msg_hash)
         for seckey in self.valid_seckeys:

@@ -3,7 +3,7 @@ import ctypes
 from typing import List
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code
+    assert_zero_return_code, Libsecp256k1Exception
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_context, secp256k1_pubkey, secp256k1_ecdsa_signature,
@@ -12,125 +12,6 @@ from pysecp256k1.low_level.constants import (
     SECP256K1_EC_UNCOMPRESSED, SECP256K1_EC_COMPRESSED, SECP256K1_CONTEXT_SIGN,
     SECP256K1_CONTEXT_VERIFY, SECKEY_SIZE, HASH32
 )
-
-
-# Create a secp256k1 context object (in dynamically allocated memory).
-#
-# This function uses malloc to allocate memory. It is guaranteed that malloc is
-# called at most once for every call of this function. If you need to avoid dynamic
-# memory allocation entirely, see the functions in secp256k1_preallocated.h.
-#
-# Returns: a newly created context object.
-# In:      flags: which parts of the context to initialize.
-#
-# See also secp256k1_context_randomize.
-#
-def context_create(flags: int) -> secp256k1_context:
-    if flags not in (SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY,
-                     (SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY)):
-        raise ValueError(
-            'Value for flags is unexpected. '
-            'Must be either SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY, '
-            'or a combination of these two'
-        )
-    ctx = lib.secp256k1_context_create(flags)
-    if ctx is None:
-        raise RuntimeError('secp256k1_context_create() returned None')
-    return ctx
-
-
-# Copy a secp256k1 context object (into dynamically allocated memory).
-#
-# This function uses malloc to allocate memory. It is guaranteed that malloc is
-# called at most once for every call of this function. If you need to avoid dynamic
-# memory allocation entirely, see the functions in secp256k1_preallocated.h.
-#
-# Returns: a newly created context object.
-# Args:    ctx: an existing context to copy
-#
-def context_clone(ctx: secp256k1_context) -> secp256k1_context:
-    pass
-
-
-# Destroy a secp256k1 context object (created in dynamically allocated memory).
-#
-# The context pointer may not be used afterwards.
-#
-# The context to destroy must have been created using secp256k1_context_create
-# or secp256k1_context_clone. If the context has instead been created using
-# secp256k1_context_preallocated_create or secp256k1_context_preallocated_clone, the
-# behaviour is undefined. In that case, secp256k1_context_preallocated_destroy must
-# be used instead.
-#
-# Args:   ctx: an existing context to destroy, constructed using
-#              secp256k1_context_create or secp256k1_context_clone
-#
-def context_destroy(ctx: secp256k1_context) -> None:
-    pass
-
-
-# Set a callback function to be called when an illegal argument is passed to
-# an API call. It will only trigger for violations that are mentioned
-# explicitly in the header.
-#
-# The philosophy is that these shouldn't be dealt with through a
-# specific return value, as calling code should not have branches to deal with
-# the case that this code itself is broken.
-#
-# On the other hand, during debug stage, one would want to be informed about
-# such mistakes, and the default (crashing) may be inadvisable.
-# When this callback is triggered, the API function called is guaranteed not
-# to cause a crash, though its return value and output arguments are
-# undefined.
-#
-# When this function has not been called (or called with fn==NULL), then the
-# default handler will be used. The library provides a default handler which
-# writes the message to stderr and calls abort. This default handler can be
-# replaced at link time if the preprocessor macro
-# USE_EXTERNAL_DEFAULT_CALLBACKS is defined, which is the case if the build
-# has been configured with --enable-external-default-callbacks. Then the
-# following two symbols must be provided to link against:
-#  - void secp256k1_default_illegal_callback_fn(const char* message, void* data);
-#  - void secp256k1_default_error_callback_fn(const char* message, void* data);
-# The library can call these default handlers even before a proper callback data
-# pointer could have been set using secp256k1_context_set_illegal_callback or
-# secp256k1_context_set_error_callback, e.g., when the creation of a context
-# fails. In this case, the corresponding default handler will be called with
-# the data pointer argument set to NULL.
-#
-# Args: ctx:  an existing context object.
-# In:   fun:  a pointer to a function to call when an illegal argument is
-#             passed to the API, taking a message and an opaque pointer.
-#             (NULL restores the default handler.)
-#       data: the opaque pointer to pass to fun above, must be NULL for the default handler.
-#
-# See also secp256k1_context_set_error_callback.
-#
-def context_set_illegal_callback():
-    pass
-
-
-# Set a callback function to be called when an internal consistency check
-# fails. The default is crashing.
-#
-# This can only trigger in case of a hardware failure, miscompilation,
-# memory corruption, serious bug in the library, or other error would can
-# otherwise result in undefined behaviour. It will not trigger due to mere
-# incorrect usage of the API (see secp256k1_context_set_illegal_callback
-# for that). After this callback returns, anything may happen, including
-# crashing.
-#
-# Args: ctx:  an existing context object.
-# In:   fun:  a pointer to a function to call when an internal error occurs,
-#             taking a message and an opaque pointer (NULL restores the
-#             default handler, see secp256k1_context_set_illegal_callback
-#             for details).
-#       data: the opaque pointer to pass to fun above, must be NULL for the default handler.
-#
-# See also secp256k1_context_set_illegal_callback.
-#
-def context_set_error_callback():
-    pass
 
 
 # Parse a variable-length public key into the pubkey object.
@@ -158,7 +39,7 @@ def ec_pubkey_parse(pubkey_ser: bytes) -> secp256k1_pubkey:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("public key could not be parsed or is invalid")
+        raise Libsecp256k1Exception("pubkey could not be parsed or is invalid")
     return pubkey
 
 
@@ -230,7 +111,7 @@ def ecdsa_signature_parse_compact(compact_sig: bytes) -> secp256k1_ecdsa_signatu
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("Signature could not be parsed")
+        raise Libsecp256k1Exception("signature could not be parsed")
     return sig
 
 
@@ -257,7 +138,7 @@ def ecdsa_signature_parse_der(der_sig: bytes) -> secp256k1_ecdsa_signature:
 
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("Signature could not be parsed")
+        raise Libsecp256k1Exception("signature could not be parsed")
     return sig
 
 
@@ -282,11 +163,9 @@ def ecdsa_signature_serialize_der(sig: secp256k1_ecdsa_signature) -> bytes:
         secp256k1_context_sign, der_sig, ctypes.byref(sig_size), sig)
     if result != 1:
         assert_zero_return_code(result)
-        raise RuntimeError(
-            'secp256k1_ecdsa_signature_parse_der returned failure'
+        raise Libsecp256k1Exception(
+            "not enough space was available to serialize signature"
         )
-    # secp256k1 creates signatures already in lower-S form, no further
-    # conversion needed.
     return der_sig.raw[:sig_size.value]
 
 
@@ -422,7 +301,9 @@ def ecdsa_sign(seckey: bytes, msghash32: bytes) -> secp256k1_ecdsa_signature:
     )
     if result != 1:
         assert (result == 0), f"Non-standard return code: {result}"
-        raise RuntimeError('secp256k1_ecdsa_sign returned failure')
+        raise Libsecp256k1Exception(
+            "nonce generation function failed, or the secret key was invalid"
+        )
     return sig
 
 
@@ -443,7 +324,7 @@ def ec_seckey_verify(seckey: bytes) -> None:
     result = lib.secp256k1_ec_seckey_verify(secp256k1_context_sign, seckey)
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError('Invalid private key data')
+        raise Libsecp256k1Exception("secret key is invalid")
 
 
 # Compute the public key for a secret key.
@@ -462,7 +343,7 @@ def ec_pubkey_create(seckey: bytes) -> secp256k1_pubkey:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError('Cannot construct public key from private key')
+        raise Libsecp256k1Exception("secret key is invalid")
     return pubkey
 
 
@@ -482,7 +363,7 @@ def ec_seckey_negate(seckey: bytes) -> bytes:
     result = lib.secp256k1_ec_seckey_negate(secp256k1_context_sign, negated_seckey)
     if result != 1:
         assert_zero_return_code(result)
-        raise RuntimeError('secp256k1_ec_seckey_negate returned failure')
+        raise Libsecp256k1Exception("secret key is invalid")
     return negated_seckey.raw[:SECKEY_SIZE]
 
 
@@ -522,7 +403,10 @@ def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("Invalid arguments or invalid resulting key")
+        raise Libsecp256k1Exception(
+            "arguments are invalid or the resulting secret key would be invalid"
+            " (only when the tweak is the negation of the secret key)"
+        )
     return tweaked_seckey.raw[:SECKEY_SIZE]
 
 
@@ -547,7 +431,10 @@ def ec_pubkey_tweak_add(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_p
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("Invalid arguments or invalid resulting key")
+        raise Libsecp256k1Exception(
+            "arguments are invalid or the resulting public key would be invalid"
+            " (only when the tweak is the negation of the corresponding secret key)"
+        )
     return pubkey
 
 
@@ -573,7 +460,7 @@ def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("Invalid arguments")
+        raise Libsecp256k1Exception("invalid arguments")
     return tweaked_seckey.raw[:SECKEY_SIZE]
 
 
@@ -596,7 +483,7 @@ def ec_pubkey_tweak_mul(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_p
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("Invalid arguments or invalid resulting key")
+        raise Libsecp256k1Exception("invalid arguments")
     return pubkey
 
 
@@ -631,7 +518,7 @@ def context_randomize(ctx: secp256k1_context, seed32: bytes = None) -> secp256k1
     result = lib.secp256k1_context_randomize(ctx, seed32)
     if result != 1:
         assert_zero_return_code(result)
-        raise RuntimeError("secp256k1 context randomization failed")
+        raise Libsecp256k1Exception("secp256k1 context randomization failed")
     return ctx
 
 
@@ -646,7 +533,7 @@ def context_randomize(ctx: secp256k1_context, seed32: bytes = None) -> secp256k1
 #
 def ec_pubkey_combine(pubkeys: List[secp256k1_pubkey]) -> secp256k1_pubkey:
     if len(pubkeys) <= 1:
-        raise ValueError('number of pubkeys to combine must be more than one')
+        raise ValueError("number of pubkeys to combine must be more than one")
     for p in pubkeys:
         enforce_type(p, secp256k1_pubkey, "pubkey")
     pubkey_arr = (ctypes.c_char_p * len(pubkeys))()
@@ -659,7 +546,7 @@ def ec_pubkey_combine(pubkeys: List[secp256k1_pubkey]) -> secp256k1_pubkey:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError('Combining the public keys failed')
+        raise Libsecp256k1Exception("the sum of the public keys is not valid")
 
     return combined_pubkey
 
@@ -689,16 +576,11 @@ def tagged_sha256(tag: bytes, msg: bytes) -> bytes:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("Invalid arguments")
+        raise Libsecp256k1Exception("invalid arguments")
     return hash32.raw[:HASH32]
 
 
 __all__ = (
-    "context_create",
-    "context_clone",
-    "context_destroy",
-    "context_set_illegal_callback",
-    "context_set_error_callback",
     "ec_pubkey_parse",
     "ec_pubkey_serialize",
     "ec_pubkey_cmp",

@@ -102,16 +102,11 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
     global has_secp256k1_ecdh
 
     _secp256k1.secp256k1_context_create.restype = ctypes.c_void_p
-    _secp256k1.secp256k1_context_create.errcheck = _check_ressecp256k1_void_p  # type: ignore
+    _secp256k1.secp256k1_context_create.errcheck = _check_ressecp256k1_void_p
     _secp256k1.secp256k1_context_create.argtypes = [ctypes.c_uint]
-
-    # context clone
-    # context destroy
 
     _secp256k1.secp256k1_context_set_illegal_callback.restype = None
     _secp256k1.secp256k1_context_set_illegal_callback.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
-
-    # context set error callback
 
     _secp256k1.secp256k1_ec_pubkey_parse.restype = ctypes.c_int
     _secp256k1.secp256k1_ec_pubkey_parse.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
@@ -315,6 +310,7 @@ secp256k1_context_verify = secp256k1_create_and_init_context(
 
 __all__ = (
     "lib",
+    "Libsecp256k1Exception",
     "secp256k1_context_sign",
     "secp256k1_context_verify",
     "has_secp256k1_schnorrsig",

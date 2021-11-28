@@ -2,7 +2,7 @@ import ctypes
 from typing import Tuple
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, has_secp256k1_extrakeys
+    assert_zero_return_code, has_secp256k1_extrakeys, Libsecp256k1Exception
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_pubkey, secp256k1_xonly_pubkey, secp256k1_keypair,
@@ -36,7 +36,9 @@ def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> secp256k1_xonly_pubkey:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise RuntimeError('secp256k1_xonly_pubkey_parse returned failure')
+        raise Libsecp256k1Exception(
+            "public key could not be parsed or is invalid"
+        )
     return xonly_pubkey
 
 
@@ -51,12 +53,9 @@ def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> secp256k1_xonly_pubkey:
 def xonly_pubkey_serialize(xonly_pubkey: secp256k1_xonly_pubkey) -> bytes:
     enforce_type(xonly_pubkey, secp256k1_xonly_pubkey, "xonly_pubkey")
     xonly_pubkey_ser = ctypes.create_string_buffer(XONLY_PUBKEY_SIZE)
-    result = lib.secp256k1_xonly_pubkey_serialize(
+    lib.secp256k1_xonly_pubkey_serialize(
         secp256k1_context_sign, xonly_pubkey_ser, xonly_pubkey
     )
-    if result != 1:
-        assert_zero_return_code(result)
-        raise RuntimeError('secp256k1_xonly_pubkey_serialize returned failure')
     return xonly_pubkey_ser.raw[:XONLY_PUBKEY_SIZE]
 
 
@@ -101,7 +100,7 @@ def xonly_pubkey_from_pubkey(pubkey: secp256k1_pubkey) -> Tuple[secp256k1_xonly_
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise RuntimeError("secp256k1_xonly_pubkey_from_pubkey failed")
+        raise Libsecp256k1Exception("failed to convert pubkey")
     return xonly_pubkey, pk_parity.value
 
 
@@ -134,8 +133,11 @@ def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes)
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("arguments areinvalid or the resulting public key "
-                         "would be invalid")
+        raise Libsecp256k1Exception(
+            "0 if the arguments are invalid or the resulting public key "
+            "would be invalid (only when the tweak is the negation "
+            "of the corresponding secret key)"
+        )
     return tweaked_xonly_pubkey
 
 
@@ -170,9 +172,6 @@ def xonly_pubkey_tweak_add_check(tweaked_pubkey32: bytes, tweaked_pk_parity: int
         secp256k1_context_verify, tweaked_pubkey32, tweaked_pk_parity,
         internal_pubkey, tweak32
     )
-    # TODO can return just bool(result) - is it necessary to check for status
-    # codes everywhere - is it even possible that secp will return anything
-    # else than 0,1 ?
     if result != 1:
         assert_zero_return_code(result)
         return False
@@ -196,7 +195,7 @@ def keypair_create(seckey: bytes) -> secp256k1_keypair:
 
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("Invalid seckey")
+        raise Libsecp256k1Exception("secret key is invalid")
     return keypair
 
 
@@ -213,7 +212,7 @@ def keypair_sec(keypair: secp256k1_keypair) -> bytes:
     result = lib.secp256k1_keypair_sec(secp256k1_context_verify, seckey, keypair)
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("arguments are invalid")
+        raise Libsecp256k1Exception("invalid arguments")
     return seckey.raw[:SECKEY_SIZE]
 
 
@@ -231,7 +230,7 @@ def keypair_pub(keypair: secp256k1_keypair) -> secp256k1_pubkey:
     result = lib.secp256k1_keypair_pub(secp256k1_context_verify, pubkey, keypair)
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("arguments are invalid")
+        raise Libsecp256k1Exception("invalid arguments")
     return pubkey
 
 
@@ -260,7 +259,7 @@ def keypair_xonly_pub(keypair: secp256k1_keypair) -> Tuple[secp256k1_xonly_pubke
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("arguments are invalid")
+        raise Libsecp256k1Exception("invalid arguments")
     return xonly_pubkey, pk_parity.value
 
 
@@ -290,7 +289,7 @@ def keypair_xonly_tweak_add(keypair: secp256k1_keypair, tweak: bytes):
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("arguments are invalid")
+        raise Libsecp256k1Exception("invalid arguments")
     return keypair
 
 

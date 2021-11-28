@@ -1,7 +1,7 @@
 import ctypes
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, has_secp256k1_recovery
+    assert_zero_return_code, has_secp256k1_recovery, Libsecp256k1Exception
 )
 from pysecp256k1.low_level.constants import (
     COMPACT_SIGNATURE_SIZE, INTERNAL_RECOVERABLE_SIGNATURE_SIZE,
@@ -33,7 +33,7 @@ def ecdsa_recoverable_signature_parse_compact(compact_sig: bytes, rec_id: int) -
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("signature could not be parsed")
+        raise Libsecp256k1Exception("signature could not be parsed")
     return rec_sig
 
 
@@ -66,12 +66,9 @@ def ecdsa_recoverable_signature_serialize_compact(rec_sig: secp256k1_ecdsa_recov
     rec_id = ctypes.c_int()
     rec_id.value = 0
     output = ctypes.create_string_buffer(COMPACT_SIGNATURE_SIZE)
-    result = lib.secp256k1_ecdsa_recoverable_signature_serialize_compact(
+    lib.secp256k1_ecdsa_recoverable_signature_serialize_compact(
         secp256k1_context_sign, output, ctypes.byref(rec_id), rec_sig
     )
-    if result != 1:
-        assert_zero_return_code(result)
-        raise RuntimeError('secp256k1_ecdsa_recoverable_signature_serialize_compact returned failure')
     return output.raw[:COMPACT_SIGNATURE_SIZE], rec_id.value
 
 
@@ -97,7 +94,9 @@ def ecdsa_sign_recoverable(seckey: bytes, msghash32: bytes) -> secp256k1_ecdsa_r
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise ValueError("the nonce generation function failed, or the secret key was invalid")
+        raise Libsecp256k1Exception(
+            "nonce generation function failed, or the secret key was invalid"
+        )
     return rec_sig
 
 
@@ -119,7 +118,7 @@ def ecdsa_recover(rec_sig: secp256k1_ecdsa_recoverable_signature, msghash32: byt
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise RuntimeError("ecdsa_recover returned failure")
+        raise Libsecp256k1Exception("failed to recover pubkey")
     return pubkey
 
 
