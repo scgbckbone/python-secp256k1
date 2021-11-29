@@ -45,9 +45,6 @@ class Libsecp256k1Exception(EnvironmentError):
     pass
 
 
-_ctypes_functype = getattr(ctypes, 'WINFUNCTYPE', getattr(ctypes, 'CFUNCTYPE'))
-
-
 class ContextVarsCompat:
     _context_vars_storage__: Dict[str, 'ContextVar[Any]']
 
@@ -78,9 +75,19 @@ class Secp256k1LastErrorContextVar(ContextVarsCompat):
 _secp256k1_error_storage = Secp256k1LastErrorContextVar(last_error=None)
 
 
-@_ctypes_functype(ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p)
-def _secp256k1_illegal_callback_fn(error_str, _data):  # type: ignore
-    _secp256k1_error_storage.last_error = {'code': -2, 'type': 'illegal_argument', 'message': str(error_str)}
+_ctypes_functype = getattr(ctypes, 'WINFUNCTYPE', getattr(ctypes, 'CFUNCTYPE'))
+callback_func_type = _ctypes_functype(
+    ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p
+)
+
+
+@callback_func_type
+def _secp256k1_illegal_callback_fn(error_str, _data):
+    _secp256k1_error_storage.last_error = {
+        'code': -2,
+        'type': 'illegal_argument',
+        'message': str(error_str)
+    }
 
 
 def _check_ressecp256k1_void_p(val: int, _func: FunctionType,
@@ -105,8 +112,18 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
     _secp256k1.secp256k1_context_create.errcheck = _check_ressecp256k1_void_p
     _secp256k1.secp256k1_context_create.argtypes = [ctypes.c_uint]
 
+    _secp256k1.secp256k1_context_clone.restype = ctypes.c_void_p
+    _secp256k1.secp256k1_context_clone.errcheck = _check_ressecp256k1_void_p
+    _secp256k1.secp256k1_context_clone.argtypes = [ctypes.c_void_p]
+
+    _secp256k1.secp256k1_context_destroy.restype = None
+    _secp256k1.secp256k1_context_destroy.argtypes = [ctypes.c_void_p]
+
     _secp256k1.secp256k1_context_set_illegal_callback.restype = None
     _secp256k1.secp256k1_context_set_illegal_callback.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
+
+    _secp256k1.secp256k1_context_set_error_callback.restype = None
+    _secp256k1.secp256k1_context_set_error_callback.argtypes = [ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p]
 
     _secp256k1.secp256k1_ec_pubkey_parse.restype = ctypes.c_int
     _secp256k1.secp256k1_ec_pubkey_parse.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_char_p, ctypes.c_size_t]
@@ -311,6 +328,7 @@ secp256k1_context_verify = secp256k1_create_and_init_context(
 __all__ = (
     "lib",
     "Libsecp256k1Exception",
+    "callback_func_type",
     "secp256k1_context_sign",
     "secp256k1_context_verify",
     "has_secp256k1_schnorrsig",
