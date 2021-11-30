@@ -6,6 +6,7 @@ from pysecp256k1 import (
     ec_pubkey_create,
     ec_seckey_verify,
     ec_seckey_tweak_add,
+    ec_seckey_negate,
 )
 from pysecp256k1.extrakeys import (
     keypair_create,
@@ -62,7 +63,9 @@ class TestPysecp256k1Extrakeys(unittest.TestCase):
             self.assertTrue(
                 xonly_pubkey_tweak_add_check(ser_tweaked_xonly_pub, parity2, xonly_pub, valid_tweak)
             )
-            tweaked_seckey = ec_seckey_tweak_add(seckey, valid_tweak)
-
-            # shouldn't below work ? it does not... meh
-            #assert tweaked_seckey == keypair_sec(tweaked_keypair)
+            # https://github.com/bitcoin-core/secp256k1/issues/1021
+            if parity == 0:
+                tweaked_seckey = ec_seckey_tweak_add(seckey, valid_tweak)
+            else:
+                tweaked_seckey = ec_seckey_tweak_add(ec_seckey_negate(seckey), valid_tweak)
+            assert tweaked_seckey == keypair_sec(tweaked_keypair)
