@@ -1,8 +1,8 @@
 import unittest
 import hashlib
-from tests import valid_seckeys, invalid_seckeys
+from tests.data import valid_seckeys, invalid_seckeys
+from pysecp256k1.low_level import Libsecp256k1Exception
 from pysecp256k1 import (
-    Libsecp256k1Exception,
     ec_pubkey_create,
     ec_seckey_verify,
     ec_seckey_tweak_add,

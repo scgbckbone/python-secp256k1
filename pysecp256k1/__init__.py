@@ -1,9 +1,10 @@
 import os
 import ctypes
-from typing import List
+from typing import List, Optional
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, Libsecp256k1Exception, callback_func_type
+    assert_zero_return_code, Libsecp256k1Exception, callback_func_type,
+    enforce_length
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_context, secp256k1_pubkey, secp256k1_ecdsa_signature,
@@ -25,6 +26,7 @@ from pysecp256k1.low_level.constants import (
 #
 # See also secp256k1_context_randomize.
 #
+@enforce_type
 def context_create(flags: int) -> secp256k1_context:
     if flags not in (SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY,
                      (SECP256K1_CONTEXT_SIGN | SECP256K1_CONTEXT_VERIFY)):
@@ -49,8 +51,8 @@ def context_create(flags: int) -> secp256k1_context:
 # Returns: a newly created context object.
 # Args:    ctx: an existing context to copy
 #
+@enforce_type
 def context_clone(ctx: secp256k1_context) -> secp256k1_context:
-    enforce_type(ctx, secp256k1_context, "ctx")
     cloned_ctx = lib.secp256k1_context_clone(ctx)
     if cloned_ctx is None:
         raise Libsecp256k1Exception("secp256k1_context_clone returned None")
@@ -70,8 +72,8 @@ def context_clone(ctx: secp256k1_context) -> secp256k1_context:
 # Args:   ctx: an existing context to destroy, constructed using
 #              secp256k1_context_create or secp256k1_context_clone
 #
+@enforce_type
 def context_destroy(ctx: secp256k1_context) -> None:
-    enforce_type(ctx, secp256k1_context, "ctx")
     lib.secp256k1_context_destroy(ctx)
     del ctx
 
@@ -113,9 +115,8 @@ def context_destroy(ctx: secp256k1_context) -> None:
 #
 # See also secp256k1_context_set_error_callback.
 #
+@enforce_type
 def context_set_illegal_callback(ctx: secp256k1_context, f: callback_func_type, data) -> None:
-    enforce_type(ctx, secp256k1_context, "ctx")
-    enforce_type(f, callback_func_type, "f")
     lib.secp256k1_context_set_illegal_callback(ctx, f, data)
 
 
@@ -138,9 +139,8 @@ def context_set_illegal_callback(ctx: secp256k1_context, f: callback_func_type, 
 #
 # See also secp256k1_context_set_illegal_callback.
 #
+@enforce_type
 def context_set_error_callback(ctx: secp256k1_context, f: callback_func_type, data) -> None:
-    enforce_type(ctx, secp256k1_context, "ctx")
-    enforce_type(f, callback_func_type, "f")
     lib.secp256k1_context_set_error_callback(ctx, f, data)
 
 
@@ -158,9 +158,10 @@ def context_set_error_callback(ctx: secp256k1_context, f: callback_func_type, da
 # 0x03), uncompressed (65 bytes, header byte 0x04), or hybrid (65 bytes, header
 # byte 0x06 or 0x07) format public keys.
 #
+@enforce_type
 def ec_pubkey_parse(pubkey_ser: bytes) -> secp256k1_pubkey:
-    enforce_type(
-        pubkey_ser, bytes, "pubkey_ser",
+    enforce_length(
+        pubkey_ser, "pubkey_ser",
         length=[PUBLIC_KEY_SIZE, COMPRESSED_PUBLIC_KEY_SIZE]
     )
     pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
@@ -188,8 +189,8 @@ def ec_pubkey_parse(pubkey_ser: bytes) -> secp256k1_pubkey:
 #         flags:      SECP256K1_EC_COMPRESSED if serialization should be in
 #                     compressed format, otherwise SECP256K1_EC_UNCOMPRESSED.
 #
+@enforce_type
 def ec_pubkey_serialize(pubkey: secp256k1_pubkey, compressed: bool = True) -> bytes:
-    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
     pub_size = ctypes.c_size_t()
     pub_size.value = COMPRESSED_PUBLIC_KEY_SIZE if compressed else PUBLIC_KEY_SIZE
     pubkey_ser = ctypes.create_string_buffer(pub_size.value)
@@ -210,9 +211,8 @@ def ec_pubkey_serialize(pubkey: secp256k1_pubkey, compressed: bool = True) -> by
 # In:   pubkey1:  first public key to compare
 #       pubkey2:  second public key to compare
 #
+@enforce_type
 def ec_pubkey_cmp(pubkey0: secp256k1_pubkey, pubkey1: secp256k1_pubkey) -> int:
-    enforce_type(pubkey0, secp256k1_pubkey, "pubkey0")
-    enforce_type(pubkey1, secp256k1_pubkey, "pubkey1")
     return lib.secp256k1_ec_pubkey_cmp(
         secp256k1_context_sign, pubkey0, pubkey1
     )
@@ -233,8 +233,9 @@ def ec_pubkey_cmp(pubkey0: secp256k1_pubkey, pubkey1: secp256k1_pubkey) -> int:
 # S are zero, the resulting sig value is guaranteed to fail validation for any
 # message and public key.
 #
+@enforce_type
 def ecdsa_signature_parse_compact(compact_sig: bytes) -> secp256k1_ecdsa_signature:
-    enforce_type(compact_sig, bytes, "compact_sig", length=COMPACT_SIGNATURE_SIZE)
+    enforce_length(compact_sig, "compact_sig", length=COMPACT_SIGNATURE_SIZE)
     sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_SIZE)
     result = lib.secp256k1_ecdsa_signature_parse_compact(
         secp256k1_context_verify, sig, compact_sig
@@ -260,8 +261,8 @@ def ecdsa_signature_parse_compact(compact_sig: bytes) -> secp256k1_ecdsa_signatu
 # encoded numbers are out of range, signature validation with it is
 # guaranteed to fail for every message and public key.
 #
+@enforce_type
 def ecdsa_signature_parse_der(der_sig: bytes) -> secp256k1_ecdsa_signature:
-    enforce_type(der_sig, bytes, "der_sig")
     sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_SIZE)
     result = lib.secp256k1_ecdsa_signature_parse_der(
         secp256k1_context_verify, sig, der_sig, len(der_sig))
@@ -283,8 +284,8 @@ def ecdsa_signature_parse_der(der_sig: bytes) -> secp256k1_ecdsa_signature:
 #                    if 0 was returned).
 # In:     sig:       a pointer to an initialized signature object
 #
+@enforce_type
 def ecdsa_signature_serialize_der(sig: secp256k1_ecdsa_signature) -> bytes:
-    enforce_type(sig, secp256k1_ecdsa_signature, "sig")
     sig_size = ctypes.c_size_t()
     sig_size.value = DER_SIGNATURE_SIZE
     der_sig = ctypes.create_string_buffer(DER_SIGNATURE_SIZE)
@@ -308,8 +309,8 @@ def ecdsa_signature_serialize_der(sig: secp256k1_ecdsa_signature) -> bytes:
 #
 # See secp256k1_ecdsa_signature_parse_compact for details about the encoding.
 #
+@enforce_type
 def ecdsa_signature_serialize_compact(sig: secp256k1_ecdsa_signature) -> bytes:
-    enforce_type(sig, secp256k1_ecdsa_signature, "sig")
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_SIZE)
     lib.secp256k1_ecdsa_signature_serialize_compact(
         secp256k1_context_verify, compact_sig, sig
@@ -342,10 +343,9 @@ def ecdsa_signature_serialize_compact(sig: secp256k1_ecdsa_signature) -> bytes:
 #
 # For details, see the comments for that function.
 #
+@enforce_type
 def ecdsa_verify(sig: secp256k1_ecdsa_signature, pubkey: secp256k1_pubkey, msghash32: bytes) -> bool:
-    enforce_type(sig, secp256k1_ecdsa_signature, "sig")
-    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
-    enforce_type(msghash32, bytes, "msghash32", length=HASH32)
+    enforce_length(msghash32, "msghash32", length=HASH32)
     result = lib.secp256k1_ecdsa_verify(
         secp256k1_context_verify, sig, msghash32, pubkey
     )
@@ -396,8 +396,8 @@ def ecdsa_verify(sig: secp256k1_ecdsa_signature, pubkey: secp256k1_pubkey, msgha
 # signatures come from a system that cannot enforce this property,
 # secp256k1_ecdsa_signature_normalize must be called before verification.
 #
+@enforce_type
 def ecdsa_signature_normalize(sig: secp256k1_ecdsa_signature) -> secp256k1_ecdsa_signature:
-    enforce_type(sig, secp256k1_ecdsa_signature, "sig")
     lib.secp256k1_ecdsa_signature_normalize(
         secp256k1_context_verify, sig, sig
     )
@@ -422,9 +422,10 @@ def ecdsa_signature_normalize(sig: secp256k1_ecdsa_signature) -> secp256k1_ecdsa
 # The created signature is always in lower-S form. See
 # secp256k1_ecdsa_signature_normalize for more details.
 #
+@enforce_type
 def ecdsa_sign(seckey: bytes, msghash32: bytes) -> secp256k1_ecdsa_signature:
-    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
-    enforce_type(msghash32, bytes, "msghash32", length=HASH32)
+    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
+    enforce_length(msghash32, "msghash32", length=HASH32)
     sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_SIZE)
     result = lib.secp256k1_ecdsa_sign(
         secp256k1_context_sign, sig, msghash32, seckey, None, None
@@ -449,8 +450,9 @@ def ecdsa_sign(seckey: bytes, msghash32: bytes) -> secp256k1_ecdsa_signature:
 # Args:    ctx: pointer to a context object.
 # In:      seckey: pointer to a 32-byte secret key.
 #
+@enforce_type
 def ec_seckey_verify(seckey: bytes) -> None:
-    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
+    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
     result = lib.secp256k1_ec_seckey_verify(secp256k1_context_sign, seckey)
     if result != 1:
         assert_zero_return_code(result)
@@ -465,8 +467,9 @@ def ec_seckey_verify(seckey: bytes) -> None:
 # Out:     pubkey: pointer to the created public key.
 # In:      seckey: pointer to a 32-byte secret key.
 #
+@enforce_type
 def ec_pubkey_create(seckey: bytes) -> secp256k1_pubkey:
-    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
+    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
     pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
     result = lib.secp256k1_ec_pubkey_create(
         secp256k1_context_sign, pubkey, seckey
@@ -487,8 +490,9 @@ def ec_pubkey_create(seckey: bytes) -> secp256k1_pubkey:
 #                 secp256k1_ec_seckey_verify, this function returns 0 and
 #                 seckey will be set to some unspecified value.
 #
+@enforce_type
 def ec_seckey_negate(seckey: bytes) -> bytes:
-    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
+    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
     negated_seckey = ctypes.create_string_buffer(seckey)
     result = lib.secp256k1_ec_seckey_negate(secp256k1_context_sign, negated_seckey)
     if result != 1:
@@ -503,8 +507,8 @@ def ec_seckey_negate(seckey: bytes) -> bytes:
 # Args:   ctx:        pointer to a context object
 # In/Out: pubkey:     pointer to the public key to be negated.
 #
+@enforce_type
 def ec_pubkey_negate(pubkey: secp256k1_pubkey) -> secp256k1_pubkey:
-    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
     lib.secp256k1_ec_pubkey_negate(secp256k1_context_verify, pubkey)
     return pubkey
 
@@ -524,9 +528,10 @@ def ec_pubkey_negate(pubkey: secp256k1_pubkey) -> secp256k1_pubkey:
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
+@enforce_type
 def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
-    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
-    enforce_type(tweak32, bytes, "tweak32", length=HASH32)
+    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
+    enforce_length(tweak32, "tweak32", length=HASH32)
     tweaked_seckey = ctypes.create_string_buffer(seckey)
     result = lib.secp256k1_ec_seckey_tweak_add(
         secp256k1_context_sign, tweaked_seckey, tweak32
@@ -553,9 +558,9 @@ def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
+@enforce_type
 def ec_pubkey_tweak_add(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_pubkey:
-    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
-    enforce_type(tweak32, bytes, "tweak32", length=HASH32)
+    enforce_length(tweak32, "tweak32", length=HASH32)
     result = lib.secp256k1_ec_pubkey_tweak_add(
         secp256k1_context_verify, pubkey, tweak32
     )
@@ -581,9 +586,10 @@ def ec_pubkey_tweak_add(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_p
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
+@enforce_type
 def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
-    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
-    enforce_type(tweak32, bytes, "tweak32", length=HASH32)
+    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
+    enforce_length(tweak32, "tweak32", length=HASH32)
     tweaked_seckey = ctypes.create_string_buffer(seckey)
     result = lib.secp256k1_ec_seckey_tweak_mul(
         secp256k1_context_sign, tweaked_seckey, tweak32
@@ -605,9 +611,9 @@ def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
 #                 uniformly random 32-byte arrays the chance of being invalid
 #                 is negligible (around 1 in 2^128).
 #
+@enforce_type
 def ec_pubkey_tweak_mul(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_pubkey:
-    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
-    enforce_type(tweak32, bytes, "tweak32", length=HASH32)
+    enforce_length(tweak32, "tweak32", length=HASH32)
     result = lib.secp256k1_ec_pubkey_tweak_mul(
         secp256k1_context_verify, pubkey, tweak32
     )
@@ -642,7 +648,8 @@ def ec_pubkey_tweak_mul(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_p
 # secp256k1_context_clone (and secp256k1_context_preallocated_create or
 # secp256k1_context_clone, resp.), and you may call this repeatedly afterwards.
 #
-def context_randomize(ctx: secp256k1_context, seed32: bytes = None) -> None:
+@enforce_type
+def context_randomize(ctx: secp256k1_context, seed32: Optional[bytes] = None) -> None:
     if seed32 is None:
         seed32 = os.urandom(32)
     result = lib.secp256k1_context_randomize(ctx, seed32)
@@ -660,11 +667,10 @@ def context_randomize(ctx: secp256k1_context, seed32: bytes = None) -> None:
 # In:    ins: pointer to array of pointers to public keys.
 #        n:   the number of public keys to add together (must be at least 1).
 #
+@enforce_type
 def ec_pubkey_combine(pubkeys: List[secp256k1_pubkey]) -> secp256k1_pubkey:
     if len(pubkeys) <= 1:
         raise ValueError("number of pubkeys to combine must be more than one")
-    for p in pubkeys:
-        enforce_type(p, secp256k1_pubkey, "pubkey")
     pubkey_arr = (ctypes.c_char_p * len(pubkeys))()
     for i, p in enumerate(pubkeys):
         pubkey_arr[i] = p.raw
@@ -696,9 +702,8 @@ def ec_pubkey_combine(pubkeys: List[secp256k1_pubkey]) -> secp256k1_pubkey:
 #          msg: pointer to an array containing the message
 #       msglen: length of the message array
 #
+@enforce_type
 def tagged_sha256(tag: bytes, msg: bytes) -> bytes:
-    enforce_type(tag, bytes, "tag")
-    enforce_type(msg, bytes, "msg")
     hash32 = ctypes.create_string_buffer(HASH32)
     result = lib.secp256k1_tagged_sha256(
         secp256k1_context_verify, hash32, tag, len(tag), msg, len(msg)

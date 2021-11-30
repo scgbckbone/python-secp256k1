@@ -1,7 +1,7 @@
 import ctypes
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, enforce_type, assert_zero_return_code,
-    has_secp256k1_ecdh, Libsecp256k1Exception
+    has_secp256k1_ecdh, Libsecp256k1Exception, enforce_length
 )
 from pysecp256k1.low_level.constants import secp256k1_pubkey, SECKEY_SIZE
 
@@ -26,9 +26,9 @@ if not has_secp256k1_ecdh:
 #          data:       arbitrary data pointer that is passed through to hashfp
 #                      (can be NULL for secp256k1_ecdh_hash_function_sha256).
 #
+@enforce_type
 def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
-    enforce_type(seckey, bytes, "seckey", length=SECKEY_SIZE)
-    enforce_type(pubkey, secp256k1_pubkey, "pubkey")
+    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
     output = ctypes.create_string_buffer(SECKEY_SIZE)
     result = lib.secp256k1_ecdh(
         secp256k1_context_sign, output, pubkey, seckey, None, None

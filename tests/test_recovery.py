@@ -1,7 +1,7 @@
 import unittest
-from tests import invalid_seckeys, valid_seckeys
+from tests.data import invalid_seckeys, valid_seckeys
+from pysecp256k1.low_level import Libsecp256k1Exception
 from pysecp256k1 import (
-    Libsecp256k1Exception,
     ec_pubkey_create,
     ecdsa_sign,
     tagged_sha256,

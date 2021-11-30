@@ -2,7 +2,8 @@ import ctypes
 from typing import Optional
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, has_secp256k1_schnorrsig, Libsecp256k1Exception
+    assert_zero_return_code, has_secp256k1_schnorrsig, Libsecp256k1Exception,
+    enforce_length
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_keypair, secp256k1_xonly_pubkey, COMPACT_SIGNATURE_SIZE, HASH32
@@ -40,14 +41,14 @@ if not has_secp256k1_schnorrsig:
 #               BIP-340 "Default Signing" for a full explanation of this
 #               argument and for guidance if randomness is expensive.
 #
-def schnorrsig_sign(keypair: secp256k1_keypair, msghash32: bytes, aux_rand32: Optional[bytes] = None) -> bytes:
-    enforce_type(keypair, secp256k1_keypair, "keypair")
-    enforce_type(msghash32, bytes, "msghash32", length=HASH32)
+@enforce_type
+def schnorrsig_sign(keypair: secp256k1_keypair, msg32: bytes, aux_rand32: Optional[bytes] = None) -> bytes:
+    enforce_length(msg32, "msg32", length=HASH32)
     if aux_rand32 is not None:
-        enforce_type(aux_rand32, bytes, "aux_rand32", length=HASH32)
+        enforce_length(aux_rand32, "aux_rand32", length=HASH32)
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_SIZE)
     result = lib.secp256k1_schnorrsig_sign(
-        secp256k1_context_sign, compact_sig, msghash32, keypair, aux_rand32
+        secp256k1_context_sign, compact_sig, msg32, keypair, aux_rand32
     )
     if result != 1:
         assert_zero_return_code(result)
@@ -70,9 +71,8 @@ def schnorrsig_sign(keypair: secp256k1_keypair, msghash32: bytes, aux_rand32: Op
 #      msglen: length of the message
 # extraparams: pointer to a extraparams object (can be NULL)
 #
+@enforce_type
 def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
-    enforce_type(keypair, secp256k1_keypair, "keypair")
-    enforce_type(msg, bytes, "msg")
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_SIZE)
     result = lib.secp256k1_schnorrsig_sign_custom(
         secp256k1_context_sign, compact_sig, msg, len(msg), keypair, None
@@ -95,10 +95,9 @@ def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
 #       msglen: length of the message
 #       pubkey: pointer to an x-only public key to verify with (cannot be NULL)
 #
+@enforce_type
 def schnorrsig_verify(compact_sig: bytes, msg: bytes, xonly_pubkey: secp256k1_xonly_pubkey) -> bool:
-    enforce_type(compact_sig, bytes, "compact_sig", length=COMPACT_SIGNATURE_SIZE)
-    enforce_type(msg, bytes, "msg")
-    enforce_type(xonly_pubkey, secp256k1_xonly_pubkey, "xonly_pubkey")
+    enforce_length(compact_sig, "compact_sig", length=COMPACT_SIGNATURE_SIZE)
     result = lib.secp256k1_schnorrsig_verify(
         secp256k1_context_verify, compact_sig, msg, len(msg), xonly_pubkey
     )

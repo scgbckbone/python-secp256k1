@@ -1,7 +1,7 @@
 import ctypes
 import unittest
 import hashlib
-from tests import invalid_seckeys, valid_seckeys, serialized_pubkeys_compressed, serialized_pubkeys
+from tests.data import invalid_seckeys, valid_seckeys, serialized_pubkeys_compressed, serialized_pubkeys
 from pysecp256k1.low_level import Libsecp256k1Exception
 from pysecp256k1.low_level.constants import secp256k1_pubkey
 from pysecp256k1 import (
