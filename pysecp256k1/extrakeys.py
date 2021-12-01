@@ -286,6 +286,7 @@ def keypair_xonly_pub(keypair: secp256k1_keypair) -> Tuple[secp256k1_xonly_pubke
 #
 @enforce_type
 def keypair_xonly_tweak_add(keypair: secp256k1_keypair, tweak32: bytes):
+    enforce_length(tweak32, "tweak32", length=SECKEY_SIZE)
     result = lib.secp256k1_keypair_xonly_tweak_add(
         secp256k1_context_verify, keypair, tweak32
     )

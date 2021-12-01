@@ -16,7 +16,14 @@ invalid_pubkey_length = [
     ctypes.create_string_buffer(65),  # too long
 ]
 
-invalid_signaure_length = invalid_pubkey_length  # both must be 64 bytes
+invalid_signature_length = invalid_pubkey_length  # both must be 64 bytes
+
+invalid_compact_sig_length = [
+    63 * b"\x01",
+    65 * b"\x01",
+]
+
+invalid_xonly_pubkey_length = invalid_seckey_length
 
 invalid_keypair_length = [
     ctypes.create_string_buffer(95),  # too short
@@ -45,13 +52,14 @@ serialized_pubkeys = [
 ]
 
 not_bytes = [
-    78,
-    48.12,
     None,
+    48.12,
     [1, 2],
     {"seckey": b"\x00"},
     {1, 2, 3, 4, 5},
     (None, None, None),
     bytearray([20, 58]),
+    78,
 ]
 not_c_char_array = not_bytes + [b"\x01" * 32]
+not_int = not_bytes[:-1] + [b"\x01" * 32]

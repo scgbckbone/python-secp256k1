@@ -29,19 +29,19 @@ def enforce_type(func):
             if typing.get_origin(correct_type) == list:
                 if not isinstance(arg, list):
                     raise ValueError(f"'{arg_name}' must be of type list")
+                _args = typing.get_args(correct_type)
                 for element in arg:
-                    if not isinstance(element, typing.get_args(correct_type)):
+                    if not isinstance(element, _args):
                         raise ValueError(
                             f"Elements of '{arg_name}' must be of type "
-                            f"{typing.get_args(correct_type)}"
+                            f"{_args}"
                         )
             else:
                 if typing.get_origin(correct_type) == typing.Union:
                     correct_type = typing.get_args(correct_type)
                 if not isinstance(arg, correct_type):
                     raise ValueError(
-                        f"'{arg_name}' must be of type "
-                        f"{type_hints[arg_name].__qualname__}"
+                        f"'{arg_name}' must be of type {correct_type}"
                     )
 
         result = func(*args, **kwargs)
@@ -70,7 +70,7 @@ def enforce_length(value, name, length):
     else:
         # expect this to be iterable
         if len(value) not in length:
-            raise ValueError(f" Length of '{name}' must be one of {length}")
+            raise ValueError(f"Length of '{name}' must be one of {length}")
 
 
 __all__ = (

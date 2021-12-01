@@ -1,5 +1,10 @@
+import ctypes
 import unittest
-from tests.data import invalid_seckeys, valid_seckeys
+from tests.data import (
+    invalid_seckeys, valid_seckeys, invalid_seckey_length,
+    invalid_compact_sig_length, not_bytes, not_int,
+    invalid_recoverable_signature_length, not_c_char_array
+)
 from pysecp256k1.low_level import Libsecp256k1Exception
 from pysecp256k1 import (
     ec_pubkey_create,
@@ -17,14 +22,92 @@ from pysecp256k1.recovery import (
 
 
 class TestPysecp256k1Recovery(unittest.TestCase):
+    def test_ecdsa_recoverable_signature_parse_compact_invalid_input_type_compact_sig(self):
+        for invalid_sig in invalid_compact_sig_length:
+            with self.assertRaises(ValueError):
+                ecdsa_recoverable_signature_parse_compact(invalid_sig, 0)
+
+        for invalid_type in not_bytes:
+            with self.assertRaises(ValueError):
+                ecdsa_recoverable_signature_parse_compact(invalid_type, 0)
+
+    def test_ecdsa_recoverable_signature_parse_compact_invalid_input_type_rec_id(self):
+        for invalid_type in not_int:
+            with self.assertRaises(ValueError):
+                ecdsa_recoverable_signature_parse_compact(64 * b"\x00", invalid_type)
+
+    def test_ecdsa_recoverable_signature_convert_invalid_input_type_rec_sig(self):
+        for invalid_sig in invalid_recoverable_signature_length:
+            with self.assertRaises(ValueError):
+                ecdsa_recoverable_signature_convert(invalid_sig)
+
+        for invalid_type in not_c_char_array:
+            with self.assertRaises(ValueError):
+                ecdsa_recoverable_signature_convert(invalid_type)
+
+    def test_ecdsa_recoverable_signature_serialize_compact_invalid_input_type_rec_sig(self):
+        for invalid_sig in invalid_recoverable_signature_length:
+            with self.assertRaises(ValueError):
+                ecdsa_recoverable_signature_serialize_compact(invalid_sig)
+
+        for invalid_type in not_c_char_array:
+            with self.assertRaises(ValueError):
+                ecdsa_recoverable_signature_serialize_compact(invalid_type)
+
+    def test_ecdsa_sign_recoverable_invalid_input_type_seckey(self):
+        msg = b"moremoremoremore"
+        tag = b"TapLeaf"
+        msg_hash = tagged_sha256(tag, msg)
+        for invalid_seckey in invalid_seckeys:
+            with self.assertRaises(Libsecp256k1Exception):
+                ecdsa_sign_recoverable(invalid_seckey, msg_hash)
+
+        for invalid_seckey in invalid_seckey_length:
+            with self.assertRaises(ValueError):
+                ecdsa_sign_recoverable(invalid_seckey, msg_hash)
+
+        for invalid_type in not_bytes:
+            with self.assertRaises(ValueError):
+                ecdsa_sign_recoverable(invalid_type, msg_hash)
+
+    def test_ecdsa_sign_recoverable_invalid_input_type_msghash32(self):
+        for invalid_msg in invalid_seckey_length:
+            with self.assertRaises(ValueError):
+                ecdsa_sign_recoverable(valid_seckeys[0], invalid_msg)
+
+        for invalid_type in not_bytes:
+            with self.assertRaises(ValueError):
+                ecdsa_sign_recoverable(valid_seckeys[1], invalid_type)
+
+    def test_ecdsa_recover_invalid_input_type_rec_sig(self):
+        msg = b"moremoremoremore"
+        tag = b"TapLeaf"
+        msg_hash = tagged_sha256(tag, msg)
+        for invalid_sig in invalid_recoverable_signature_length:
+            with self.assertRaises(ValueError):
+                ecdsa_recover(invalid_sig, msg_hash)
+
+        for invalid_type in not_c_char_array:
+            with self.assertRaises(ValueError):
+                ecdsa_recover(invalid_type, msg_hash)
+
+    def test_ecdsa_recover_invalid_input_type_msghash32(self):
+        for invalid_msg in invalid_seckey_length:
+            with self.assertRaises(ValueError):
+                ecdsa_recover(ctypes.create_string_buffer(65), invalid_msg)
+
+        for invalid_type in not_bytes:
+            with self.assertRaises(ValueError):
+                ecdsa_recover(ctypes.create_string_buffer(65), invalid_type)
+
     def test_recovery(self):
         msg = b"moremoremoremore"
         tag = b"TapLeaf"
         msg_hash = tagged_sha256(tag, msg)
-        for seckey in invalid_seckeys[:2]:
+        for seckey in invalid_seckeys:
             with self.assertRaises(Libsecp256k1Exception):
                 ecdsa_sign_recoverable(seckey, msg_hash)
-        for seckey in invalid_seckeys[2:]:
+        for seckey in invalid_seckey_length:
             with self.assertRaises(ValueError):
                 ecdsa_sign_recoverable(seckey, msg_hash)
         for seckey in valid_seckeys:
@@ -41,3 +124,5 @@ class TestPysecp256k1Recovery(unittest.TestCase):
             self.assertTrue(recid in (0, 1, 2, 3))
             rec_pubkey = ecdsa_recover(rec_sig, msg_hash)
             self.assertEqual(pubkey.raw, rec_pubkey.raw)
+
+        # TODO test for rec id that is too big or too small (invalid)
