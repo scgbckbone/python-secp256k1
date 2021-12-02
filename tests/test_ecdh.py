@@ -1,4 +1,5 @@
 import unittest
+import itertools
 from tests.data import (
     valid_seckeys, invalid_seckeys, invalid_seckey_length,
     invalid_pubkey_length, not_bytes, not_c_char_array
@@ -36,10 +37,13 @@ class TestPysecp256k1ECDHValidation(unittest.TestCase):
 
 class TestPysecp256k1ECDH(unittest.TestCase):
     def test_ecdh(self):
-        alice_seckey = valid_seckeys[0]
-        bob_seckey = valid_seckeys[1]
-        alice_pubkey = ec_pubkey_create(alice_seckey)
-        bob_pubkey = ec_pubkey_create(bob_seckey)
-        shared_key0 = ecdh(alice_seckey, bob_pubkey)
-        shared_key1 = ecdh(bob_seckey, alice_pubkey)
-        self.assertEqual(shared_key0, shared_key1)
+        for alice_seckey, bob_seckey in itertools.combinations(valid_seckeys, 2):
+            alice_pubkey = ec_pubkey_create(alice_seckey)
+            bob_pubkey = ec_pubkey_create(bob_seckey)
+            shared_key0 = ecdh(alice_seckey, bob_pubkey)
+            shared_key1 = ecdh(bob_seckey, alice_pubkey)
+            self.assertEqual(shared_key0, shared_key1)
+
+        for invalid_seckey in invalid_seckeys:
+            with self.assertRaises(Libsecp256k1Exception):
+                ecdh(invalid_seckey, ec_pubkey_create(valid_seckeys[0]))

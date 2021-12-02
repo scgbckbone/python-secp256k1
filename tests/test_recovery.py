@@ -1,3 +1,4 @@
+import os
 import ctypes
 import unittest
 from tests.data import (
@@ -120,9 +121,6 @@ class TestPysecp256k1Recovery(unittest.TestCase):
         for seckey in invalid_seckeys:
             with self.assertRaises(Libsecp256k1Exception):
                 ecdsa_sign_recoverable(seckey, msg_hash)
-        for seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
-                ecdsa_sign_recoverable(seckey, msg_hash)
         for seckey in valid_seckeys:
             pubkey = ec_pubkey_create(seckey)
             rec_sig = ecdsa_sign_recoverable(seckey, msg_hash)
@@ -131,9 +129,28 @@ class TestPysecp256k1Recovery(unittest.TestCase):
             self.assertEqual(converted_rec_sig.raw, sig.raw)
             compact_sig_ser = ecdsa_signature_serialize_compact(sig)
             compact_rec_sig_ser, recid = ecdsa_recoverable_signature_serialize_compact(rec_sig)
-            rec_sig_parsed = ecdsa_recoverable_signature_parse_compact(compact_rec_sig_ser, recid)
+            rec_sig_parsed = ecdsa_recoverable_signature_parse_compact(
+                compact_rec_sig_ser, recid
+            )
+            # try to parse it but with wrong (yet valid) rec_id
+            rec_sig_parsed_wrong = ecdsa_recoverable_signature_parse_compact(
+                compact_rec_sig_ser, 3 if recid <= 2 else 0
+            )
             self.assertEqual(rec_sig_parsed.raw, rec_sig.raw)
+            self.assertNotEqual(rec_sig_parsed_wrong.raw, rec_sig.raw)
             self.assertEqual(compact_rec_sig_ser, compact_sig_ser)
             self.assertTrue(recid in (0, 1, 2, 3))
             rec_pubkey = ecdsa_recover(rec_sig, msg_hash)
             self.assertEqual(pubkey.raw, rec_pubkey.raw)
+
+    def test_ecdsa_recover_invalid(self):
+        seckey = valid_seckeys[0]
+        target_pubkey = ec_pubkey_create(seckey)
+        msghash32 = valid_seckeys[2]
+        rec_sig0 = ecdsa_sign_recoverable(seckey, msghash32)
+        # incorrect msghash32 TODO
+        # recovered_pk = ecdsa_recover(rec_sig0, os.urandom(32))
+        # self.assertEqual(recovered_pk.raw, target_pubkey.raw)
+        # incorrect sig
+        with self.assertRaises(Libsecp256k1Exception):
+            ecdsa_recover(ctypes.create_string_buffer(65), msghash32)

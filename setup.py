@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 import os
 from setuptools import setup
@@ -26,6 +26,7 @@ setup(
       "Programming Language :: Python :: 3.7",
       "Programming Language :: Python :: 3.8",
       "Programming Language :: Python :: 3.9",
+      "Programming Language :: Python :: 3.10",
     ],
     url='https://github.com/scgbckbone/btc-hd-wallet',
     keywords=[
@@ -34,7 +35,7 @@ setup(
         "ecdsa",
         "schnorr",
     ],
-    packages=["pysecp256k1"],
+    packages=["pysecp256k1", "pysecp256k1.low_level"],
     zip_safe=False,
     install_requires=install_requires,
     test_suite="tests"
