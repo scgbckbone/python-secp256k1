@@ -8,7 +8,7 @@ from pysecp256k1.low_level import Libsecp256k1Exception
 from pysecp256k1.ecdh import ecdh
 
 
-class TestPysecp256k1ECDH(unittest.TestCase):
+class TestPysecp256k1ECDHValidation(unittest.TestCase):
     def test_ecdh_invalid_input_type_seckey(self):
         pubkey = ec_pubkey_create(valid_seckeys[0])
         for invalid_seckey in invalid_seckeys:
@@ -33,6 +33,8 @@ class TestPysecp256k1ECDH(unittest.TestCase):
             with self.assertRaises(ValueError):
                 ecdh(seckey, invalid_type)
 
+
+class TestPysecp256k1ECDH(unittest.TestCase):
     def test_ecdh(self):
         alice_seckey = valid_seckeys[0]
         bob_seckey = valid_seckeys[1]

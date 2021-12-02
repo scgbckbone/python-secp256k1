@@ -431,7 +431,7 @@ def ecdsa_sign(seckey: bytes, msghash32: bytes) -> secp256k1_ecdsa_signature:
         secp256k1_context_sign, sig, msghash32, seckey, None, None
     )
     if result != 1:
-        assert (result == 0), f"Non-standard return code: {result}"
+        assert_zero_return_code(result)
         raise Libsecp256k1Exception(
             "nonce generation function failed, or the secret key was invalid"
         )

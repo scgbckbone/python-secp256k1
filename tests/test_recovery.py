@@ -2,7 +2,7 @@ import ctypes
 import unittest
 from tests.data import (
     invalid_seckeys, valid_seckeys, invalid_seckey_length,
-    invalid_compact_sig_length, not_bytes, not_int,
+    invalid_compact_sig_length, not_bytes, not_int, invalid_rec_ids,
     invalid_recoverable_signature_length, not_c_char_array
 )
 from pysecp256k1.low_level import Libsecp256k1Exception
@@ -21,7 +21,10 @@ from pysecp256k1.recovery import (
 )
 
 
-class TestPysecp256k1Recovery(unittest.TestCase):
+class TestPysecp256k1RecoveryValidation(unittest.TestCase):
+    compact_sig = 64 * b"\x00"
+    recoverable_sig = ctypes.create_string_buffer(65)
+
     def test_ecdsa_recoverable_signature_parse_compact_invalid_input_type_compact_sig(self):
         for invalid_sig in invalid_compact_sig_length:
             with self.assertRaises(ValueError):
@@ -32,9 +35,17 @@ class TestPysecp256k1Recovery(unittest.TestCase):
                 ecdsa_recoverable_signature_parse_compact(invalid_type, 0)
 
     def test_ecdsa_recoverable_signature_parse_compact_invalid_input_type_rec_id(self):
+        for rec_id_invalid in invalid_rec_ids:
+            with self.assertRaises(Libsecp256k1Exception):
+                ecdsa_recoverable_signature_parse_compact(
+                    self.compact_sig, rec_id_invalid
+                )
+
         for invalid_type in not_int:
             with self.assertRaises(ValueError):
-                ecdsa_recoverable_signature_parse_compact(64 * b"\x00", invalid_type)
+                ecdsa_recoverable_signature_parse_compact(
+                    self.compact_sig, invalid_type
+                )
 
     def test_ecdsa_recoverable_signature_convert_invalid_input_type_rec_sig(self):
         for invalid_sig in invalid_recoverable_signature_length:
@@ -94,12 +105,14 @@ class TestPysecp256k1Recovery(unittest.TestCase):
     def test_ecdsa_recover_invalid_input_type_msghash32(self):
         for invalid_msg in invalid_seckey_length:
             with self.assertRaises(ValueError):
-                ecdsa_recover(ctypes.create_string_buffer(65), invalid_msg)
+                ecdsa_recover(self.compact_sig, invalid_msg)
 
         for invalid_type in not_bytes:
             with self.assertRaises(ValueError):
-                ecdsa_recover(ctypes.create_string_buffer(65), invalid_type)
+                ecdsa_recover(self.compact_sig, invalid_type)
 
+
+class TestPysecp256k1Recovery(unittest.TestCase):
     def test_recovery(self):
         msg = b"moremoremoremore"
         tag = b"TapLeaf"
@@ -124,5 +137,3 @@ class TestPysecp256k1Recovery(unittest.TestCase):
             self.assertTrue(recid in (0, 1, 2, 3))
             rec_pubkey = ecdsa_recover(rec_sig, msg_hash)
             self.assertEqual(pubkey.raw, rec_pubkey.raw)
-
-        # TODO test for rec id that is too big or too small (invalid)
