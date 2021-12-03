@@ -160,6 +160,21 @@ def context_set_error_callback(ctx: secp256k1_context, f: callback_func_type, da
 #
 @enforce_type
 def ec_pubkey_parse(pubkey_ser: bytes) -> secp256k1_pubkey:
+    """
+    Parse a variable-length public key into the pubkey object.
+
+    This function supports parsing following public key formats:
+        1.) compressed (33 bytes, header byte 0x02 or 0x03)
+        2.) uncompressed (65 bytes, header byte 0x04)
+        3.) hybrid (65 bytes, header byte 0x06 or 0x07)
+
+    :param pubkey_ser: public key serialization
+    :type pubkey_ser: bytes
+    :return: initialized public key
+    :rtype: secp256k1_pubkey
+    :raises ValueError: if pubkey_ser is not of length 33 or 65
+    :raises Libsecp256k1Exception: if pubkey is invalid or could not be parsed
+    """
     enforce_length(
         pubkey_ser, "pubkey_ser",
         length=[PUBLIC_KEY_SIZE, COMPRESSED_PUBLIC_KEY_SIZE]

@@ -23,6 +23,7 @@
 # buffers you should use ctypes.create_string_buffer().
 
 import os
+import logging
 import ctypes
 import ctypes.util
 from types import FunctionType
@@ -33,6 +34,11 @@ from pysecp256k1.low_level.constants import (
     SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY, secp256k1_context
 )
 from pysecp256k1.low_level.util import assert_zero_return_code
+
+
+_LOGGER = logging.getLogger(__name__)
+sh = logging.StreamHandler()
+_LOGGER.addHandler(sh)
 
 
 has_secp256k1_recovery = False
@@ -83,10 +89,12 @@ callback_func_type = _ctypes_functype(
 
 @callback_func_type
 def _secp256k1_illegal_callback_fn(error_str, _data):
+    error_string = str(error_str)
+    _LOGGER.error("illegal_argument: %s", error_string)
     _secp256k1_error_storage.last_error = {
         'code': -2,
         'type': 'illegal_argument',
-        'message': str(error_str)
+        'message': error_string
     }
 
 

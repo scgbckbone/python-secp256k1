@@ -5,10 +5,15 @@ from tests.data import (
     invalid_pubkey_length, not_bytes, not_c_char_array
 )
 from pysecp256k1 import ec_pubkey_create
-from pysecp256k1.low_level import Libsecp256k1Exception
-from pysecp256k1.ecdh import ecdh
+from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_ecdh
+if has_secp256k1_ecdh:
+    from pysecp256k1.ecdh import ecdh
 
 
+skip_reason = "secp256k1 is not compiled with module 'ecdh'"
+
+
+@unittest.skipUnless(has_secp256k1_ecdh, skip_reason)
 class TestPysecp256k1ECDHValidation(unittest.TestCase):
     def test_ecdh_invalid_input_type_seckey(self):
         pubkey = ec_pubkey_create(valid_seckeys[0])
@@ -35,6 +40,7 @@ class TestPysecp256k1ECDHValidation(unittest.TestCase):
                 ecdh(seckey, invalid_type)
 
 
+@unittest.skipUnless(has_secp256k1_ecdh, skip_reason)
 class TestPysecp256k1ECDH(unittest.TestCase):
     def test_ecdh(self):
         for alice_seckey, bob_seckey in itertools.combinations(valid_seckeys, 2):

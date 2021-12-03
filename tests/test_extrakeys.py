@@ -7,32 +7,40 @@ from tests.data import (
     not_c_char_array, not_int, invalid_keypair_length,
     serialized_pubkeys_compressed,
 )
-from pysecp256k1.low_level import Libsecp256k1Exception
+from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_extrakeys
 from pysecp256k1 import (
     ec_pubkey_create,
     ec_seckey_verify,
     ec_seckey_tweak_add,
     ec_seckey_negate,
 )
-from pysecp256k1.extrakeys import (
-    keypair_create,
-    keypair_pub,
-    keypair_sec,
-    keypair_xonly_pub,
-    keypair_xonly_tweak_add,
-    xonly_pubkey_parse,
-    xonly_pubkey_serialize,
-    xonly_pubkey_from_pubkey,
-    xonly_pubkey_tweak_add,
-    xonly_pubkey_tweak_add_check,
-    xonly_pubkey_cmp,
-)
+if has_secp256k1_extrakeys:
+    from pysecp256k1.extrakeys import (
+        keypair_create,
+        keypair_pub,
+        keypair_sec,
+        keypair_xonly_pub,
+        keypair_xonly_tweak_add,
+        xonly_pubkey_parse,
+        xonly_pubkey_serialize,
+        xonly_pubkey_from_pubkey,
+        xonly_pubkey_tweak_add,
+        xonly_pubkey_tweak_add_check,
+        xonly_pubkey_cmp,
+    )
 
 
+skip_reason = "secp256k1 is not compiled with module 'extrakeys'"
+
+
+@unittest.skipUnless(has_secp256k1_extrakeys, skip_reason)
 class TestPysecp256k1ExtrakeysValidation(unittest.TestCase):
-    b32 = valid_seckeys[1]
-    keypair = keypair_create(valid_seckeys[0])
-    xonly_pubkey, pk_parity = keypair_xonly_pub(keypair)
+
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.b32 = valid_seckeys[1]
+        cls.keypair = keypair_create(valid_seckeys[0])
+        cls.xonly_pubkey, cls.pk_parity = keypair_xonly_pub(cls.keypair)
 
     def test_xonly_pubkey_parse_invalid_input_type_xonly_pubkey_ser(self):
         for invalid_xonly_ser in invalid_xonly_pubkey_length:
@@ -197,6 +205,7 @@ class TestPysecp256k1ExtrakeysValidation(unittest.TestCase):
                 keypair_xonly_tweak_add(self.keypair, invalid_type)
 
 
+@unittest.skipUnless(has_secp256k1_extrakeys, skip_reason)
 class TestPysecp256k1Extrakeys(unittest.TestCase):
     def test_xonly_pubkey_parse_serialize(self):
         for pk_ser in serialized_pubkeys_compressed:

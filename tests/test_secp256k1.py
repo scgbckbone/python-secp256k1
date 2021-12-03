@@ -6,10 +6,10 @@ from tests.data import (
     invalid_seckeys, valid_seckeys, serialized_pubkeys_compressed,
     serialized_pubkeys, invalid_seckey_length, not_bytes, not_c_char_array,
     invalid_pubkey_serialization_length, invalid_pubkey_length, not_bool,
-    invalid_signature_length, invalid_compact_sig_length
+    invalid_signature_length, invalid_compact_sig_length,
+    valid_compact_sig_serializations, valid_der_sig_serializations
 )
 from pysecp256k1.low_level import Libsecp256k1Exception
-from pysecp256k1.low_level.constants import secp256k1_pubkey
 from pysecp256k1 import (
     ec_seckey_verify, ec_pubkey_create, ec_pubkey_serialize,
     ec_pubkey_parse, ec_seckey_negate, ec_pubkey_negate, ec_seckey_tweak_add,
@@ -22,9 +22,11 @@ from pysecp256k1 import (
 
 class TestPysecp256k1Validation(unittest.TestCase):
 
-    b32 = os.urandom(32)
-    pubkey0 = ec_pubkey_create(valid_seckeys[0])
-    pubkey1 = ec_pubkey_create(valid_seckeys[1])
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.b32 = os.urandom(32)
+        cls.pubkey0 = ec_pubkey_create(valid_seckeys[0])
+        cls.pubkey1 = ec_pubkey_create(valid_seckeys[1])
 
     def test_context_create_invalid_input_type_flags(self):
         pass
@@ -308,16 +310,6 @@ class TestPysecp256k1Validation(unittest.TestCase):
 
 
 class TestPysecp256k1(unittest.TestCase):
-    valid_der = (
-        b'0D\x02 +{\x89\x95\r\\I\x0f(q\x9d\xf0B\xe2R\xeb\x11(\xc2\x87\x18'
-        b'\x9c-\x18da\x82+`"!I\x02 Q]\xe3N\xa4\x0b7V\x9dy\xdfAU\xf4;\x89OW'
-        b'\xdd\xf3)\xd9\xd3\xe9B\x0b\x0c\xe1\xc0Cq\xff'
-    )
-    valid_compact = (
-        b'\x1a#\x05\x1c\x02^\x9d\x0c\xf6\xbf\xdb7\x12 \x0e"8\x87\'8D\xc6'
-        b'\x1172\xc1\xc8\xab\xab\n\xf9\\Cl\x8fP\'\xc6\xd3\xc3\xdd\xbd3X'
-        b'\xdc\xc1\x87m\xa4\xa4e\x1d\x7f\x92\xd44J\xf2C\x03\xa7\x07\xf2]'
-    )
 
     def test_ec_pubkey_parse(self):
         # swap marker - uncompressed marker for compressed pubkey
@@ -393,10 +385,11 @@ class TestPysecp256k1(unittest.TestCase):
         # order
         with self.assertRaises(Libsecp256k1Exception):
             ecdsa_signature_parse_compact(2 * invalid_seckeys[0])
-        sig = ecdsa_signature_parse_compact(self.valid_compact)
-        self.assertEqual(
-            ecdsa_signature_serialize_compact(sig), self.valid_compact
-        )
+        for compact_sig_ser in valid_compact_sig_serializations:
+            sig = ecdsa_signature_parse_compact(compact_sig_ser)
+            self.assertEqual(
+                ecdsa_signature_serialize_compact(sig), compact_sig_ser
+            )
         for seckey in valid_seckeys:
             msg = hashlib.sha256(seckey).digest()
             raw_sig = ecdsa_sign(seckey, msg)
@@ -415,8 +408,9 @@ class TestPysecp256k1(unittest.TestCase):
             ecdsa_signature_parse_der(os.urandom(72))
         with self.assertRaises(Libsecp256k1Exception):
             ecdsa_signature_parse_der(os.urandom(73))
-        sig = ecdsa_signature_parse_der(self.valid_der)
-        self.assertEqual(ecdsa_signature_serialize_der(sig), self.valid_der)
+        for der_sig_ser in valid_der_sig_serializations:
+            sig = ecdsa_signature_parse_der(der_sig_ser)
+            self.assertEqual(ecdsa_signature_serialize_der(sig), der_sig_ser)
         for seckey in valid_seckeys:
             msg = hashlib.sha256(seckey).digest()
             raw_sig = ecdsa_sign(seckey, msg)
@@ -463,8 +457,6 @@ class TestPysecp256k1(unittest.TestCase):
 
         for seckey in valid_seckeys:
             raw_pubkey = ec_pubkey_create(seckey)
-            self.assertIsInstance(raw_pubkey, secp256k1_pubkey)
-            self.assertEqual(len(raw_pubkey), 64)
 
     def test_ec_seckey_negate(self):
         for invalid_seckey in invalid_seckeys:
