@@ -18,10 +18,6 @@ from pysecp256k1 import (
     ec_pubkey_tweak_mul, ec_seckey_tweak_mul, tagged_sha256, ec_pubkey_cmp,
     ecdsa_signature_parse_compact, ecdsa_signature_serialize_compact,
 )
-from pysecp256k1.extrakeys import (
-    keypair_create, xonly_pubkey_from_pubkey, keypair_xonly_tweak_add,
-    xonly_pubkey_tweak_add,
-)
 
 
 class TestPysecp256k1Validation(unittest.TestCase):
@@ -458,7 +454,7 @@ class TestPysecp256k1(unittest.TestCase):
 
         # VALID KEY
         for seckey in valid_seckeys:
-            assert ec_seckey_verify(seckey) is None
+            self.assertIsNone(ec_seckey_verify(seckey))
 
     def test_ec_pubkey_create(self):
         for seckey in invalid_seckeys:
@@ -511,7 +507,7 @@ class TestPysecp256k1(unittest.TestCase):
         for seckey in valid_seckeys:
             self.assertEqual(len(ec_seckey_tweak_add(seckey, valid_tweak)), 32)
 
-        x, y, z = valid_seckeys
+        x, y, z = valid_seckeys[:3]
         xy = ec_seckey_tweak_add(x, y)
         yx = ec_seckey_tweak_add(y, x)
         yz = ec_seckey_tweak_add(y, z)
@@ -537,7 +533,7 @@ class TestPysecp256k1(unittest.TestCase):
         for seckey in valid_seckeys:
             self.assertEqual(len(ec_seckey_tweak_mul(seckey, valid_tweak)), 32)
 
-        x, y, z = valid_seckeys
+        x, y, z = valid_seckeys[:3]
         xy = ec_seckey_tweak_mul(x, y)
         yx = ec_seckey_tweak_mul(y, x)
         yz = ec_seckey_tweak_mul(y, z)
@@ -604,7 +600,7 @@ class TestPysecp256k1(unittest.TestCase):
     def test_tweak_mul_seckey_pubkey_cmp(self):
         for seckey in valid_seckeys:
             tweak = hashlib.sha256(seckey).digest()
-            assert ec_seckey_verify(tweak) is None
+            self.assertIsNone(ec_seckey_verify(seckey))
             raw_pubkey = ec_pubkey_create(seckey)
             tweaked_pk0 = ec_pubkey_tweak_mul(raw_pubkey, tweak)
             tweaked_sk = ec_seckey_tweak_mul(seckey, tweak)
@@ -614,7 +610,7 @@ class TestPysecp256k1(unittest.TestCase):
     def test_tweak_add_seckey_pubkey_cmp(self):
         for seckey in valid_seckeys:
             tweak = hashlib.sha256(seckey).digest()
-            assert ec_seckey_verify(tweak) is None
+            self.assertIsNone(ec_seckey_verify(tweak))
             raw_pubkey = ec_pubkey_create(seckey)
             tweaked_pk0 = ec_pubkey_tweak_add(raw_pubkey, tweak)
             tweaked_sk = ec_seckey_tweak_add(seckey, tweak)
@@ -624,9 +620,9 @@ class TestPysecp256k1(unittest.TestCase):
     def test_ec_pubkey_combine(self):
         parsed_pubkeys = [
             ec_pubkey_parse(pk)
-            for pk in serialized_pubkeys_compressed
+            for pk in serialized_pubkeys_compressed[:3]
         ]
-        x, y, z = valid_seckeys
+        x, y, z = valid_seckeys[:3]
         xy = ec_seckey_tweak_add(x, y)
         xyz = ec_seckey_tweak_add(x, ec_seckey_tweak_add(y, z))
 
@@ -645,7 +641,7 @@ class TestPysecp256k1(unittest.TestCase):
         with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = valid_seckeys[0]
-        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         raw_pubkey = ec_pubkey_create(seckey)
         with self.assertRaises(Libsecp256k1Exception) as exc:
             ec_pubkey_tweak_mul(raw_pubkey, tweak_null)  # this raises
@@ -659,7 +655,7 @@ class TestPysecp256k1(unittest.TestCase):
         with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = valid_seckeys[0]
-        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         with self.assertRaises(Libsecp256k1Exception) as exc:
             ec_seckey_tweak_mul(seckey, tweak_null)  # this raises
         self.assertEqual(
@@ -674,23 +670,23 @@ class TestPysecp256k1(unittest.TestCase):
         with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = valid_seckeys[0]
-        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         raw_pubkey = ec_pubkey_create(seckey)
         res = ec_pubkey_tweak_add(raw_pubkey, tweak_null)  # this should raise but won't
-        assert res.raw == raw_pubkey.raw  # instead pubkey is untweaked
+        self.assertEqual(res.raw, raw_pubkey.raw)  # instead pubkey is untweaked
 
     def test_seckey_add_null_tweak(self):
         tweak_null = 32 * b"\x00"
         with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = valid_seckeys[0]
-        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         res = ec_seckey_tweak_add(seckey, tweak_null)  # this should raise but won't
-        assert res == seckey  # instead seckey is untweaked
+        self.assertEqual(res, seckey)  # instead seckey is untweaked
 
     def test_tagged_sha256(self):
         msg = b"moremoremoremore"
         tag = b"TapLeaf"
         res = tagged_sha256(tag, msg)
         res0 = hashlib.sha256((hashlib.sha256(tag).digest() * 2) + msg).digest()
-        assert res == res0
+        self.assertEqual(res, res0)

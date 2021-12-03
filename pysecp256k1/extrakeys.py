@@ -126,11 +126,11 @@ def xonly_pubkey_from_pubkey(pubkey: secp256k1_pubkey) -> Tuple[secp256k1_xonly_
 #                      chance of being invalid is negligible (around 1 in 2^128).
 #
 @enforce_type
-def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> secp256k1_xonly_pubkey:
+def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> secp256k1_pubkey:
     enforce_length(tweak32, "tweak32", length=HASH32)
-    tweaked_xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    tweaked_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
     result = lib.secp256k1_xonly_pubkey_tweak_add(
-        secp256k1_context_verify, tweaked_xonly_pubkey, xonly_pubkey, tweak32
+        secp256k1_context_verify, tweaked_pubkey, xonly_pubkey, tweak32
     )
     if result != 1:
         assert_zero_return_code(result)
@@ -139,7 +139,7 @@ def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes)
             "would be invalid (only when the tweak is the negation "
             "of the corresponding secret key)"
         )
-    return tweaked_xonly_pubkey
+    return tweaked_pubkey
 
 
 # Checks that a tweaked pubkey is the result of calling

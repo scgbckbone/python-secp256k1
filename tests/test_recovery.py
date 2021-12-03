@@ -148,9 +148,13 @@ class TestPysecp256k1Recovery(unittest.TestCase):
         target_pubkey = ec_pubkey_create(seckey)
         msghash32 = valid_seckeys[2]
         rec_sig0 = ecdsa_sign_recoverable(seckey, msghash32)
-        # incorrect msghash32 TODO
-        # recovered_pk = ecdsa_recover(rec_sig0, os.urandom(32))
-        # self.assertEqual(recovered_pk.raw, target_pubkey.raw)
+        # https://github.com/bitcoin-core/secp256k1/issues/1024#issuecomment-985193303
+        # correct signature and incorrect msghash32
+        # if 1 is returned - It means it found a public key
+        # for which the provided (message, signature) pair was valid.
+        recovered_pk = ecdsa_recover(rec_sig0, os.urandom(32))
+        # recovered must be different than target
+        self.assertNotEqual(recovered_pk.raw, target_pubkey.raw)
         # incorrect sig
         with self.assertRaises(Libsecp256k1Exception):
             ecdsa_recover(ctypes.create_string_buffer(65), msghash32)

@@ -1,10 +1,11 @@
-import os
+import ctypes
 import unittest
 import hashlib
 from tests.data import (
     valid_seckeys, invalid_seckeys, invalid_seckey_length,
     invalid_xonly_pubkey_length, not_bytes, invalid_pubkey_length,
-    not_c_char_array, not_int, invalid_keypair_length
+    not_c_char_array, not_int, invalid_keypair_length,
+    serialized_pubkeys_compressed,
 )
 from pysecp256k1.low_level import Libsecp256k1Exception
 from pysecp256k1 import (
@@ -197,66 +198,146 @@ class TestPysecp256k1ExtrakeysValidation(unittest.TestCase):
 
 
 class TestPysecp256k1Extrakeys(unittest.TestCase):
-    def test_extrakeys(self):
-        for seckey in invalid_seckeys:
+    def test_xonly_pubkey_parse_serialize(self):
+        for pk_ser in serialized_pubkeys_compressed:
+            xonly_ser = pk_ser[1:]
+            xonly_pubkey = xonly_pubkey_parse(xonly_ser)
+            self.assertEqual(xonly_pubkey_serialize(xonly_pubkey), xonly_ser)
+
+        with self.assertRaises(Libsecp256k1Exception):
+            xonly_pubkey_parse(32 * b"\x00")
+
+    def test_xonly_pubkey_cmp(self):
+        # without first byte the ascending order of indexes is: 0,2,1
+        pks = [xonly_pubkey_parse(ser[1:]) for ser in serialized_pubkeys_compressed[:3]]
+        xonly_pubkey0, xonly_pubkey1, xonly_pubkey2 = pks
+        self.assertTrue(xonly_pubkey_cmp(xonly_pubkey0, xonly_pubkey1) < 0)
+        self.assertTrue(xonly_pubkey_cmp(xonly_pubkey0, xonly_pubkey0) == 0)
+        self.assertTrue(xonly_pubkey_cmp(xonly_pubkey1, xonly_pubkey2) > 0)
+
+    def test_keypair_create(self):
+        for invalid_seckey in invalid_seckeys:
             with self.assertRaises(Libsecp256k1Exception) as exc:
-                keypair_create(seckey)
+                keypair_create(invalid_seckey)
             self.assertEqual(
                 str(exc.exception),
                 "secret key is invalid"
             )
+
+    def test_keypair_sec(self):
         for seckey in valid_seckeys:
-            #import pdb;pdb.set_trace()
             keypair = keypair_create(seckey)
-            assert seckey == keypair_sec(keypair)
+            sk = keypair_sec(keypair)
+            self.assertEqual(seckey, sk)
+
+        null = ctypes.create_string_buffer(96)
+        null_sk = keypair_sec(null)
+        self.assertEqual(null_sk, invalid_seckeys[1])
+
+    def test_keypair_pub(self):
+        for seckey in valid_seckeys:
+            keypair = keypair_create(seckey)
+            pubkey = ec_pubkey_create(seckey)
+            self.assertEqual(pubkey.raw, keypair_pub(keypair).raw)
+
+        null = ctypes.create_string_buffer(96)
+        null_pk = keypair_pub(null)
+        self.assertEqual(null_pk.raw, ctypes.create_string_buffer(64).raw)
+
+    def test_keypair_xonly_pub(self):
+        for seckey in valid_seckeys:
+            pubkey = ec_pubkey_create(seckey)
+            keypair = keypair_create(seckey)
+            xonly_pubkey, pk_parity = keypair_xonly_pub(keypair)
+            xonly_pubkey0, pk_parity0 = xonly_pubkey_from_pubkey(pubkey)
+            self.assertEqual(xonly_pubkey.raw, xonly_pubkey0.raw)
+            self.assertEqual(pk_parity, pk_parity0)
+
+        null = ctypes.create_string_buffer(96)
+        with self.assertRaises(Libsecp256k1Exception):
+            keypair_xonly_pub(null)
+
+    def test_tweaking_extrakeys(self):
+        for seckey in valid_seckeys:
             raw_pubkey = ec_pubkey_create(seckey)
-            assert raw_pubkey.raw == keypair_pub(keypair).raw
+            keypair = keypair_create(seckey)
             xonly_pub, parity = xonly_pubkey_from_pubkey(raw_pubkey)
             xonly_pub1, parity1 = keypair_xonly_pub(keypair)
-            assert xonly_pub.raw == xonly_pub1.raw
-            assert parity == parity1
+            self.assertEqual(xonly_pub.raw, xonly_pub1.raw)
+            self.assertEqual(parity, parity1)
             ser_xonly_pub = xonly_pubkey_serialize(xonly_pub)
-            assert xonly_pubkey_parse(ser_xonly_pub).raw == xonly_pub.raw
+            self.assertEqual(xonly_pubkey_parse(ser_xonly_pub).raw, xonly_pub.raw)
 
             valid_tweak = hashlib.sha256(seckey).digest()
-            assert ec_seckey_verify(valid_tweak) is None
+            self.assertIsNone(ec_seckey_verify(valid_tweak))
             # tweak keypair
             tweaked_keypair = keypair_xonly_tweak_add(keypair, valid_tweak)
-            tweaked_xonly_pub = xonly_pubkey_tweak_add(xonly_pub, valid_tweak)
-            tweaked_xonly_pub1, parity2 = keypair_xonly_pub(tweaked_keypair)
+            tweaked_pubkey = xonly_pubkey_tweak_add(xonly_pub, valid_tweak)
+            tweaked_xonly_pub, parity2 = xonly_pubkey_from_pubkey(tweaked_pubkey)
+            tweaked_xonly_pub1, parity3 = keypair_xonly_pub(tweaked_keypair)
+            self.assertEqual(parity2, parity3)
             ser_tweaked_xonly_pub = xonly_pubkey_serialize(tweaked_xonly_pub)
-            if parity2 == 0:
-                assert tweaked_xonly_pub.raw == tweaked_xonly_pub1.raw
-            else:
-                # TODO
-                assert False
+            self.assertEqual(tweaked_xonly_pub.raw, tweaked_xonly_pub1.raw)
             self.assertTrue(
-                xonly_pubkey_tweak_add_check(ser_tweaked_xonly_pub, parity2, xonly_pub, valid_tweak)
+                xonly_pubkey_tweak_add_check(
+                    ser_tweaked_xonly_pub, parity2, xonly_pub, valid_tweak
+                )
             )
             # https://github.com/bitcoin-core/secp256k1/issues/1021
             if parity == 0:
                 tweaked_seckey = ec_seckey_tweak_add(seckey, valid_tweak)
             else:
-                tweaked_seckey = ec_seckey_tweak_add(ec_seckey_negate(seckey), valid_tweak)
+                tweaked_seckey = ec_seckey_tweak_add(
+                    ec_seckey_negate(seckey), valid_tweak
+                )
             assert tweaked_seckey == keypair_sec(tweaked_keypair)
+
+            # incorrect serialization ok pubkey
+            self.assertFalse(
+                xonly_pubkey_tweak_add_check(
+                    ser_tweaked_xonly_pub[:-1] + b"\xff", parity2,
+                    xonly_pub, valid_tweak
+                )
+            )
+            # incorrect parity
+            self.assertFalse(
+                xonly_pubkey_tweak_add_check(
+                    ser_tweaked_xonly_pub, 0 if parity2 else 1,
+                    xonly_pub, valid_tweak
+                )
+            )
+            # invalid internal key
+            self.assertFalse(
+                xonly_pubkey_tweak_add_check(
+                    ser_tweaked_xonly_pub, parity2, tweaked_xonly_pub,
+                    valid_tweak
+                )
+            )
+            # invalid tweak
+            self.assertFalse(
+                xonly_pubkey_tweak_add_check(
+                    ser_tweaked_xonly_pub, parity2, tweaked_xonly_pub,
+                    seckey
+                )
+            )
 
     def test_xonly_pubkey_add_null_tweak(self):
         tweak_null = 32 * b"\x00"
         with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = valid_seckeys[0]
-        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         raw_pubkey = ec_pubkey_create(seckey)
         xonly_pubkey, parity = xonly_pubkey_from_pubkey(raw_pubkey)
-        res = xonly_pubkey_tweak_add(xonly_pubkey, tweak_null)  # this should raise but won't
-        assert res.raw == xonly_pubkey.raw  # instead xonly pubkey is untweaked
+        pubkey = xonly_pubkey_tweak_add(xonly_pubkey, tweak_null)  # this should raise but won't
+        self.assertEqual(pubkey.raw, xonly_pubkey.raw)  # instead xonly pubkey is untweaked
 
     def test_keypair_xonly_add_null_tweak(self):
         tweak_null = 32 * b"\x00"
         with self.assertRaises(Libsecp256k1Exception):
             ec_seckey_verify(tweak_null)  # this means tweak is invalid
         seckey = valid_seckeys[0]
-        assert ec_seckey_verify(seckey) is None  # this means seckey is valid
+        self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         keypair = keypair_create(seckey)
         res = keypair_xonly_tweak_add(keypair, tweak_null)  # this should raise but won't
-        assert res.raw == keypair.raw  # instead keypair is untweaked
+        self.assertEqual(res.raw, keypair.raw)  # instead keypair is untweaked
