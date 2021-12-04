@@ -4,14 +4,13 @@ from typing import List, Optional
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
     assert_zero_return_code, Libsecp256k1Exception, callback_func_type,
-    enforce_length
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_context, secp256k1_pubkey, secp256k1_ecdsa_signature,
-    PUBLIC_KEY_SIZE, COMPRESSED_PUBLIC_KEY_SIZE, COMPACT_SIGNATURE_SIZE,
-    DER_SIGNATURE_SIZE, INTERNAL_PUBKEY_SIZE, INTERNAL_SIGNATURE_SIZE,
+    PUBLIC_KEY_LENGTH, COMPRESSED_PUBLIC_KEY_LENGTH, COMPACT_SIGNATURE_LENGTH,
+    DER_SIGNATURE_LENGTH, INTERNAL_PUBKEY_LENGTH, INTERNAL_SIGNATURE_LENGTH,
     SECP256K1_EC_UNCOMPRESSED, SECP256K1_EC_COMPRESSED, SECP256K1_CONTEXT_SIGN,
-    SECP256K1_CONTEXT_VERIFY, SECKEY_SIZE, HASH32
+    SECP256K1_CONTEXT_VERIFY, SECKEY_LENGTH, HASH32
 )
 
 
@@ -175,11 +174,7 @@ def ec_pubkey_parse(pubkey_ser: bytes) -> secp256k1_pubkey:
     :raises ValueError: if pubkey_ser is not of length 33 or 65
     :raises Libsecp256k1Exception: if pubkey is invalid or could not be parsed
     """
-    enforce_length(
-        pubkey_ser, "pubkey_ser",
-        length=[PUBLIC_KEY_SIZE, COMPRESSED_PUBLIC_KEY_SIZE]
-    )
-    pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     result = lib.secp256k1_ec_pubkey_parse(
         secp256k1_context_verify, pubkey, pubkey_ser, len(pubkey_ser)
     )
@@ -207,7 +202,7 @@ def ec_pubkey_parse(pubkey_ser: bytes) -> secp256k1_pubkey:
 @enforce_type
 def ec_pubkey_serialize(pubkey: secp256k1_pubkey, compressed: bool = True) -> bytes:
     pub_size = ctypes.c_size_t()
-    pub_size.value = COMPRESSED_PUBLIC_KEY_SIZE if compressed else PUBLIC_KEY_SIZE
+    pub_size.value = COMPRESSED_PUBLIC_KEY_LENGTH if compressed else PUBLIC_KEY_LENGTH
     pubkey_ser = ctypes.create_string_buffer(pub_size.value)
 
     lib.secp256k1_ec_pubkey_serialize(
@@ -250,8 +245,7 @@ def ec_pubkey_cmp(pubkey0: secp256k1_pubkey, pubkey1: secp256k1_pubkey) -> int:
 #
 @enforce_type
 def ecdsa_signature_parse_compact(compact_sig: bytes) -> secp256k1_ecdsa_signature:
-    enforce_length(compact_sig, "compact_sig", length=COMPACT_SIGNATURE_SIZE)
-    sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_SIZE)
+    sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_LENGTH)
     result = lib.secp256k1_ecdsa_signature_parse_compact(
         secp256k1_context_verify, sig, compact_sig
     )
@@ -278,7 +272,7 @@ def ecdsa_signature_parse_compact(compact_sig: bytes) -> secp256k1_ecdsa_signatu
 #
 @enforce_type
 def ecdsa_signature_parse_der(der_sig: bytes) -> secp256k1_ecdsa_signature:
-    sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_SIZE)
+    sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_LENGTH)
     result = lib.secp256k1_ecdsa_signature_parse_der(
         secp256k1_context_verify, sig, der_sig, len(der_sig))
 
@@ -302,8 +296,8 @@ def ecdsa_signature_parse_der(der_sig: bytes) -> secp256k1_ecdsa_signature:
 @enforce_type
 def ecdsa_signature_serialize_der(sig: secp256k1_ecdsa_signature) -> bytes:
     sig_size = ctypes.c_size_t()
-    sig_size.value = DER_SIGNATURE_SIZE
-    der_sig = ctypes.create_string_buffer(DER_SIGNATURE_SIZE)
+    sig_size.value = DER_SIGNATURE_LENGTH
+    der_sig = ctypes.create_string_buffer(DER_SIGNATURE_LENGTH)
 
     result = lib.secp256k1_ecdsa_signature_serialize_der(
         secp256k1_context_sign, der_sig, ctypes.byref(sig_size), sig)
@@ -326,11 +320,11 @@ def ecdsa_signature_serialize_der(sig: secp256k1_ecdsa_signature) -> bytes:
 #
 @enforce_type
 def ecdsa_signature_serialize_compact(sig: secp256k1_ecdsa_signature) -> bytes:
-    compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_SIZE)
+    compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
     lib.secp256k1_ecdsa_signature_serialize_compact(
         secp256k1_context_verify, compact_sig, sig
     )
-    return compact_sig.raw[:COMPACT_SIGNATURE_SIZE]
+    return compact_sig.raw[:COMPACT_SIGNATURE_LENGTH]
 
 
 # Verify an ECDSA signature.
@@ -360,7 +354,6 @@ def ecdsa_signature_serialize_compact(sig: secp256k1_ecdsa_signature) -> bytes:
 #
 @enforce_type
 def ecdsa_verify(sig: secp256k1_ecdsa_signature, pubkey: secp256k1_pubkey, msghash32: bytes) -> bool:
-    enforce_length(msghash32, "msghash32", length=HASH32)
     result = lib.secp256k1_ecdsa_verify(
         secp256k1_context_verify, sig, msghash32, pubkey
     )
@@ -439,9 +432,7 @@ def ecdsa_signature_normalize(sig: secp256k1_ecdsa_signature) -> secp256k1_ecdsa
 #
 @enforce_type
 def ecdsa_sign(seckey: bytes, msghash32: bytes) -> secp256k1_ecdsa_signature:
-    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
-    enforce_length(msghash32, "msghash32", length=HASH32)
-    sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_SIZE)
+    sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_LENGTH)
     result = lib.secp256k1_ecdsa_sign(
         secp256k1_context_sign, sig, msghash32, seckey, None, None
     )
@@ -467,7 +458,6 @@ def ecdsa_sign(seckey: bytes, msghash32: bytes) -> secp256k1_ecdsa_signature:
 #
 @enforce_type
 def ec_seckey_verify(seckey: bytes) -> None:
-    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
     result = lib.secp256k1_ec_seckey_verify(secp256k1_context_sign, seckey)
     if result != 1:
         assert_zero_return_code(result)
@@ -484,8 +474,7 @@ def ec_seckey_verify(seckey: bytes) -> None:
 #
 @enforce_type
 def ec_pubkey_create(seckey: bytes) -> secp256k1_pubkey:
-    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
-    pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     result = lib.secp256k1_ec_pubkey_create(
         secp256k1_context_sign, pubkey, seckey
     )
@@ -507,13 +496,12 @@ def ec_pubkey_create(seckey: bytes) -> secp256k1_pubkey:
 #
 @enforce_type
 def ec_seckey_negate(seckey: bytes) -> bytes:
-    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
     negated_seckey = ctypes.create_string_buffer(seckey)
     result = lib.secp256k1_ec_seckey_negate(secp256k1_context_sign, negated_seckey)
     if result != 1:
         assert_zero_return_code(result)
         raise Libsecp256k1Exception("secret key is invalid")
-    return negated_seckey.raw[:SECKEY_SIZE]
+    return negated_seckey.raw[:SECKEY_LENGTH]
 
 
 # Negates a public key in place.
@@ -545,8 +533,6 @@ def ec_pubkey_negate(pubkey: secp256k1_pubkey) -> secp256k1_pubkey:
 #
 @enforce_type
 def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
-    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
-    enforce_length(tweak32, "tweak32", length=HASH32)
     tweaked_seckey = ctypes.create_string_buffer(seckey)
     result = lib.secp256k1_ec_seckey_tweak_add(
         secp256k1_context_sign, tweaked_seckey, tweak32
@@ -557,7 +543,7 @@ def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
             "arguments are invalid or the resulting secret key would be invalid"
             " (only when the tweak is the negation of the secret key)"
         )
-    return tweaked_seckey.raw[:SECKEY_SIZE]
+    return tweaked_seckey.raw[:SECKEY_LENGTH]
 
 
 # Tweak a public key by adding tweak times the generator to it.
@@ -575,7 +561,6 @@ def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
 #
 @enforce_type
 def ec_pubkey_tweak_add(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_pubkey:
-    enforce_length(tweak32, "tweak32", length=HASH32)
     result = lib.secp256k1_ec_pubkey_tweak_add(
         secp256k1_context_verify, pubkey, tweak32
     )
@@ -603,8 +588,6 @@ def ec_pubkey_tweak_add(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_p
 #
 @enforce_type
 def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
-    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
-    enforce_length(tweak32, "tweak32", length=HASH32)
     tweaked_seckey = ctypes.create_string_buffer(seckey)
     result = lib.secp256k1_ec_seckey_tweak_mul(
         secp256k1_context_sign, tweaked_seckey, tweak32
@@ -612,7 +595,7 @@ def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
     if result != 1:
         assert_zero_return_code(result)
         raise Libsecp256k1Exception("invalid arguments")
-    return tweaked_seckey.raw[:SECKEY_SIZE]
+    return tweaked_seckey.raw[:SECKEY_LENGTH]
 
 
 # Tweak a public key by multiplying it by a tweak value.
@@ -628,7 +611,6 @@ def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
 #
 @enforce_type
 def ec_pubkey_tweak_mul(pubkey: secp256k1_pubkey, tweak32: bytes) -> secp256k1_pubkey:
-    enforce_length(tweak32, "tweak32", length=HASH32)
     result = lib.secp256k1_ec_pubkey_tweak_mul(
         secp256k1_context_verify, pubkey, tweak32
     )
@@ -690,7 +672,7 @@ def ec_pubkey_combine(pubkeys: List[secp256k1_pubkey]) -> secp256k1_pubkey:
     for i, p in enumerate(pubkeys):
         pubkey_arr[i] = p.raw
 
-    combined_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    combined_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     result = lib.secp256k1_ec_pubkey_combine(
         secp256k1_context_verify, combined_pubkey, pubkey_arr, len(pubkeys)
     )

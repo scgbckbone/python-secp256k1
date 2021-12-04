@@ -11,12 +11,12 @@ from tests.data import (
 )
 from pysecp256k1.low_level import Libsecp256k1Exception
 from pysecp256k1 import (
-    ec_seckey_verify, ec_pubkey_create, ec_pubkey_serialize,
+    ec_seckey_verify, ec_pubkey_create, ec_pubkey_serialize, ec_pubkey_cmp,
     ec_pubkey_parse, ec_seckey_negate, ec_pubkey_negate, ec_seckey_tweak_add,
     ec_pubkey_tweak_add, ec_pubkey_combine, ecdsa_verify, ecdsa_sign,
-    ecdsa_signature_serialize_der, ecdsa_signature_parse_der, ecdsa_signature_normalize,
-    ec_pubkey_tweak_mul, ec_seckey_tweak_mul, tagged_sha256, ec_pubkey_cmp,
-    ecdsa_signature_parse_compact, ecdsa_signature_serialize_compact,
+    ecdsa_signature_serialize_der, ecdsa_signature_parse_der, tagged_sha256,
+    ec_pubkey_tweak_mul, ec_seckey_tweak_mul, ecdsa_signature_parse_compact,
+    ecdsa_signature_serialize_compact, ecdsa_signature_normalize
 )
 
 

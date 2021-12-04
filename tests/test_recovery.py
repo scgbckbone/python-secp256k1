@@ -45,7 +45,7 @@ class TestPysecp256k1RecoveryValidation(unittest.TestCase):
 
     def test_ecdsa_recoverable_signature_parse_compact_invalid_input_type_rec_id(self):
         for rec_id_invalid in invalid_rec_ids:
-            with self.assertRaises(Libsecp256k1Exception):
+            with self.assertRaises(ValueError):
                 ecdsa_recoverable_signature_parse_compact(
                     self.compact_sig, rec_id_invalid
                 )

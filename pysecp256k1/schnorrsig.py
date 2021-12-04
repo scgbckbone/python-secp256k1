@@ -2,11 +2,10 @@ import ctypes
 from typing import Optional
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, has_secp256k1_schnorrsig, Libsecp256k1Exception,
-    enforce_length
+    assert_zero_return_code, has_secp256k1_schnorrsig, Libsecp256k1Exception
 )
 from pysecp256k1.low_level.constants import (
-    secp256k1_keypair, secp256k1_xonly_pubkey, COMPACT_SIGNATURE_SIZE, HASH32
+    secp256k1_keypair, secp256k1_xonly_pubkey, COMPACT_SIGNATURE_LENGTH
 )
 
 if not has_secp256k1_schnorrsig:
@@ -43,10 +42,7 @@ if not has_secp256k1_schnorrsig:
 #
 @enforce_type
 def schnorrsig_sign(keypair: secp256k1_keypair, msg32: bytes, aux_rand32: Optional[bytes] = None) -> bytes:
-    enforce_length(msg32, "msg32", length=HASH32)
-    if aux_rand32 is not None:
-        enforce_length(aux_rand32, "aux_rand32", length=HASH32)
-    compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_SIZE)
+    compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
     result = lib.secp256k1_schnorrsig_sign(
         secp256k1_context_sign, compact_sig, msg32, keypair, aux_rand32
     )
@@ -55,7 +51,7 @@ def schnorrsig_sign(keypair: secp256k1_keypair, msg32: bytes, aux_rand32: Option
         raise Libsecp256k1Exception(
             "secp256k1_schnorrsig_sign returned failure"
         )
-    return compact_sig.raw[:COMPACT_SIGNATURE_SIZE]
+    return compact_sig.raw[:COMPACT_SIGNATURE_LENGTH]
 
 
 # Create a Schnorr signature with a more flexible API.
@@ -73,7 +69,7 @@ def schnorrsig_sign(keypair: secp256k1_keypair, msg32: bytes, aux_rand32: Option
 #
 @enforce_type
 def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
-    compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_SIZE)
+    compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
     result = lib.secp256k1_schnorrsig_sign_custom(
         secp256k1_context_sign, compact_sig, msg, len(msg), keypair, None
     )
@@ -82,7 +78,7 @@ def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
         raise Libsecp256k1Exception(
             "secp256k1_schnorrsig_sign_custom returned failure"
         )
-    return compact_sig.raw[:COMPACT_SIGNATURE_SIZE]
+    return compact_sig.raw[:COMPACT_SIGNATURE_LENGTH]
 
 
 # Verify a Schnorr signature.
@@ -97,7 +93,6 @@ def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
 #
 @enforce_type
 def schnorrsig_verify(compact_sig: bytes, msg: bytes, xonly_pubkey: secp256k1_xonly_pubkey) -> bool:
-    enforce_length(compact_sig, "compact_sig", length=COMPACT_SIGNATURE_SIZE)
     result = lib.secp256k1_schnorrsig_verify(
         secp256k1_context_verify, compact_sig, msg, len(msg), xonly_pubkey
     )

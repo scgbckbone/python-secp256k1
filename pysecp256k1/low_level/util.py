@@ -1,5 +1,24 @@
 import typing
 import functools
+from pysecp256k1.low_level.constants import (
+    SECKEY_LENGTH, PUBLIC_KEY_LENGTH, COMPRESSED_PUBLIC_KEY_LENGTH,
+    XONLY_PUBKEY_LENGTH, HASH32, COMPACT_SIGNATURE_LENGTH,
+    VALID_RECOVERY_IDS
+)
+
+
+ARG_LENGTH_MAP = {
+    "aux_rand32": HASH32,
+    "msghash32": HASH32,
+    "msg32": HASH32,
+    "tweak32": HASH32,
+    "seckey": SECKEY_LENGTH,
+    "compact_sig": COMPACT_SIGNATURE_LENGTH,
+    "pubkey_ser": [PUBLIC_KEY_LENGTH, COMPRESSED_PUBLIC_KEY_LENGTH],
+    "xonly_pubkey_ser": XONLY_PUBKEY_LENGTH,
+    "tweaked_pubkey32": XONLY_PUBKEY_LENGTH,
+
+}
 
 
 def assert_zero_return_code(code: int) -> None:
@@ -14,14 +33,18 @@ def enforce_type(func):
     cares about the needs of this library.
 
     Mostly just enforcing basic python types like bytes, int, bool.
-    Some specific ctypes types - c_char of specific length.
+    Some specific ctypes types - c_char array of specific length.
     And finally Optional, List and Tuple from typing library.
+
+    Also enforces length of bytes based on ARG_LENGTH_MAP and checks if
+    recovery id is from valid range.
     """
     # no need to calculate them every time the function is executed
     type_hints = typing.get_type_hints(func)
 
     @functools.wraps(func)
     def inner(*args, **kwargs):
+        # args, kwargs type enforcement
         all_args = kwargs.copy()
         all_args.update(dict(zip(func.__code__.co_varnames, args)))
         for arg_name, arg in all_args.items():
@@ -43,9 +66,20 @@ def enforce_type(func):
                     raise ValueError(
                         f"'{arg_name}' must be of type {correct_type}"
                     )
+            # length enforcement
+            length = ARG_LENGTH_MAP.get(arg_name, None)
+            if length is not None:
+                enforce_length(arg, arg_name, length)
+            # recovery id check
+            if arg_name == "rec_id":
+                if arg not in VALID_RECOVERY_IDS:
+                    raise ValueError(
+                        "Invalid recovery id. (rec_id >= 0 && rec_id <= 3)"
+                    )
 
         result = func(*args, **kwargs)
 
+        # return type enforcement
         if "return" in type_hints:
             origin = typing.get_origin(type_hints["return"])
             if origin == tuple:

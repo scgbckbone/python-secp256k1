@@ -2,7 +2,9 @@ import unittest
 from pysecp256k1.low_level.util import (
     assert_zero_return_code, enforce_length
 )
-from pysecp256k1.low_level.constants import SECKEY_SIZE, COMPACT_SIGNATURE_SIZE
+from pysecp256k1.low_level.constants import (
+    SECKEY_LENGTH, COMPACT_SIGNATURE_LENGTH
+)
 
 
 class TestUtil(unittest.TestCase):
@@ -12,8 +14,8 @@ class TestUtil(unittest.TestCase):
             assert_zero_return_code(1)
 
     def test_enforce_length(self):
-        b32 = SECKEY_SIZE * b"\x00"
-        b64 = COMPACT_SIGNATURE_SIZE * b"\x01"
+        b32 = SECKEY_LENGTH * b"\x00"
+        b64 = COMPACT_SIGNATURE_LENGTH * b"\x01"
         self.assertIsNone(enforce_length(b32, "seckey", length=32))
         self.assertIsNone(enforce_length(b64, "sig", length=64))
         with self.assertRaises(ValueError) as exc:

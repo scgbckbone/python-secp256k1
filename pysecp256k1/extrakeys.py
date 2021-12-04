@@ -2,13 +2,12 @@ import ctypes
 from typing import Tuple
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, has_secp256k1_extrakeys, Libsecp256k1Exception,
-    enforce_length
+    assert_zero_return_code, has_secp256k1_extrakeys, Libsecp256k1Exception
 )
 from pysecp256k1.low_level.constants import (
     secp256k1_pubkey, secp256k1_xonly_pubkey, secp256k1_keypair,
-    INTERNAL_PUBKEY_SIZE, INTERNAL_KEYPAIR_SIZE, XONLY_PUBKEY_SIZE, SECKEY_SIZE,
-    HASH32
+    INTERNAL_PUBKEY_LENGTH, INTERNAL_KEYPAIR_LENGTH, XONLY_PUBKEY_LENGTH,
+    SECKEY_LENGTH
 )
 
 if not has_secp256k1_extrakeys:
@@ -31,8 +30,7 @@ if not has_secp256k1_extrakeys:
 #
 @enforce_type
 def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> secp256k1_xonly_pubkey:
-    enforce_length(xonly_pubkey_ser, "xonly_pubkey_ser", length=XONLY_PUBKEY_SIZE)
-    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     result = lib.secp256k1_xonly_pubkey_parse(
         secp256k1_context_verify, xonly_pubkey, xonly_pubkey_ser
     )
@@ -54,11 +52,11 @@ def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> secp256k1_xonly_pubkey:
 #
 @enforce_type
 def xonly_pubkey_serialize(xonly_pubkey: secp256k1_xonly_pubkey) -> bytes:
-    xonly_pubkey_ser = ctypes.create_string_buffer(XONLY_PUBKEY_SIZE)
+    xonly_pubkey_ser = ctypes.create_string_buffer(XONLY_PUBKEY_LENGTH)
     lib.secp256k1_xonly_pubkey_serialize(
         secp256k1_context_sign, xonly_pubkey_ser, xonly_pubkey
     )
-    return xonly_pubkey_ser.raw[:XONLY_PUBKEY_SIZE]
+    return xonly_pubkey_ser.raw[:XONLY_PUBKEY_LENGTH]
 
 
 # Compare two x-only public keys using lexicographic order
@@ -91,7 +89,7 @@ def xonly_pubkey_cmp(xonly_pubkey0: secp256k1_xonly_pubkey, xonly_pubkey1: secp2
 #
 @enforce_type
 def xonly_pubkey_from_pubkey(pubkey: secp256k1_pubkey) -> Tuple[secp256k1_xonly_pubkey, int]:
-    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
 
     pk_parity = ctypes.c_int()
     pk_parity.value = -1
@@ -127,8 +125,7 @@ def xonly_pubkey_from_pubkey(pubkey: secp256k1_pubkey) -> Tuple[secp256k1_xonly_
 #
 @enforce_type
 def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> secp256k1_pubkey:
-    enforce_length(tweak32, "tweak32", length=HASH32)
-    tweaked_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    tweaked_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     result = lib.secp256k1_xonly_pubkey_tweak_add(
         secp256k1_context_verify, tweaked_pubkey, xonly_pubkey, tweak32
     )
@@ -167,8 +164,6 @@ def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes)
 #
 @enforce_type
 def xonly_pubkey_tweak_add_check(tweaked_pubkey32: bytes, tweaked_pk_parity: int, internal_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> bool:
-    enforce_length(tweaked_pubkey32, "tweaked_pubkey32", length=XONLY_PUBKEY_SIZE)
-    enforce_length(tweak32, "tweak32", length=HASH32)
     result = lib.secp256k1_xonly_pubkey_tweak_add_check(
         secp256k1_context_verify, tweaked_pubkey32, tweaked_pk_parity,
         internal_pubkey, tweak32
@@ -189,8 +184,7 @@ def xonly_pubkey_tweak_add_check(tweaked_pubkey32: bytes, tweaked_pk_parity: int
 #
 @enforce_type
 def keypair_create(seckey: bytes) -> secp256k1_keypair:
-    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
-    keypair = ctypes.create_string_buffer(INTERNAL_KEYPAIR_SIZE)
+    keypair = ctypes.create_string_buffer(INTERNAL_KEYPAIR_LENGTH)
     result = lib.secp256k1_keypair_create(
         secp256k1_context_sign, keypair, seckey
     )
@@ -210,12 +204,12 @@ def keypair_create(seckey: bytes) -> secp256k1_keypair:
 #
 @enforce_type
 def keypair_sec(keypair: secp256k1_keypair) -> bytes:
-    seckey = ctypes.create_string_buffer(SECKEY_SIZE)
+    seckey = ctypes.create_string_buffer(SECKEY_LENGTH)
     result = lib.secp256k1_keypair_sec(secp256k1_context_verify, seckey, keypair)
     if result != 1:
         assert_zero_return_code(result)
         raise Libsecp256k1Exception("invalid arguments")
-    return seckey.raw[:SECKEY_SIZE]
+    return seckey.raw[:SECKEY_LENGTH]
 
 
 # Get the public key from a keypair.
@@ -228,7 +222,7 @@ def keypair_sec(keypair: secp256k1_keypair) -> bytes:
 #
 @enforce_type
 def keypair_pub(keypair: secp256k1_keypair) -> secp256k1_pubkey:
-    pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     result = lib.secp256k1_keypair_pub(secp256k1_context_verify, pubkey, keypair)
     if result != 1:
         assert_zero_return_code(result)
@@ -252,7 +246,7 @@ def keypair_pub(keypair: secp256k1_keypair) -> secp256k1_pubkey:
 #
 @enforce_type
 def keypair_xonly_pub(keypair: secp256k1_keypair) -> Tuple[secp256k1_xonly_pubkey, int]:
-    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_SIZE)
+    xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     pk_parity = ctypes.c_int()
     pk_parity.value = -1
 
@@ -286,7 +280,6 @@ def keypair_xonly_pub(keypair: secp256k1_keypair) -> Tuple[secp256k1_xonly_pubke
 #
 @enforce_type
 def keypair_xonly_tweak_add(keypair: secp256k1_keypair, tweak32: bytes):
-    enforce_length(tweak32, "tweak32", length=SECKEY_SIZE)
     result = lib.secp256k1_keypair_xonly_tweak_add(
         secp256k1_context_verify, keypair, tweak32
     )

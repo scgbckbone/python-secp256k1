@@ -1,9 +1,9 @@
 import ctypes
 from pysecp256k1.low_level import (
     lib, secp256k1_context_sign, enforce_type, assert_zero_return_code,
-    has_secp256k1_ecdh, Libsecp256k1Exception, enforce_length
+    has_secp256k1_ecdh, Libsecp256k1Exception
 )
-from pysecp256k1.low_level.constants import secp256k1_pubkey, SECKEY_SIZE
+from pysecp256k1.low_level.constants import secp256k1_pubkey, SECKEY_LENGTH
 
 if not has_secp256k1_ecdh:
     raise RuntimeError(
@@ -28,8 +28,7 @@ if not has_secp256k1_ecdh:
 #
 @enforce_type
 def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
-    enforce_length(seckey, "seckey", length=SECKEY_SIZE)
-    output = ctypes.create_string_buffer(SECKEY_SIZE)
+    output = ctypes.create_string_buffer(SECKEY_LENGTH)
     result = lib.secp256k1_ecdh(
         secp256k1_context_sign, output, pubkey, seckey, None, None
     )
@@ -38,7 +37,7 @@ def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
         raise Libsecp256k1Exception(
             "scalar was invalid (zero or overflow) or hashfp returned 0"
         )
-    return output.raw[:SECKEY_SIZE]
+    return output.raw[:SECKEY_LENGTH]
 
 
 __all__ = (
