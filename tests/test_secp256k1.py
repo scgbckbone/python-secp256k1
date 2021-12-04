@@ -3,25 +3,47 @@ import ctypes
 import unittest
 import hashlib
 from tests.data import (
-    invalid_seckeys, valid_seckeys, serialized_pubkeys_compressed,
-    serialized_pubkeys, invalid_seckey_length, not_bytes, not_c_char_array,
-    invalid_pubkey_serialization_length, invalid_pubkey_length, not_bool,
-    invalid_signature_length, invalid_compact_sig_length,
-    valid_compact_sig_serializations, valid_der_sig_serializations
+    invalid_seckeys,
+    valid_seckeys,
+    serialized_pubkeys_compressed,
+    serialized_pubkeys,
+    invalid_seckey_length,
+    not_bytes,
+    not_c_char_array,
+    invalid_pubkey_serialization_length,
+    invalid_pubkey_length,
+    not_bool,
+    invalid_signature_length,
+    invalid_compact_sig_length,
+    valid_compact_sig_serializations,
+    valid_der_sig_serializations,
 )
 from pysecp256k1.low_level import Libsecp256k1Exception
 from pysecp256k1 import (
-    ec_seckey_verify, ec_pubkey_create, ec_pubkey_serialize, ec_pubkey_cmp,
-    ec_pubkey_parse, ec_seckey_negate, ec_pubkey_negate, ec_seckey_tweak_add,
-    ec_pubkey_tweak_add, ec_pubkey_combine, ecdsa_verify, ecdsa_sign,
-    ecdsa_signature_serialize_der, ecdsa_signature_parse_der, tagged_sha256,
-    ec_pubkey_tweak_mul, ec_seckey_tweak_mul, ecdsa_signature_parse_compact,
-    ecdsa_signature_serialize_compact, ecdsa_signature_normalize
+    ec_seckey_verify,
+    ec_pubkey_create,
+    ec_pubkey_serialize,
+    ec_pubkey_cmp,
+    ec_pubkey_parse,
+    ec_seckey_negate,
+    ec_pubkey_negate,
+    ec_seckey_tweak_add,
+    ec_pubkey_tweak_add,
+    ec_pubkey_combine,
+    ecdsa_verify,
+    ecdsa_sign,
+    ecdsa_signature_serialize_der,
+    ecdsa_signature_parse_der,
+    tagged_sha256,
+    ec_pubkey_tweak_mul,
+    ec_seckey_tweak_mul,
+    ecdsa_signature_parse_compact,
+    ecdsa_signature_serialize_compact,
+    ecdsa_signature_normalize,
 )
 
 
 class TestPysecp256k1Validation(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls) -> None:
         cls.b32 = os.urandom(32)
@@ -289,7 +311,7 @@ class TestPysecp256k1Validation(unittest.TestCase):
         # not list
         for invalid_type in [
             (self.pubkey0, self.pubkey1),
-            {"pk1": self.pubkey0, "pk2": self.pubkey1}
+            {"pk1": self.pubkey0, "pk2": self.pubkey1},
         ]:
             with self.assertRaises(ValueError):
                 ec_pubkey_combine(invalid_type)
@@ -310,7 +332,6 @@ class TestPysecp256k1Validation(unittest.TestCase):
 
 
 class TestPysecp256k1(unittest.TestCase):
-
     def test_ec_pubkey_parse(self):
         # swap marker - uncompressed marker for compressed pubkey
         for ser_pub in serialized_pubkeys_compressed:
@@ -330,27 +351,18 @@ class TestPysecp256k1(unittest.TestCase):
 
         # compressed
         for ser_pub, seckey in zip(serialized_pubkeys_compressed, valid_seckeys):
-            self.assertEqual(
-                ec_pubkey_parse(ser_pub).raw, ec_pubkey_create(seckey).raw
-            )
+            self.assertEqual(ec_pubkey_parse(ser_pub).raw, ec_pubkey_create(seckey).raw)
 
         # uncompressed
         for ser_pub, seckey in zip(serialized_pubkeys, valid_seckeys):
-            self.assertEqual(
-                ec_pubkey_parse(ser_pub).raw, ec_pubkey_create(seckey).raw
-            )
+            self.assertEqual(ec_pubkey_parse(ser_pub).raw, ec_pubkey_create(seckey).raw)
 
     def test_ec_pubkey_serialize(self):
         # NULL
-        self.assertEqual(
-            ec_pubkey_serialize(ctypes.create_string_buffer(64)),
-            b""
-        )
+        self.assertEqual(ec_pubkey_serialize(ctypes.create_string_buffer(64)), b"")
         # compressed
         for seckey, ser_pub in zip(valid_seckeys, serialized_pubkeys_compressed):
-            self.assertEqual(
-                ec_pubkey_serialize(ec_pubkey_create(seckey)), ser_pub
-            )
+            self.assertEqual(ec_pubkey_serialize(ec_pubkey_create(seckey)), ser_pub)
         # uncompressed
         for seckey, ser_pub in zip(valid_seckeys, serialized_pubkeys):
             self.assertEqual(
@@ -362,8 +374,9 @@ class TestPysecp256k1(unittest.TestCase):
             self.assertTrue(
                 ec_pubkey_cmp(
                     ec_pubkey_parse(serialized_pubkeys[i]),
-                    ec_pubkey_parse(serialized_pubkeys_compressed[i])
-                ) == 0  # meaning that they are equal
+                    ec_pubkey_parse(serialized_pubkeys_compressed[i]),
+                )
+                == 0  # meaning that they are equal
             )
         # first 3 are in ascending order
         pubkey0 = ec_pubkey_parse(serialized_pubkeys_compressed[0])
@@ -371,11 +384,13 @@ class TestPysecp256k1(unittest.TestCase):
         pubkey2 = ec_pubkey_parse(serialized_pubkeys_compressed[2])
         self.assertTrue(
             # first public key is less than the second
-            ec_pubkey_cmp(pubkey0, pubkey1) < 0
+            ec_pubkey_cmp(pubkey0, pubkey1)
+            < 0
         )
         self.assertTrue(
             # the first public key is greater than the second
-            ec_pubkey_cmp(pubkey2, pubkey0) > 0
+            ec_pubkey_cmp(pubkey2, pubkey0)
+            > 0
         )
 
     def test_ecdsa_signature_parse_ser_compact(self):
@@ -387,9 +402,7 @@ class TestPysecp256k1(unittest.TestCase):
             ecdsa_signature_parse_compact(2 * invalid_seckeys[0])
         for compact_sig_ser in valid_compact_sig_serializations:
             sig = ecdsa_signature_parse_compact(compact_sig_ser)
-            self.assertEqual(
-                ecdsa_signature_serialize_compact(sig), compact_sig_ser
-            )
+            self.assertEqual(ecdsa_signature_serialize_compact(sig), compact_sig_ser)
         for seckey in valid_seckeys:
             msg = hashlib.sha256(seckey).digest()
             raw_sig = ecdsa_sign(seckey, msg)
@@ -469,8 +482,7 @@ class TestPysecp256k1(unittest.TestCase):
         for seckey in valid_seckeys:
             raw_pubkey = ec_pubkey_create(seckey)
             self.assertEqual(
-                raw_pubkey.raw,
-                ec_pubkey_negate(ec_pubkey_negate(raw_pubkey)).raw
+                raw_pubkey.raw, ec_pubkey_negate(ec_pubkey_negate(raw_pubkey)).raw
             )
 
     def test_ec_seckey_tweak_add(self):
@@ -482,7 +494,7 @@ class TestPysecp256k1(unittest.TestCase):
             self.assertEqual(
                 str(exc.exception),
                 "arguments are invalid or the resulting secret key would be invalid"
-                " (only when the tweak is the negation of the secret key)"
+                " (only when the tweak is the negation of the secret key)",
             )
             with self.assertRaises(Libsecp256k1Exception) as exc:
                 # invalid tweak
@@ -490,7 +502,7 @@ class TestPysecp256k1(unittest.TestCase):
             self.assertEqual(
                 str(exc.exception),
                 "arguments are invalid or the resulting secret key would be invalid"
-                " (only when the tweak is the negation of the secret key)"
+                " (only when the tweak is the negation of the secret key)",
             )
         # tweak is the negation of secret key
         with self.assertRaises(Libsecp256k1Exception):
@@ -545,15 +557,14 @@ class TestPysecp256k1(unittest.TestCase):
             self.assertEqual(
                 str(exc.exception),
                 "arguments are invalid or the resulting public key would be invalid"
-                " (only when the tweak is the negation of the corresponding secret key)"
+                " (only when the tweak is the negation of the corresponding secret key)",
             )
 
         # compressed
         tweak = valid_seckeys[2]
         sx, sy = valid_seckeys[:2]
         raw_px, raw_py = (
-            ec_pubkey_parse(pk)
-            for pk in serialized_pubkeys_compressed[:2]
+            ec_pubkey_parse(pk) for pk in serialized_pubkeys_compressed[:2]
         )
         sxt = ec_seckey_tweak_add(sx, tweak)
         sxt_p = ec_pubkey_create(sxt)
@@ -576,8 +587,7 @@ class TestPysecp256k1(unittest.TestCase):
         tweak = valid_seckeys[2]
         sx, sy = valid_seckeys[:2]
         raw_px, raw_py = (
-            ec_pubkey_parse(pk)
-            for pk in serialized_pubkeys_compressed[:2]
+            ec_pubkey_parse(pk) for pk in serialized_pubkeys_compressed[:2]
         )
         sxt = ec_seckey_tweak_mul(sx, tweak)
         sxt_p = ec_pubkey_create(sxt)
@@ -611,8 +621,7 @@ class TestPysecp256k1(unittest.TestCase):
 
     def test_ec_pubkey_combine(self):
         parsed_pubkeys = [
-            ec_pubkey_parse(pk)
-            for pk in serialized_pubkeys_compressed[:3]
+            ec_pubkey_parse(pk) for pk in serialized_pubkeys_compressed[:3]
         ]
         x, y, z = valid_seckeys[:3]
         xy = ec_seckey_tweak_add(x, y)
@@ -637,10 +646,7 @@ class TestPysecp256k1(unittest.TestCase):
         raw_pubkey = ec_pubkey_create(seckey)
         with self.assertRaises(Libsecp256k1Exception) as exc:
             ec_pubkey_tweak_mul(raw_pubkey, tweak_null)  # this raises
-        self.assertEqual(
-            str(exc.exception),
-            "invalid arguments"
-        )
+        self.assertEqual(str(exc.exception), "invalid arguments")
 
     def test_seckey_mul_null_tweak(self):
         tweak_null = 32 * b"\x00"
@@ -650,10 +656,7 @@ class TestPysecp256k1(unittest.TestCase):
         self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         with self.assertRaises(Libsecp256k1Exception) as exc:
             ec_seckey_tweak_mul(seckey, tweak_null)  # this raises
-        self.assertEqual(
-            str(exc.exception),
-            "invalid arguments"
-        )
+        self.assertEqual(str(exc.exception), "invalid arguments")
 
     # ec_pubkey_tweak_add, ec_seckey_tweak_add, xonly_pubkey_tweak_add,
     # keypair_xonly_tweak_add do NOT raise for NULL tweak

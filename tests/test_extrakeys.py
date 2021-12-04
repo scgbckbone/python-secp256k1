@@ -2,9 +2,15 @@ import ctypes
 import unittest
 import hashlib
 from tests.data import (
-    valid_seckeys, invalid_seckeys, invalid_seckey_length,
-    invalid_xonly_pubkey_length, not_bytes, invalid_pubkey_length,
-    not_c_char_array, not_int, invalid_keypair_length,
+    valid_seckeys,
+    invalid_seckeys,
+    invalid_seckey_length,
+    invalid_xonly_pubkey_length,
+    not_bytes,
+    invalid_pubkey_length,
+    not_c_char_array,
+    not_int,
+    invalid_keypair_length,
     serialized_pubkeys_compressed,
 )
 from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_extrakeys
@@ -14,6 +20,7 @@ from pysecp256k1 import (
     ec_seckey_tweak_add,
     ec_seckey_negate,
 )
+
 if has_secp256k1_extrakeys:
     from pysecp256k1.extrakeys import (
         keypair_create,
@@ -35,7 +42,6 @@ skip_reason = "secp256k1 is not compiled with module 'extrakeys'"
 
 @unittest.skipUnless(has_secp256k1_extrakeys, skip_reason)
 class TestPysecp256k1ExtrakeysValidation(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls) -> None:
         cls.b32 = valid_seckeys[1]
@@ -133,9 +139,7 @@ class TestPysecp256k1ExtrakeysValidation(unittest.TestCase):
 
         for invalid_type in not_c_char_array:
             with self.assertRaises(ValueError):
-                xonly_pubkey_tweak_add_check(
-                    self.b32, 0, invalid_type, self.b32
-                )
+                xonly_pubkey_tweak_add_check(self.b32, 0, invalid_type, self.b32)
 
     def test_xonly_pubkey_tweak_add_check_invalid_input_type_tweak32(self):
         for invalid_tweak in invalid_seckey_length:
@@ -228,10 +232,7 @@ class TestPysecp256k1Extrakeys(unittest.TestCase):
         for invalid_seckey in invalid_seckeys:
             with self.assertRaises(Libsecp256k1Exception) as exc:
                 keypair_create(invalid_seckey)
-            self.assertEqual(
-                str(exc.exception),
-                "secret key is invalid"
-            )
+            self.assertEqual(str(exc.exception), "secret key is invalid")
 
     def test_keypair_sec(self):
         for seckey in valid_seckeys:
@@ -304,29 +305,28 @@ class TestPysecp256k1Extrakeys(unittest.TestCase):
             # incorrect serialization ok pubkey
             self.assertFalse(
                 xonly_pubkey_tweak_add_check(
-                    ser_tweaked_xonly_pub[:-1] + b"\xff", parity2,
-                    xonly_pub, valid_tweak
+                    ser_tweaked_xonly_pub[:-1] + b"\xff",
+                    parity2,
+                    xonly_pub,
+                    valid_tweak,
                 )
             )
             # incorrect parity
             self.assertFalse(
                 xonly_pubkey_tweak_add_check(
-                    ser_tweaked_xonly_pub, 0 if parity2 else 1,
-                    xonly_pub, valid_tweak
+                    ser_tweaked_xonly_pub, 0 if parity2 else 1, xonly_pub, valid_tweak
                 )
             )
             # invalid internal key
             self.assertFalse(
                 xonly_pubkey_tweak_add_check(
-                    ser_tweaked_xonly_pub, parity2, tweaked_xonly_pub,
-                    valid_tweak
+                    ser_tweaked_xonly_pub, parity2, tweaked_xonly_pub, valid_tweak
                 )
             )
             # invalid tweak
             self.assertFalse(
                 xonly_pubkey_tweak_add_check(
-                    ser_tweaked_xonly_pub, parity2, tweaked_xonly_pub,
-                    seckey
+                    ser_tweaked_xonly_pub, parity2, tweaked_xonly_pub, seckey
                 )
             )
 
@@ -338,8 +338,12 @@ class TestPysecp256k1Extrakeys(unittest.TestCase):
         self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         raw_pubkey = ec_pubkey_create(seckey)
         xonly_pubkey, parity = xonly_pubkey_from_pubkey(raw_pubkey)
-        pubkey = xonly_pubkey_tweak_add(xonly_pubkey, tweak_null)  # this should raise but won't
-        self.assertEqual(pubkey.raw, xonly_pubkey.raw)  # instead xonly pubkey is untweaked
+        pubkey = xonly_pubkey_tweak_add(
+            xonly_pubkey, tweak_null
+        )  # this should raise but won't
+        self.assertEqual(
+            pubkey.raw, xonly_pubkey.raw
+        )  # instead xonly pubkey is untweaked
 
     def test_keypair_xonly_add_null_tweak(self):
         tweak_null = 32 * b"\x00"
@@ -348,5 +352,7 @@ class TestPysecp256k1Extrakeys(unittest.TestCase):
         seckey = valid_seckeys[0]
         self.assertIsNone(ec_seckey_verify(seckey))  # this means seckey is valid
         keypair = keypair_create(seckey)
-        res = keypair_xonly_tweak_add(keypair, tweak_null)  # this should raise but won't
+        res = keypair_xonly_tweak_add(
+            keypair, tweak_null
+        )  # this should raise but won't
         self.assertEqual(res.raw, keypair.raw)  # instead keypair is untweaked

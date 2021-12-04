@@ -3,12 +3,20 @@ import os
 import unittest
 import hashlib
 from tests.data import (
-    valid_seckeys, invalid_keypair_length, not_c_char_array, not_bytes,
-    invalid_seckey_length, invalid_pubkey_length, invalid_compact_sig_length
+    valid_seckeys,
+    invalid_keypair_length,
+    not_c_char_array,
+    not_bytes,
+    invalid_seckey_length,
+    invalid_pubkey_length,
+    invalid_compact_sig_length,
 )
 from pysecp256k1.low_level import (
-    Libsecp256k1Exception, has_secp256k1_schnorrsig, has_secp256k1_extrakeys
+    Libsecp256k1Exception,
+    has_secp256k1_schnorrsig,
+    has_secp256k1_extrakeys,
 )
+
 if has_secp256k1_extrakeys:
     from pysecp256k1.extrakeys import keypair_create, keypair_xonly_pub
 if has_secp256k1_schnorrsig:
@@ -24,7 +32,6 @@ skip_reason = "secp256k1 is not compiled with module 'schnorrsig'"
 
 @unittest.skipUnless(has_secp256k1_schnorrsig, skip_reason)
 class TestPysecp256k1SchnorrsigValidation(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls) -> None:
         cls.b32 = valid_seckeys[0]
@@ -129,6 +136,4 @@ class TestPysecp256k1Schnorrsig(unittest.TestCase):
             self.assertFalse(
                 schnorrsig_verify(signature0, msg32, ctypes.create_string_buffer(64))
             )
-            self.assertFalse(
-                schnorrsig_verify(64 * b"\x01", msg32, xonly_pubkey)
-            )
+            self.assertFalse(schnorrsig_verify(64 * b"\x01", msg32, xonly_pubkey))

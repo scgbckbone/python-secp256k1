@@ -2,24 +2,31 @@ import os
 import ctypes
 import unittest
 from tests.data import (
-    invalid_seckeys, valid_seckeys, invalid_seckey_length,
-    invalid_compact_sig_length, not_bytes, not_int, invalid_rec_ids,
-    invalid_recoverable_signature_length, not_c_char_array
+    invalid_seckeys,
+    valid_seckeys,
+    invalid_seckey_length,
+    invalid_compact_sig_length,
+    not_bytes,
+    not_int,
+    invalid_rec_ids,
+    invalid_recoverable_signature_length,
+    not_c_char_array,
 )
 from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_recovery
 from pysecp256k1 import (
     ec_pubkey_create,
     ecdsa_sign,
     tagged_sha256,
-    ecdsa_signature_serialize_compact
+    ecdsa_signature_serialize_compact,
 )
+
 if has_secp256k1_recovery:
     from pysecp256k1.recovery import (
         ecdsa_recoverable_signature_parse_compact,
         ecdsa_recoverable_signature_serialize_compact,
         ecdsa_recoverable_signature_convert,
         ecdsa_sign_recoverable,
-        ecdsa_recover
+        ecdsa_recover,
     )
 
 
@@ -28,13 +35,14 @@ skip_reason = "secp256k1 is not compiled with module 'recovery'"
 
 @unittest.skipUnless(has_secp256k1_recovery, skip_reason)
 class TestPysecp256k1RecoveryValidation(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls) -> None:
         cls.compact_sig = 64 * b"\x00"
         cls.recoverable_sig = ctypes.create_string_buffer(65)
 
-    def test_ecdsa_recoverable_signature_parse_compact_invalid_input_type_compact_sig(self):
+    def test_ecdsa_recoverable_signature_parse_compact_invalid_input_type_compact_sig(
+        self,
+    ):
         for invalid_sig in invalid_compact_sig_length:
             with self.assertRaises(ValueError):
                 ecdsa_recoverable_signature_parse_compact(invalid_sig, 0)
@@ -65,7 +73,9 @@ class TestPysecp256k1RecoveryValidation(unittest.TestCase):
             with self.assertRaises(ValueError):
                 ecdsa_recoverable_signature_convert(invalid_type)
 
-    def test_ecdsa_recoverable_signature_serialize_compact_invalid_input_type_rec_sig(self):
+    def test_ecdsa_recoverable_signature_serialize_compact_invalid_input_type_rec_sig(
+        self,
+    ):
         for invalid_sig in invalid_recoverable_signature_length:
             with self.assertRaises(ValueError):
                 ecdsa_recoverable_signature_serialize_compact(invalid_sig)
@@ -137,7 +147,9 @@ class TestPysecp256k1Recovery(unittest.TestCase):
             sig = ecdsa_sign(seckey, msg_hash)
             self.assertEqual(converted_rec_sig.raw, sig.raw)
             compact_sig_ser = ecdsa_signature_serialize_compact(sig)
-            compact_rec_sig_ser, recid = ecdsa_recoverable_signature_serialize_compact(rec_sig)
+            compact_rec_sig_ser, recid = ecdsa_recoverable_signature_serialize_compact(
+                rec_sig
+            )
             rec_sig_parsed = ecdsa_recoverable_signature_parse_compact(
                 compact_rec_sig_ser, recid
             )

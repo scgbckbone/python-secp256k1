@@ -1,11 +1,16 @@
 import unittest
 import itertools
 from tests.data import (
-    valid_seckeys, invalid_seckeys, invalid_seckey_length,
-    invalid_pubkey_length, not_bytes, not_c_char_array
+    valid_seckeys,
+    invalid_seckeys,
+    invalid_seckey_length,
+    invalid_pubkey_length,
+    not_bytes,
+    not_c_char_array,
 )
 from pysecp256k1 import ec_pubkey_create
 from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_ecdh
+
 if has_secp256k1_ecdh:
     from pysecp256k1.ecdh import ecdh
 

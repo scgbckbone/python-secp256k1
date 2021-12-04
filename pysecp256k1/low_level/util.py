@@ -1,9 +1,13 @@
 import typing
 import functools
 from pysecp256k1.low_level.constants import (
-    SECKEY_LENGTH, PUBLIC_KEY_LENGTH, COMPRESSED_PUBLIC_KEY_LENGTH,
-    XONLY_PUBKEY_LENGTH, HASH32, COMPACT_SIGNATURE_LENGTH,
-    VALID_RECOVERY_IDS
+    SECKEY_LENGTH,
+    PUBLIC_KEY_LENGTH,
+    COMPRESSED_PUBLIC_KEY_LENGTH,
+    XONLY_PUBKEY_LENGTH,
+    HASH32,
+    COMPACT_SIGNATURE_LENGTH,
+    VALID_RECOVERY_IDS,
 )
 
 
@@ -17,7 +21,6 @@ ARG_LENGTH_MAP = {
     "pubkey_ser": [PUBLIC_KEY_LENGTH, COMPRESSED_PUBLIC_KEY_LENGTH],
     "xonly_pubkey_ser": XONLY_PUBKEY_LENGTH,
     "tweaked_pubkey32": XONLY_PUBKEY_LENGTH,
-
 }
 
 
@@ -56,16 +59,13 @@ def enforce_type(func):
                 for element in arg:
                     if not isinstance(element, _args):
                         raise ValueError(
-                            f"Elements of '{arg_name}' must be of type "
-                            f"{_args}"
+                            f"Elements of '{arg_name}' must be of type " f"{_args}"
                         )
             else:
                 if typing.get_origin(correct_type) == typing.Union:
                     correct_type = typing.get_args(correct_type)
                 if not isinstance(arg, correct_type):
-                    raise ValueError(
-                        f"'{arg_name}' must be of type {correct_type}"
-                    )
+                    raise ValueError(f"'{arg_name}' must be of type {correct_type}")
             # length enforcement
             length = ARG_LENGTH_MAP.get(arg_name, None)
             if length is not None:
@@ -94,6 +94,7 @@ def enforce_type(func):
                     raise ValueError(f"Result must be of type {type_hints['return']}")
 
         return result
+
     return inner
 
 
@@ -107,8 +108,4 @@ def enforce_length(value, name, length):
             raise ValueError(f"Length of '{name}' must be one of {length}")
 
 
-__all__ = (
-    "assert_zero_return_code",
-    "enforce_length",
-    "enforce_type"
-)
+__all__ = ("assert_zero_return_code", "enforce_length", "enforce_type")

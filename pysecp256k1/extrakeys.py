@@ -1,13 +1,22 @@
 import ctypes
 from typing import Tuple
 from pysecp256k1.low_level import (
-    lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, has_secp256k1_extrakeys, Libsecp256k1Exception
+    lib,
+    secp256k1_context_sign,
+    secp256k1_context_verify,
+    enforce_type,
+    assert_zero_return_code,
+    has_secp256k1_extrakeys,
+    Libsecp256k1Exception,
 )
 from pysecp256k1.low_level.constants import (
-    secp256k1_pubkey, secp256k1_xonly_pubkey, secp256k1_keypair,
-    INTERNAL_PUBKEY_LENGTH, INTERNAL_KEYPAIR_LENGTH, XONLY_PUBKEY_LENGTH,
-    SECKEY_LENGTH
+    secp256k1_pubkey,
+    secp256k1_xonly_pubkey,
+    secp256k1_keypair,
+    INTERNAL_PUBKEY_LENGTH,
+    INTERNAL_KEYPAIR_LENGTH,
+    XONLY_PUBKEY_LENGTH,
+    SECKEY_LENGTH,
 )
 
 if not has_secp256k1_extrakeys:
@@ -36,9 +45,7 @@ def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> secp256k1_xonly_pubkey:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception(
-            "public key could not be parsed or is invalid"
-        )
+        raise Libsecp256k1Exception("public key could not be parsed or is invalid")
     return xonly_pubkey
 
 
@@ -69,7 +76,9 @@ def xonly_pubkey_serialize(xonly_pubkey: secp256k1_xonly_pubkey) -> bytes:
 #       pubkey2:  second public key to compare
 #
 @enforce_type
-def xonly_pubkey_cmp(xonly_pubkey0: secp256k1_xonly_pubkey, xonly_pubkey1: secp256k1_xonly_pubkey) -> int:
+def xonly_pubkey_cmp(
+    xonly_pubkey0: secp256k1_xonly_pubkey, xonly_pubkey1: secp256k1_xonly_pubkey
+) -> int:
     return lib.secp256k1_xonly_pubkey_cmp(
         secp256k1_context_sign, xonly_pubkey0, xonly_pubkey1
     )
@@ -88,7 +97,9 @@ def xonly_pubkey_cmp(xonly_pubkey0: secp256k1_xonly_pubkey, xonly_pubkey1: secp2
 # In:        pubkey: pointer to a public key that is converted.
 #
 @enforce_type
-def xonly_pubkey_from_pubkey(pubkey: secp256k1_pubkey) -> Tuple[secp256k1_xonly_pubkey, int]:
+def xonly_pubkey_from_pubkey(
+    pubkey: secp256k1_pubkey,
+) -> Tuple[secp256k1_xonly_pubkey, int]:
     xonly_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
 
     pk_parity = ctypes.c_int()
@@ -124,7 +135,9 @@ def xonly_pubkey_from_pubkey(pubkey: secp256k1_pubkey) -> Tuple[secp256k1_xonly_
 #                      chance of being invalid is negligible (around 1 in 2^128).
 #
 @enforce_type
-def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> secp256k1_pubkey:
+def xonly_pubkey_tweak_add(
+    xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes
+) -> secp256k1_pubkey:
     tweaked_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     result = lib.secp256k1_xonly_pubkey_tweak_add(
         secp256k1_context_verify, tweaked_pubkey, xonly_pubkey, tweak32
@@ -163,10 +176,18 @@ def xonly_pubkey_tweak_add(xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes)
 #              tweak32: pointer to a 32-byte tweak.
 #
 @enforce_type
-def xonly_pubkey_tweak_add_check(tweaked_pubkey32: bytes, tweaked_pk_parity: int, internal_pubkey: secp256k1_xonly_pubkey, tweak32: bytes) -> bool:
+def xonly_pubkey_tweak_add_check(
+    tweaked_pubkey32: bytes,
+    tweaked_pk_parity: int,
+    internal_pubkey: secp256k1_xonly_pubkey,
+    tweak32: bytes,
+) -> bool:
     result = lib.secp256k1_xonly_pubkey_tweak_add_check(
-        secp256k1_context_verify, tweaked_pubkey32, tweaked_pk_parity,
-        internal_pubkey, tweak32
+        secp256k1_context_verify,
+        tweaked_pubkey32,
+        tweaked_pk_parity,
+        internal_pubkey,
+        tweak32,
     )
     if result != 1:
         assert_zero_return_code(result)
@@ -185,9 +206,7 @@ def xonly_pubkey_tweak_add_check(tweaked_pubkey32: bytes, tweaked_pk_parity: int
 @enforce_type
 def keypair_create(seckey: bytes) -> secp256k1_keypair:
     keypair = ctypes.create_string_buffer(INTERNAL_KEYPAIR_LENGTH)
-    result = lib.secp256k1_keypair_create(
-        secp256k1_context_sign, keypair, seckey
-    )
+    result = lib.secp256k1_keypair_create(secp256k1_context_sign, keypair, seckey)
 
     if result != 1:
         assert_zero_return_code(result)
@@ -300,5 +319,5 @@ __all__ = (
     "keypair_sec",
     "keypair_pub",
     "keypair_xonly_pub",
-    "keypair_xonly_tweak_add"
+    "keypair_xonly_tweak_add",
 )

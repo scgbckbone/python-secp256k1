@@ -1,7 +1,11 @@
 import ctypes
 from pysecp256k1.low_level import (
-    lib, secp256k1_context_sign, enforce_type, assert_zero_return_code,
-    has_secp256k1_ecdh, Libsecp256k1Exception
+    lib,
+    secp256k1_context_sign,
+    enforce_type,
+    assert_zero_return_code,
+    has_secp256k1_ecdh,
+    Libsecp256k1Exception,
 )
 from pysecp256k1.low_level.constants import secp256k1_pubkey, SECKEY_LENGTH
 
@@ -40,6 +44,4 @@ def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
     return output.raw[:SECKEY_LENGTH]
 
 
-__all__ = (
-    "ecdh"
-)
+__all__ = "ecdh"
