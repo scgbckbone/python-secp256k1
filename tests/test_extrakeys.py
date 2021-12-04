@@ -124,6 +124,12 @@ class TestPysecp256k1ExtrakeysValidation(unittest.TestCase):
                 )
 
     def test_xonly_pubkey_tweak_add_check_invalid_input_type_tweaked_pk_parity(self):
+        for invalid_pk_parity in [-1, 2, 3]:
+            with self.assertRaises(ValueError):
+                xonly_pubkey_tweak_add_check(
+                    self.b32, invalid_pk_parity, self.xonly_pubkey, self.b32
+                )
+
         for invalid_type in not_int:
             with self.assertRaises(ValueError):
                 xonly_pubkey_tweak_add_check(

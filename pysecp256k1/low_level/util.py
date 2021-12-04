@@ -8,6 +8,7 @@ from pysecp256k1.low_level.constants import (
     HASH32,
     COMPACT_SIGNATURE_LENGTH,
     VALID_RECOVERY_IDS,
+    VALID_PUBKEY_PARITY,
 )
 
 
@@ -74,7 +75,12 @@ def enforce_type(func):
             if arg_name == "rec_id":
                 if arg not in VALID_RECOVERY_IDS:
                     raise ValueError(
-                        "Invalid recovery id. (rec_id >= 0 && rec_id <= 3)"
+                        "Invalid recovery id. Must be one of %s", VALID_RECOVERY_IDS
+                    )
+            if arg_name == "tweaked_pk_parity":
+                if arg not in VALID_PUBKEY_PARITY:
+                    raise ValueError(
+                        "Invalid pubkey parity. Must be one %s", VALID_PUBKEY_PARITY
                     )
 
         result = func(*args, **kwargs)

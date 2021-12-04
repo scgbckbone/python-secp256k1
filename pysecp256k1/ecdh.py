@@ -32,6 +32,20 @@ if not has_secp256k1_ecdh:
 #
 @enforce_type
 def ecdh(seckey: bytes, pubkey: secp256k1_pubkey) -> bytes:
+    """
+    Compute an EC Diffie-Hellman secret in constant time.
+
+    :param seckey: 32-byte scalar with which to multiply the point
+    :type seckey: bytes
+    :param pubkey: initialized public key
+    :type pubkey: secp256k1_pubkey
+    :return: EC Diffie-Hellman secret
+    :rtype: bytes
+    :raises ValueError: if secret key is not of type bytes and length 32
+    :raises ValueError: if pubkey is invalid type
+    :raises Libsecp256k1Exception: if scalar was invalid (zero or overflow)
+                                   or hashfp returned 0
+    """
     output = ctypes.create_string_buffer(SECKEY_LENGTH)
     result = lib.secp256k1_ecdh(
         secp256k1_context_sign, output, pubkey, seckey, None, None
