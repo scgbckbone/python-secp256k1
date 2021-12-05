@@ -121,8 +121,12 @@ class TestPysecp256k1Schnorrsig(unittest.TestCase):
             signature0 = schnorrsig_sign(keypair, msg32)
             signature0_custom = schnorrsig_sign_custom(keypair, msg32)
             self.assertEqual(signature0, signature0_custom)
-            signature1 = schnorrsig_sign(keypair, msg32, aux_rand32=os.urandom(32))
-
+            random_32 = os.urandom(32)
+            signature1 = schnorrsig_sign(keypair, msg32, aux_rand32=random_32)
+            signature1_custom = schnorrsig_sign_custom(
+                keypair, msg32, aux_rand32=random_32
+            )
+            self.assertEqual(signature1, signature1_custom)
             self.assertTrue(schnorrsig_verify(signature0, msg32, xonly_pubkey))
             self.assertTrue(schnorrsig_verify(signature1, msg32, xonly_pubkey))
 

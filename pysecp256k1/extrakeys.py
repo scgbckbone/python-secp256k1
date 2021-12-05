@@ -10,9 +10,9 @@ from pysecp256k1.low_level import (
     Libsecp256k1Exception,
 )
 from pysecp256k1.low_level.constants import (
-    secp256k1_pubkey,
-    secp256k1_xonly_pubkey,
-    secp256k1_keypair,
+    Secp256k1Pubkey,
+    Secp256k1XonlyPubkey,
+    Secp256k1Keypair,
     INTERNAL_PUBKEY_LENGTH,
     INTERNAL_KEYPAIR_LENGTH,
     XONLY_PUBKEY_LENGTH,
@@ -38,14 +38,14 @@ if not has_secp256k1_extrakeys:
 # In: input32: pointer to a serialized xonly_pubkey.
 #
 @enforce_type
-def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> secp256k1_xonly_pubkey:
+def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> Secp256k1XonlyPubkey:
     """
     Parse a 32-byte sequence into a xonly_pubkey object.
 
     :param xonly_pubkey_ser: serialized xonly public key
     :type xonly_pubkey_ser: bytes
     :return: initialized xonly pubkey
-    :rtype: secp256k1_xonly_pubkey
+    :rtype: Secp256k1XonlyPubkey
     :raises ValueError: if xonly_pubkey_ser is not of type bytes and length 32
     :raises Libsecp256k1Exception: if public key could not be parsed or is invalid
     """
@@ -68,12 +68,12 @@ def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> secp256k1_xonly_pubkey:
 # In:    pubkey: a pointer to a secp256k1_xonly_pubkey containing an initialized public key.
 #
 @enforce_type
-def xonly_pubkey_serialize(xonly_pubkey: secp256k1_xonly_pubkey) -> bytes:
+def xonly_pubkey_serialize(xonly_pubkey: Secp256k1XonlyPubkey) -> bytes:
     """
     Serialize an xonly_pubkey object into a 32-byte sequence.
 
     :param xonly_pubkey: initialized xonly pubkey
-    :type xonly_pubkey: secp256k1_xonly_pubkey
+    :type xonly_pubkey: Secp256k1XonlyPubkey
     :return: serialized xonly public key
     :rtype: bytes
     :raises ValueError: if xonly_pubkey is invalid type
@@ -96,15 +96,15 @@ def xonly_pubkey_serialize(xonly_pubkey: secp256k1_xonly_pubkey) -> bytes:
 #
 @enforce_type
 def xonly_pubkey_cmp(
-    xonly_pubkey0: secp256k1_xonly_pubkey, xonly_pubkey1: secp256k1_xonly_pubkey
+    xonly_pubkey0: Secp256k1XonlyPubkey, xonly_pubkey1: Secp256k1XonlyPubkey
 ) -> int:
     """
     Compare two x-only public keys using lexicographic order.
 
     :param xonly_pubkey0: initialized xonly pubkey no. 0
-    :type xonly_pubkey0: secp256k1_xonly_pubkey
+    :type xonly_pubkey0: Secp256k1XonlyPubkey
     :param xonly_pubkey1: initialized xonly pubkey no. 1
-    :type xonly_pubkey1: secp256k1_xonly_pubkey
+    :type xonly_pubkey1: Secp256k1XonlyPubkey
     :return: <0 if the first public key is less than the second
              >0 if the first public key is greater than the second
              0 if the two public keys are equal
@@ -130,17 +130,17 @@ def xonly_pubkey_cmp(
 #
 @enforce_type
 def xonly_pubkey_from_pubkey(
-    pubkey: secp256k1_pubkey,
-) -> Tuple[secp256k1_xonly_pubkey, int]:
+    pubkey: Secp256k1Pubkey,
+) -> Tuple[Secp256k1XonlyPubkey, int]:
     """
-    Converts a secp256k1_pubkey into a secp256k1_xonly_pubkey.
+    Converts a Secp256k1Pubkey into a Secp256k1XonlyPubkey.
 
     :param pubkey: initialized public key
-    :type pubkey: secp256k1_pubkey
+    :type pubkey: Secp256k1Pubkey
     :return: initialized xonly public key and its parity (set to 1 if the point
              encoded by xonly_pubkey is the negation of the pubkey and set to 0
              otherwise)
-    :rtype: Tuple[secp256k1_xonly_pubkey, int]
+    :rtype: Tuple[Secp256k1XonlyPubkey, int]
     :raises ValueError: if pubkey is invalid type
     :raises Libsecp256k1Exception: if converting pubkey failed
     """
@@ -180,22 +180,22 @@ def xonly_pubkey_from_pubkey(
 #
 @enforce_type
 def xonly_pubkey_tweak_add(
-    xonly_pubkey: secp256k1_xonly_pubkey, tweak32: bytes
-) -> secp256k1_pubkey:
+    xonly_pubkey: Secp256k1XonlyPubkey, tweak32: bytes
+) -> Secp256k1Pubkey:
     """
     Tweak an x-only public key by adding the generator multiplied with tweak32
     to it.
 
     Note that the resulting point can not in general be represented by an x-only
     pubkey because it may have an odd Y coordinate. Instead, the output_pubkey
-    is a normal secp256k1_pubkey.
+    is a normal Secp256k1Pubkey.
 
     :param xonly_pubkey: initialized xonly pubkey
-    :type xonly_pubkey: secp256k1_xonly_pubkey
+    :type xonly_pubkey: Secp256k1XonlyPubkey
     :param tweak32: 32-byte tweak
     :type tweak32: bytes
     :return: tweaked public key
-    :rtype: secp256k1_pubkey
+    :rtype: Secp256k1Pubkey
     :raises ValueError: if tweak32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: arguments are invalid or the resulting public
                                    key would be invalid (only when the tweak is
@@ -242,7 +242,7 @@ def xonly_pubkey_tweak_add(
 def xonly_pubkey_tweak_add_check(
     tweaked_pubkey32: bytes,
     tweaked_pk_parity: int,
-    internal_pubkey: secp256k1_xonly_pubkey,
+    internal_pubkey: Secp256k1XonlyPubkey,
     tweak32: bytes,
 ) -> bool:
     """
@@ -255,7 +255,7 @@ def xonly_pubkey_tweak_add_check(
                               (whose serialization is passed in as tweaked_pubkey32)
     :type tweaked_pk_parity: int
     :param internal_pubkey: x-only public key object to apply the tweak to
-    :type internal_pubkey: secp256k1_xonly_pubkey
+    :type internal_pubkey: Secp256k1XonlyPubkey
     :param tweak32: 32-byte tweak
     :type tweak32: bytes
     :return: whether tweaked key is the result of tweaking internal with tweak
@@ -287,14 +287,14 @@ def xonly_pubkey_tweak_add_check(
 # In:   seckey: pointer to a 32-byte secret key.
 #
 @enforce_type
-def keypair_create(seckey: bytes) -> secp256k1_keypair:
+def keypair_create(seckey: bytes) -> Secp256k1Keypair:
     """
     Compute the keypair for a secret key.
 
     :param seckey: 32-byte secret key
     :type seckey: bytes
     :return: initialized keypair
-    :rtype: secp256k1_keypair
+    :rtype: Secp256k1Keypair
     :raises ValueError: if secret key is not of type bytes and length 32
     :raises Libsecp256k1Exception: if secret key is invalid
     """
@@ -315,12 +315,12 @@ def keypair_create(seckey: bytes) -> secp256k1_keypair:
 # In: keypair: pointer to a keypair.
 #
 @enforce_type
-def keypair_sec(keypair: secp256k1_keypair) -> bytes:
+def keypair_sec(keypair: Secp256k1Keypair) -> bytes:
     """
     Get the secret key from a keypair.
 
     :param keypair: initialized keypair
-    :type keypair: secp256k1_keypair
+    :type keypair: Secp256k1Keypair
     :return: 32-byte secret key
     :rtype: bytes
     :raises ValueError: if keypair is invalid type
@@ -343,14 +343,14 @@ def keypair_sec(keypair: secp256k1_keypair) -> bytes:
 # In: keypair: pointer to a keypair.
 #
 @enforce_type
-def keypair_pub(keypair: secp256k1_keypair) -> secp256k1_pubkey:
+def keypair_pub(keypair: Secp256k1Keypair) -> Secp256k1Pubkey:
     """
     Get the public key from a keypair.
 
     :param keypair: initialized keypair
-    :type keypair: secp256k1_keypair
+    :type keypair: Secp256k1Keypair
     :return: initialized public key
-    :rtype: secp256k1_pubkey
+    :rtype: Secp256k1Pubkey
     :raises ValueError: if keypair is invalid type
     :raises Libsecp256k1Exception: if arguments are invalid
     """
@@ -377,7 +377,7 @@ def keypair_pub(keypair: secp256k1_keypair) -> secp256k1_pubkey:
 # In: keypair: pointer to a keypair.
 #
 @enforce_type
-def keypair_xonly_pub(keypair: secp256k1_keypair) -> Tuple[secp256k1_xonly_pubkey, int]:
+def keypair_xonly_pub(keypair: Secp256k1Keypair) -> Tuple[Secp256k1XonlyPubkey, int]:
     """
     Get the x-only public key from a keypair.
 
@@ -385,11 +385,11 @@ def keypair_xonly_pub(keypair: secp256k1_keypair) -> Tuple[secp256k1_xonly_pubke
     secp256k1_xonly_pubkey_from_pubkey.
 
     :param keypair: initialized keypair
-    :type keypair: secp256k1_keypair
+    :type keypair: Secp256k1Keypair
     :return: initialized xonly public key and its parity (set to 1 if the point
              encoded by xonly_pubkey is the negation of the pubkey and set to 0
              otherwise)
-    :rtype: Tuple[secp256k1_xonly_pubkey, int]
+    :rtype: Tuple[Secp256k1XonlyPubkey, int]
     :raises ValueError: if keypair is invalid type
     :raises Libsecp256k1Exception: if arguments are invalid
     """
@@ -427,8 +427,8 @@ def keypair_xonly_pub(keypair: secp256k1_keypair) -> Tuple[secp256k1_xonly_pubke
 #
 @enforce_type
 def keypair_xonly_tweak_add(
-    keypair: secp256k1_keypair, tweak32: bytes
-) -> secp256k1_keypair:
+    keypair: Secp256k1Keypair, tweak32: bytes
+) -> Secp256k1Keypair:
     """
     Tweak a keypair by adding tweak32 to the secret key and updating the public
     key accordingly.
@@ -437,11 +437,11 @@ def keypair_xonly_tweak_add(
     as calling keypair_xonly_pub and then xonly_pubkey_tweak_add.
 
     :param keypair: initialized keypair
-    :type keypair: secp256k1_keypair
+    :type keypair: Secp256k1Keypair
     :param tweak32: 32-byte tweak
     :type tweak32: bytes
     :return: tweaked keypair
-    :rtype: secp256k1_keypair
+    :rtype: Secp256k1Keypair
     :raises ValueError: if keypair is invalid type
     :raises ValueError: if tweak32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if arguments are invalid

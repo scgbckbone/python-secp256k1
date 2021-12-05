@@ -14,9 +14,9 @@ from pysecp256k1.low_level.constants import (
     INTERNAL_RECOVERABLE_SIGNATURE_LENGTH,
     INTERNAL_SIGNATURE_LENGTH,
     INTERNAL_PUBKEY_LENGTH,
-    secp256k1_pubkey,
-    secp256k1_ecdsa_recoverable_signature,
-    secp256k1_ecdsa_signature,
+    Secp256k1Pubkey,
+    Secp256k1ECDSARecoverableSignature,
+    Secp256k1ECDSASignature,
 )
 
 if not has_secp256k1_recovery:
@@ -37,7 +37,7 @@ if not has_secp256k1_recovery:
 @enforce_type
 def ecdsa_recoverable_signature_parse_compact(
     compact_sig: bytes, rec_id: int
-) -> secp256k1_ecdsa_recoverable_signature:
+) -> Secp256k1ECDSARecoverableSignature:
     """
     Parse a compact ECDSA signature (64 bytes + recovery id).
 
@@ -46,7 +46,7 @@ def ecdsa_recoverable_signature_parse_compact(
     :param rec_id: recovery id (0, 1, 2 or 3)
     :type rec_id: int
     :return: ECDSA recoverable signature
-    :rtype: secp256k1_ecdsa_recoverable_signature
+    :rtype: Secp256k1ECDSARecoverableSignature
     :raises ValueError: if compact_sig is not of type bytes and length 64
     :raises ValueError: if rec_id is not of type int and one of 0 or 1
     """
@@ -69,15 +69,15 @@ def ecdsa_recoverable_signature_parse_compact(
 #
 @enforce_type
 def ecdsa_recoverable_signature_convert(
-    rec_sig: secp256k1_ecdsa_recoverable_signature,
-) -> secp256k1_ecdsa_signature:
+    rec_sig: Secp256k1ECDSARecoverableSignature,
+) -> Secp256k1ECDSASignature:
     """
     Convert a recoverable signature into a normal signature.
 
     :param rec_sig: initialized ECDSA recoverable signature
-    :type rec_sig: secp256k1_ecdsa_recoverable_signature
+    :type rec_sig: Secp256k1ECDSARecoverableSignature
     :return: initialized ECDSA signature
-    :rtype: secp256k1_ecdsa_signature
+    :rtype: Secp256k1ECDSASignature
     :raises ValueError: if rec_sig is invalid type
     """
     sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_LENGTH)
@@ -97,13 +97,13 @@ def ecdsa_recoverable_signature_convert(
 #
 @enforce_type
 def ecdsa_recoverable_signature_serialize_compact(
-    rec_sig: secp256k1_ecdsa_recoverable_signature,
+    rec_sig: Secp256k1ECDSARecoverableSignature,
 ) -> Tuple[bytes, int]:
     """
     Serialize an ECDSA signature in compact format (64 bytes + recovery id).
 
     :param rec_sig: initialized ECDSA recoverable signature
-    :type rec_sig: secp256k1_ecdsa_recoverable_signature
+    :type rec_sig: Secp256k1ECDSARecoverableSignature
     :return: 64-byte compact signature serialization and recovery id
     :rtype: Tuple[bytes, int]
     :raises ValueError: if arguments are invalid
@@ -133,7 +133,7 @@ def ecdsa_recoverable_signature_serialize_compact(
 @enforce_type
 def ecdsa_sign_recoverable(
     seckey: bytes, msghash32: bytes
-) -> secp256k1_ecdsa_recoverable_signature:
+) -> Secp256k1ECDSARecoverableSignature:
     """
     Create a recoverable ECDSA signature.
 
@@ -142,7 +142,7 @@ def ecdsa_sign_recoverable(
     :param msghash32: the 32-byte message hash being signed
     :type msghash32: bytes
     :return: initialized ECDSA recoverable signature
-    :rtype: secp256k1_ecdsa_recoverable_signature
+    :rtype: Secp256k1ECDSARecoverableSignature
     :raises ValueError: if secret key is not of type bytes and length 32
     :raises ValueError: if msghash32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if nonce generation function failed,
@@ -171,17 +171,17 @@ def ecdsa_sign_recoverable(
 #
 @enforce_type
 def ecdsa_recover(
-    rec_sig: secp256k1_ecdsa_recoverable_signature, msghash32: bytes
-) -> secp256k1_pubkey:
+    rec_sig: Secp256k1ECDSARecoverableSignature, msghash32: bytes
+) -> Secp256k1Pubkey:
     """
     Recover an ECDSA public key from a signature.
 
     :param rec_sig: initialized ECDSA recoverable signature
-    :type rec_sig: secp256k1_ecdsa_recoverable_signature
+    :type rec_sig: Secp256k1ECDSARecoverableSignature
     :param msghash32: the 32-byte message hash being signed
     :type msghash32: bytes
     :return: recovered public key
-    :rtype: secp256k1_pubkey
+    :rtype: Secp256k1Pubkey
     :raises ValueError: if rec_sig is invalid type
     :raises ValueError: if msghash32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if public key recovery failed

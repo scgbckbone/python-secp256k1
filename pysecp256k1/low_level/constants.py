@@ -24,6 +24,7 @@ DER_SIGNATURE_LENGTH = 72
 COMPACT_SIGNATURE_LENGTH = 64
 VALID_RECOVERY_IDS = [0, 1, 2, 3]
 VALID_PUBKEY_PARITY = [0, 1]
+SCHNORRSIG_EXTRAPARAMS_MAGIC = bytes([0xDA, 0x6F, 0xB3, 0x8C])
 
 INTERNAL_PUBKEY_LENGTH = 64
 INTERNAL_SIGNATURE_LENGTH = 64
@@ -31,11 +32,19 @@ INTERNAL_KEYPAIR_LENGTH = 96
 INTERNAL_RECOVERABLE_SIGNATURE_LENGTH = 65
 
 # Opaque secp256k1 data structures
-secp256k1_context = ctypes.c_void_p
-secp256k1_pubkey = ctypes.c_char * INTERNAL_PUBKEY_LENGTH
-secp256k1_ecdsa_signature = ctypes.c_char * INTERNAL_SIGNATURE_LENGTH
-secp256k1_xonly_pubkey = ctypes.c_char * INTERNAL_PUBKEY_LENGTH
-secp256k1_keypair = ctypes.c_char * INTERNAL_KEYPAIR_LENGTH
-secp256k1_ecdsa_recoverable_signature = (
+Secp256k1Context = ctypes.c_void_p
+Secp256k1Pubkey = ctypes.c_char * INTERNAL_PUBKEY_LENGTH
+Secp256k1ECDSASignature = ctypes.c_char * INTERNAL_SIGNATURE_LENGTH
+Secp256k1XonlyPubkey = ctypes.c_char * INTERNAL_PUBKEY_LENGTH
+Secp256k1Keypair = ctypes.c_char * INTERNAL_KEYPAIR_LENGTH
+Secp256k1ECDSARecoverableSignature = (
     ctypes.c_char * INTERNAL_RECOVERABLE_SIGNATURE_LENGTH
 )
+
+
+class SchnorrsigExtraparams(ctypes.Structure):
+    _fields_ = [
+        ("magic", ctypes.c_char * 4),
+        ("noncefp", ctypes.c_void_p),
+        ("ndata", ctypes.c_void_p),
+    ]

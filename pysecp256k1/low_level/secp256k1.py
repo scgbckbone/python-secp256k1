@@ -33,7 +33,7 @@ from contextvars import ContextVar
 from pysecp256k1.low_level.constants import (
     SECP256K1_CONTEXT_SIGN,
     SECP256K1_CONTEXT_VERIFY,
-    secp256k1_context,
+    Secp256k1Context,
 )
 from pysecp256k1.low_level.util import assert_zero_return_code
 
@@ -468,7 +468,7 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
 
 def secp256k1_create_and_init_context(
     _secp256k1: ctypes.CDLL, flags: int
-) -> secp256k1_context:
+) -> Secp256k1Context:
     if flags not in (
         SECP256K1_CONTEXT_SIGN,
         SECP256K1_CONTEXT_VERIFY,

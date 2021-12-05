@@ -10,8 +10,10 @@ from pysecp256k1.low_level import (
     Libsecp256k1Exception,
 )
 from pysecp256k1.low_level.constants import (
-    secp256k1_keypair,
-    secp256k1_xonly_pubkey,
+    Secp256k1Keypair,
+    Secp256k1XonlyPubkey,
+    SchnorrsigExtraparams,
+    SCHNORRSIG_EXTRAPARAMS_MAGIC,
     COMPACT_SIGNATURE_LENGTH,
 )
 
@@ -49,7 +51,7 @@ if not has_secp256k1_schnorrsig:
 #
 @enforce_type
 def schnorrsig_sign(
-    keypair: secp256k1_keypair, msg32: bytes, aux_rand32: Optional[bytes] = None
+    keypair: Secp256k1Keypair, msg32: bytes, aux_rand32: Optional[bytes] = None
 ) -> bytes:
     """
     Create a Schnorr signature.
@@ -66,7 +68,7 @@ def schnorrsig_sign(
     signatures from being valid in multiple contexts by accident.
 
     :param keypair: initialized keypair
-    :type keypair: secp256k1_keypair
+    :type keypair: Secp256k1Keypair
     :param msg32: 32-byte message being signed
     :type msg32: bytes
     :param aux_rand32: 32 bytes of fresh randomness. While recommended to provide
@@ -74,6 +76,7 @@ def schnorrsig_sign(
                        None argument is treated the same as an all-zero one. See
                        BIP-340 "Default Signing" for a full explanation of this
                        argument and for guidance if randomness is expensive.
+    :type aux_rand32: bytes
     :return: 64-byte serialized Schnorr signature
     :rtype: bytes
     :raises ValueError: if keypair is invalid type
@@ -105,30 +108,46 @@ def schnorrsig_sign(
 # extraparams: pointer to a extraparams object (can be NULL)
 #
 @enforce_type
-def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
+def schnorrsig_sign_custom(
+    keypair: Secp256k1Keypair, msg: bytes, aux_rand32: Optional[bytes] = None
+) -> bytes:
     """
     Create a Schnorr signature with a more flexible API.
 
     Same arguments as secp256k1_schnorrsig_sign except that it allows signing
-    variable length messages
-    TODO not implemented and accepts a pointer to an extraparams object that
-    allows customizing signing by passing additional arguments.
-    Creates the same signatures as schnorrsig_sign if msglen is 32 and the
-    extraparams.ndata is the same as aux_rand32.
+    variable length messages.
+
+    Creates the same signatures as schnorrsig_sign if aux_rand32 is the same
+    and msglen is 32.
 
     :param keypair: initialized keypair
-    :type keypair: secp256k1_keypair
+    :type keypair: Secp256k1Keypair
     :param msg: message being signed
     :type msg: bytes
+    :param aux_rand32: 32 bytes of fresh randomness. While recommended to provide
+                   this, it is only supplemental to security and can be None.
+                   None argument is treated the same as an all-zero one. See
+                   BIP-340 "Default Signing" for a full explanation of this
+                   argument and for guidance if randomness is expensive.
+    :type aux_rand32: bytes
     :return: 64-byte serialized Schnorr signature
     :rtype: bytes
     :raises ValueError: if keypair is invalid type
     :raises ValueError: if msg is not of type bytes
     :raises Libsecp256k1Exception: if schnorrsig_sign_custom returned failure
     """
+    extraparams = None
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
+    if aux_rand32 is not None:
+        extraparams = SchnorrsigExtraparams(
+            SCHNORRSIG_EXTRAPARAMS_MAGIC,
+            None,
+            ctypes.cast(ctypes.create_string_buffer(aux_rand32), ctypes.c_void_p),
+        )
+        extraparams = ctypes.byref(extraparams)
+
     result = lib.secp256k1_schnorrsig_sign_custom(
-        secp256k1_context_sign, compact_sig, msg, len(msg), keypair, None
+        secp256k1_context_sign, compact_sig, msg, len(msg), keypair, extraparams
     )
     if result != 1:
         assert_zero_return_code(result)
@@ -148,7 +167,7 @@ def schnorrsig_sign_custom(keypair: secp256k1_keypair, msg: bytes) -> bytes:
 #
 @enforce_type
 def schnorrsig_verify(
-    compact_sig: bytes, msg: bytes, xonly_pubkey: secp256k1_xonly_pubkey
+    compact_sig: bytes, msg: bytes, xonly_pubkey: Secp256k1XonlyPubkey
 ) -> bool:
     """
     Verify a Schnorr signature.
@@ -158,7 +177,7 @@ def schnorrsig_verify(
     :param msg: message being verified
     :type msg: bytes
     :param xonly_pubkey: initialized xonly pubkey
-    :type xonly_pubkey: secp256k1_xonly_pubkey
+    :type xonly_pubkey: Secp256k1XonlyPubkey
     :return: whether signature is correct
     :rtype: bool
     :raises ValueError: if compact_sig is not of type bytes and length 64
