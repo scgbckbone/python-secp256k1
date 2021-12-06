@@ -28,7 +28,6 @@ import ctypes
 import ctypes.util
 from types import FunctionType
 from typing import Any, Optional, Dict, Union
-from contextvars import ContextVar
 
 from pysecp256k1.low_level.constants import (
     SECP256K1_CONTEXT_SIGN,
@@ -53,38 +52,7 @@ class Libsecp256k1Exception(EnvironmentError):
     pass
 
 
-class ContextVarsCompat:
-    _context_vars_storage__: Dict[str, "ContextVar[Any]"]
-
-    def __init__(self, **kwargs: Any):
-        assert (
-            self.__class__ is not ContextVarsCompat
-        ), "ContextVarsCompat should always be subclassed"
-        vardict = {
-            name: ContextVar(name, default=default_value)
-            for name, default_value in kwargs.items()
-        }
-        object.__setattr__(self, "_context_vars_storage__", vardict)
-
-    def __getattr__(self, name: str) -> Any:
-        if name not in self._context_vars_storage__:
-            raise AttributeError
-        return self._context_vars_storage__[name].get()
-
-    def __setattr__(self, name: str, value: Any) -> None:
-        if name not in self._context_vars_storage__:
-            raise AttributeError(
-                f"context variable {name} was not specified on "
-                f"{self.__class__.__name__} creation"
-            )
-        self._context_vars_storage__[name].set(value)
-
-
-class Secp256k1LastErrorContextVar(ContextVarsCompat):
-    last_error: Optional[Dict[str, Union[int, str]]]
-
-
-_secp256k1_error_storage = Secp256k1LastErrorContextVar(last_error=None)
+_secp256k1_error_storage = {}
 
 
 _ctypes_functype = getattr(ctypes, "WINFUNCTYPE", getattr(ctypes, "CFUNCTYPE"))
@@ -95,7 +63,7 @@ callback_func_type = _ctypes_functype(ctypes.c_void_p, ctypes.c_char_p, ctypes.c
 def _secp256k1_illegal_callback_fn(error_str, _data):
     error_string = str(error_str)
     _LOGGER.error("illegal_argument: %s", error_string)
-    _secp256k1_error_storage.last_error = {
+    _secp256k1_error_storage["last_error"] = {
         "code": -2,
         "type": "illegal_argument",
         "message": error_string,
@@ -106,7 +74,7 @@ def _check_ressecp256k1_void_p(
     val: int, _func: FunctionType, _args: Any
 ) -> ctypes.c_void_p:
     if val == 0:
-        err = getattr(_secp256k1_error_storage, "last_error", None)
+        err = _secp256k1_error_storage.get("last_error", None)
         if err is None:
             raise Libsecp256k1Exception(
                 -3,

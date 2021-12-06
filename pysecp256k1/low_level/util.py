@@ -53,18 +53,22 @@ def enforce_type(func):
         all_args.update(dict(zip(func.__code__.co_varnames, args)))
         for arg_name, arg in all_args.items():
             correct_type = type_hints[arg_name]
-            if typing.get_origin(correct_type) == list:
+            # if typing.get_origin(correct_type) == list:
+            if getattr(correct_type, "__origin__", None) in [list, typing.List]:
                 if not isinstance(arg, list):
                     raise ValueError(f"'{arg_name}' must be of type list")
-                _args = typing.get_args(correct_type)
+                # _args = typing.get_args(correct_type)
+                _args = getattr(correct_type, "__args__", None)
                 for element in arg:
                     if not isinstance(element, _args):
                         raise ValueError(
                             f"Elements of '{arg_name}' must be of type " f"{_args}"
                         )
             else:
-                if typing.get_origin(correct_type) == typing.Union:
-                    correct_type = typing.get_args(correct_type)
+                # if typing.get_origin(correct_type) == typing.Union:
+                if getattr(correct_type, "__origin__", None) == typing.Union:
+                    # correct_type = typing.get_args(correct_type)
+                    correct_type = getattr(correct_type, "__args__", None)
                 if not isinstance(arg, correct_type):
                     raise ValueError(f"'{arg_name}' must be of type {correct_type}")
             # length enforcement
@@ -87,11 +91,12 @@ def enforce_type(func):
 
         # return type enforcement
         if "return" in type_hints:
-            origin = typing.get_origin(type_hints["return"])
-            if origin == tuple:
+            # origin = typing.get_origin(type_hints["return"])
+            origin = getattr(type_hints["return"], "__origin__", None)
+            if origin in [tuple, typing.Tuple]:
                 if not isinstance(result, tuple):
                     raise ValueError(f"Result must be of type {origin}")
-                _args = typing.get_args(type_hints["return"])
+                _args = getattr(type_hints["return"], "__args__", None)
                 for i, element in enumerate(result):
                     if not isinstance(element, _args[i]):
                         raise ValueError(f"Element {i} of result must be {_args}")
