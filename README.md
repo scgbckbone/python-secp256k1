@@ -7,18 +7,16 @@ CFFI is heavier, needs compiler for API mode (parses C headers) while ctypes doe
 #### Rationale and goal
 This library aims to provide a standard way to wrap `libsecp256k1` using `ctypes`.
 
-#### Contexts
-This library creates default contexts (sign/verify) at the initialization phase, randomizes them 
-and uses them the whole time, you do not need to worry about contexts. Check this [issue](https://github.com/scgbckbone/python-secp256k1/issues/1).
-
 #### Implementation Details
 * Scratch spaces are not implemented.
 * methods from `secp256k1_preallocated.h` are not implemented
+* This library creates default contexts (sign/verify) at the initialization phase, randomizes them 
+and uses them the whole time, you do not need to worry about contexts. Check this [issue](https://github.com/scgbckbone/python-secp256k1/issues/1).
 * way to provide own hash functions is not implemented - default hash functions are used
 * `schnorrsig_sign_custom` does not accept extraparams argument, instead accepts `aux_rand32` as `schnorrsig_sign` - same as passing `extraparams.ndata`
 * Default illegal callback function (that is added to default contexts) logs to stderr. 
 * Method names are the same as in `libsecp256k1` but without 'secp256k1_' prefix (i.e. `secp256k1_ec_pubkey_serialize` -> `ec_pubkey_serialize`)
-* Modules are structures same as in secp256k1 `include/` directory but without 'secp256k1_' prefix.
+* Modules are structured same as in secp256k1 `include/` directory but without 'secp256k1_' prefix.
 
 |    secp256k1 modules   |    pysecp256k1 modules    |               importing              |
 |:----------------------:|:-------------------------:|:------------------------------------:|
@@ -29,9 +27,8 @@ and uses them the whole time, you do not need to worry about contexts. Check thi
 | secp256k1_schnorrsig.h | pysecp256k1.schnorrsig.py | from pysecp256k1.schnorrsig import * |
 
 #### Validation and data types
-This library tries to supplement secp256k1 with valid data ONLY, therefore heavy input/output type validation is in place. 
-Validation is implemented via `enforce_type` which check for correct type (based on type hints) and correct length if possible.
-decorator that can be found in `pysecp256k1.low_level.util`.
+This library tries to supplement `libsecp256k1` with valid data ONLY, therefore heavy input type validation is in place. 
+Validation is implemented via `enforce_type`((can be found in `pysecp256k1.low_level.util`)) which check for correct type (based on type hints) and correct length if possible.
 
 Internal (opaque) secp256k1 data structures are represented as `ctypes.c_char_Array`
 to get bytes from `c_char_Array` use `.raw` (see examples).
@@ -84,6 +81,7 @@ python3 -m pip install git+https://github.com/scgbckbone/python-secp256k1.git
 ```python
 import os
 from pysecp256k1 import *
+
 
 seckey = tagged_sha256(b"seckey", os.urandom(32))
 print("seckey:", seckey.hex())
@@ -180,6 +178,8 @@ from pysecp256k1.extrakeys import (
     xonly_pubkey_serialize, xonly_pubkey_tweak_add_check, xonly_pubkey_parse,
     xonly_pubkey_tweak_add, keypair_xonly_tweak_add
 )
+
+
 seckey = tagged_sha256(b"seckey", os.urandom(32))
 raw_pubkey = ec_pubkey_create(seckey)
 keypair = keypair_create(seckey)
@@ -218,6 +218,7 @@ assert tweaked_seckey == keypair_sec(tweaked_keypair)
 ```python
 import os
 from pysecp256k1 import ec_pubkey_create, ec_pubkey_negate, ec_seckey_negate, tagged_sha256
+
 
 seckey = tagged_sha256(b"seckey", os.urandom(32))
 pubkey = ec_pubkey_create(seckey)

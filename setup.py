@@ -17,16 +17,17 @@ setup(
     license="MIT",
     author="Andrej Virgovic",
     author_email="virgovica@gmail.com",
-    description="secp256k1 C lib python wrapper",
+    description="Ctypes Python3 FFI bindings for libsecp256k1",
     long_description=README,
     long_description_content_type="text/markdown",
     classifiers=[
-        "Development Status :: 4 - Beta",
         "Programming Language :: Python :: 3.6",
         "Programming Language :: Python :: 3.7",
         "Programming Language :: Python :: 3.8",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",
+        "License :: OSI Approved :: MIT License",
+        "Natural Language :: English",
     ],
     url="https://github.com/scgbckbone/python-secp256k1",
     keywords=[
@@ -39,4 +40,5 @@ setup(
     zip_safe=False,
     install_requires=install_requires,
     test_suite="tests",
+    extras_require={"typing_extensions": ["typing_extensions>=3.6"]},
 )
