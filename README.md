@@ -5,7 +5,7 @@ Alternative implementation that uses [cffi](https://cffi.readthedocs.io/en/lates
 CFFI is heavier, needs compiler for API mode (parses C headers) while ctypes does not need dependencies at all.
 
 #### Rationale and goal
-This library aims to provide a standard way to wrap `libsecp256k1` using python3.
+This library aims to provide a standard way to wrap `libsecp256k1` using `ctypes`.
 
 #### Contexts
 This library creates default contexts (sign/verify) at the initialization phase, randomizes them 
