@@ -1,34 +1,80 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="198.0" height="20"><linearGradient id="smooth" x2="0" y2="100%"><stop offset="0" stop-color="#bbb" stop-opacity=".1"/><stop offset="1" stop-opacity=".1"/></linearGradient><clipPath id="round"><rect width="198.0" height="20" rx="3" fill="#fff"/></clipPath><g clip-path="url(#round)"><rect width="65.5" height="20" fill="#555"/><rect x="65.5" width="132.5" height="20" fill="#007ec6"/><rect width="198.0" height="20" fill="url(#smooth)"/></g><g fill="#fff" text-anchor="middle" font-family="DejaVu Sans,Verdana,Geneva,sans-serif" font-size="110"><image x="5" y="3" width="14" height="14" xlink:href="https://dev.w3.org/SVG/tools/svgweb/samples/svg-files/python.svg"/><text x="422.5" y="150" fill="#010101" fill-opacity=".3" transform="scale(0.1)" textLength="385.0" lengthAdjust="spacing">python</text><text x="422.5" y="140" transform="scale(0.1)" textLength="385.0" lengthAdjust="spacing">python</text><text x="1307.5" y="150" fill="#010101" fill-opacity=".3" transform="scale(0.1)" textLength="1225.0" lengthAdjust="spacing">3.6, 3.7, 3.8, 3.9, 3.10</text><text x="1307.5" y="140" transform="scale(0.1)" textLength="1225.0" lengthAdjust="spacing">3.6, 3.7, 3.8, 3.9, 3.10</text><a xlink:href=""><rect width="65.5" height="20" fill="rgba(0,0,0,0)"/></a><a xlink:href="https://www.python.org/"><rect x="65.5" width="132.5" height="20" fill="rgba(0,0,0,0)"/></a></g></svg> 
 # python-secp256k1
 
-Python3 wrapper of [secp256k1](https://github.com/bitcoin-core/secp256k1) library using [ctypes](https://docs.python.org/3/library/ctypes.html).
+Python FFI bindings for [libsecp256k1](https://github.com/bitcoin-core/secp256k1) (an experimental and optimized C library for EC operations on curve secp256k1) using [ctypes](https://docs.python.org/3/library/ctypes.html).
+Alternative implementation that uses [cffi](https://cffi.readthedocs.io/en/latest/) instead of ctypes is [secp256k1-py](https://github.com/rustyrussell/secp256k1-py).
+CFFI is heavier, needs compiler for API mode (parses C headers) while ctypes does not need dependencies at all.
 
-This library creates both contexts (sign/verify) at the beginning, randomizes them 
-and uses them the whole time, you do not need to worry about contexts (issue here)
+#### Rationale and goal
+This library aims to provide a standard way to wrap `libsecp256k1` using python3.
 
-Scratch spaces are not implemented. 
+#### Contexts
+This library creates default contexts (sign/verify) at the initialization phase, randomizes them 
+and uses them the whole time, you do not need to worry about contexts. Check this [issue](https://github.com/scgbckbone/python-secp256k1/issues/1).
 
-Illegal callback logs to to stderr. 
+#### Implementation Details
+* Scratch spaces are not implemented.
+* methods from `secp256k1_preallocated.h` are not implemented
+* way to provide own hash functions is not implemented - default hash functions are used
+* `schnorrsig_sign_custom` does not accept extraparams argument, instead accepts `aux_rand32` as `schnorrsig_sign` - same as passing `extraparams.ndata`
+* Default illegal callback function (that is added to default contexts) logs to stderr. 
+* Method names are the same as in `libsecp256k1` but without 'secp256k1_' prefix (i.e. `secp256k1_ec_pubkey_serialize` -> `ec_pubkey_serialize`)
+* Modules are structures same as in secp256k1 `include/` directory but without 'secp256k1_' prefix.
 
-This lib tries to supplement secp256k1 with valid data only. So heavy input/output validation is in place. 
+|    secp256k1 modules   |    pysecp256k1 modules    |               importing              |
+|:----------------------:|:-------------------------:|:------------------------------------:|
+|       secp256k1.h      | pysecp256k1.\_\_init__.py |       from pysecp256k1 import *      |
+|    secp256k1_ecdh.h    |    pysecp256k1.ecdh.py    |    from pysecp256k1.ecdh import *    |
+|  secp256k1_extrakeys.h |  pysecp256k1.extrakeys.py |  from pysecp256k1.extrakeys import * |
+|  secp256k1_recovery.h  |  pysecp256k1.recovery.py  |  from pysecp256k1.recovery import *  |
+| secp256k1_schnorrsig.h | pysecp256k1.schnorrsig.py | from pysecp256k1.schnorrsig import * |
 
-Method names are the same as secp256k1 but without 'secp256k1_' prefix
-Modules are structures same as include/
+#### Validation and data types
+This library tries to supplement secp256k1 with valid data ONLY, therefore heavy input/output type validation is in place. 
+Validation is implemented via `enforce_type` which check for correct type (based on type hints) and correct length if possible.
+decorator that can be found in `pysecp256k1.low_level.util`.
 
-Enumerate data structures used and their rationale
+Internal (opaque) secp256k1 data structures are represented as `ctypes.c_char_Array`
+to get bytes from `c_char_Array` use `.raw` (see examples).
 
-## Installation
+|          pysecp256k1 class         |       type      |
+|:----------------------------------:|:---------------:|
+|           Secp256k1Pubkey          | c_char_Array_64 |
+|       Secp256k1ECDSASignature      | c_char_Array_64 |
+|        Secp256k1XonlyPubkey        | c_char_Array_64 |
+|          Secp256k1Keypair          | c_char_Array_96 |
+| Secp256k1ECDSARecoverableSignature | c_char_Array_65 |
+|          Secp256k1Context          |     c_void_p    |
+
+Apart from `ctypes.c_char_Array` and `ctypes.c_void_p` this library uses a limited number of standard python types.
+
+|            python type           |                                          usage                                          |
+|:--------------------------------:|:------------------------------------------------------------------------------------------:|
+|               bool               |      result of signature verification functions `ecdsa_verify` and `schnorrsig_verify`     |
+|                int               |        recovery id, pubkey parity, result of `ec_pubkey_cmp` and `xonly_pubkey_cmp`        |
+|               bytes              | tags, tweaks, messages, message hashes, serialized pubkeys, serialized signatures, seckeys |
+|       List[Secp256k1Pubkey]      |                     list of initialized pubkeys for `ec_pubkey_combine`                    |
+| Tuple[Secp256k1XonlyPubkey, int] |                         initialized xonly public key and its parity                        |
+|         Tuple[bytes, int]        |                    serialized recoverable signature and its recovery id                    |
+|          Optional[bytes]         |                    optional random data for `schnorrsig_sign{,_custom}`                    |
+
+## Installation and dependencies
+Only dependency of `pysecp256k1` is `libsecp256k1` itself.
 To use full feature set build secp256k1 this way:
 ```shell
 git clone https://github.com/bitcoin-core/secp256k1.git
 cd secp256k1/
-git checkout 61ae37c61261a43c1199d112a79a7ad64442f36d  # last tested
+git checkout 5d0dbef0183e0648bc2673d8c3709e323c0c8b0d  # last tested
 ./autogen.sh
 ./configure --enable-module-ecdh --enable-module-recovery  --enable-module-schnorrsig --enable-experimental
 make
 make check
 sudo make install
 ```
-This library uses the latest master and I only plan to release when secp256k1 releases. 
+if one builds secp256k1 without schnorrsig for example and then tries to import from it `from pysecp256k1.schnorrsig import schnorrsig_sign`
+`RuntimeError` is raised hinting that `libsecp256k1` is built without shnorrsig support. Same applies for all optional modules.
+
+This library uses the latest secp256k1 master. I only plan to release when secp256k1 releases. 
 So until then install like this 
 ```shell
 python3 -m pip install -U pip wheel
@@ -167,4 +213,28 @@ else:
         ec_seckey_negate(seckey), valid_tweak
     )
 assert tweaked_seckey == keypair_sec(tweaked_keypair)
+```
+
+### Negations
+```python
+import os
+from pysecp256k1 import ec_pubkey_create, ec_pubkey_negate, ec_seckey_negate, tagged_sha256
+
+seckey = tagged_sha256(b"seckey", os.urandom(32))
+pubkey = ec_pubkey_create(seckey)
+# double negation - result is the same seckey
+assert seckey == ec_seckey_negate(ec_seckey_negate(seckey))
+# double negation - result is the same pubkey
+assert pubkey.raw == ec_pubkey_negate(ec_pubkey_negate(pubkey)).raw
+
+```
+## Testing
+```shell
+cd python-secp256k1
+python3 -m unittest -vvv
+```
+or with tox against multiple python interpreters
+```shell
+cd python-secp256k1
+tox
 ```
