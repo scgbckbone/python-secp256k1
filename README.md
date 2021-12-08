@@ -1,5 +1,5 @@
 # python-secp256k1
-### WARNING: In python you do not control memory. Regardless of how secrets are passed to the underlying lib, it still was an object in python before. It will linger in the heap for some time even after going out of scope. It is impossible to mlock() secrets, your private keys may end up on disk in swap. Use with caution!!!
+### WARNING: In python you do not control memory. Regardless of how secrets are passed to the underlying lib, it still was an object in python before. It will linger in the heap for some time even after going out of scope. It is also impossible to mlock() secrets, your private keys may end up on disk in swap. Use with caution!!!
 
 Python FFI bindings for [libsecp256k1](https://github.com/bitcoin-core/secp256k1) (an experimental and optimized C library for EC operations on curve secp256k1) using [ctypes](https://docs.python.org/3/library/ctypes.html).
 Alternative implementation that uses [cffi](https://cffi.readthedocs.io/en/latest/) instead of ctypes is [secp256k1-py](https://github.com/rustyrussell/secp256k1-py).
