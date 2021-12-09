@@ -68,20 +68,16 @@ def schnorrsig_sign(
     signatures from being valid in multiple contexts by accident.
 
     :param keypair: initialized keypair
-    :type keypair: Secp256k1Keypair
     :param msg32: 32-byte message being signed
-    :type msg32: bytes
     :param aux_rand32: 32 bytes of fresh randomness. While recommended to provide
                        this, it is only supplemental to security and can be None.
                        None argument is treated the same as an all-zero one. See
                        BIP-340 "Default Signing" for a full explanation of this
                        argument and for guidance if randomness is expensive.
-    :type aux_rand32: bytes
     :return: 64-byte serialized Schnorr signature
-    :rtype: bytes
     :raises ValueError: if keypair is invalid type
-    :raises ValueError: if msg32 is not of type bytes and length 32
-    :raises ValueError: if aux_rand32 is not of type bytes and length 32
+                        if msg32 is not of type bytes and length 32
+                        if aux_rand32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if schnorrsig_sign returned failure
     """
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
@@ -121,19 +117,15 @@ def schnorrsig_sign_custom(
     and msglen is 32.
 
     :param keypair: initialized keypair
-    :type keypair: Secp256k1Keypair
     :param msg: message being signed
-    :type msg: bytes
     :param aux_rand32: 32 bytes of fresh randomness. While recommended to provide
                    this, it is only supplemental to security and can be None.
                    None argument is treated the same as an all-zero one. See
                    BIP-340 "Default Signing" for a full explanation of this
                    argument and for guidance if randomness is expensive.
-    :type aux_rand32: bytes
     :return: 64-byte serialized Schnorr signature
-    :rtype: bytes
     :raises ValueError: if keypair is invalid type
-    :raises ValueError: if msg is not of type bytes
+                        if msg is not of type bytes
     :raises Libsecp256k1Exception: if schnorrsig_sign_custom returned failure
     """
     extraparams = None
@@ -173,16 +165,12 @@ def schnorrsig_verify(
     Verify a Schnorr signature.
 
     :param compact_sig: 64-byte compact signature serialization
-    :type compact_sig: bytes
     :param msg: message being verified
-    :type msg: bytes
     :param xonly_pubkey: initialized xonly pubkey
-    :type xonly_pubkey: Secp256k1XonlyPubkey
     :return: whether signature is correct
-    :rtype: bool
     :raises ValueError: if compact_sig is not of type bytes and length 64
-    :raises ValueError: if msg is not of type bytes
-    :raises ValueError: if xonly_pubkey is invalid type
+                        if msg is not of type bytes
+                        if xonly_pubkey is invalid type
     """
     result = lib.secp256k1_schnorrsig_verify(
         secp256k1_context_verify, compact_sig, msg, len(msg), xonly_pubkey

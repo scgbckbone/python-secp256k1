@@ -190,9 +190,7 @@ def ec_pubkey_parse(pubkey_ser: bytes) -> Secp256k1Pubkey:
         3.) hybrid (65 bytes, header byte 0x06 or 0x07)
 
     :param pubkey_ser: public key serialization
-    :type pubkey_ser: bytes
     :return: initialized public key
-    :rtype: Secp256k1Pubkey
     :raises ValueError: if pubkey_ser is not of length 33 or 65
     :raises Libsecp256k1Exception: if pubkey is invalid or could not be parsed
     """
@@ -227,11 +225,8 @@ def ec_pubkey_serialize(pubkey: Secp256k1Pubkey, compressed: bool = True) -> byt
     Serialize a pubkey object into a serialized byte sequence.
 
     :param pubkey: initialized public key
-    :type pubkey: Secp256k1Pubkey
     :param compressed: if serialization should be in compressed format
-    :type compressed: bool
     :return: public key serialization
-    :rtype: bytes
     :raises ValueError: if arguments are invalid type
     """
     pub_size = ctypes.c_size_t()
@@ -264,13 +259,10 @@ def ec_pubkey_cmp(pubkey0: Secp256k1Pubkey, pubkey1: Secp256k1Pubkey) -> int:
     order.
 
     :param pubkey0: initialized public key no. 0
-    :type pubkey0: Secp256k1Pubkey
     :param pubkey1: initialized public key no. 1
-    :type pubkey1: Secp256k1Pubkey
     :return: <0 if the first public key is less than the second
              >0 if the first public key is greater than the second
              0 if the two public keys are equal
-    :rtype: int
     :raises ValueError: if arguments are invalid type
     """
     return lib.secp256k1_ec_pubkey_cmp(secp256k1_context_sign, pubkey0, pubkey1)
@@ -305,9 +297,7 @@ def ecdsa_signature_parse_compact(compact_sig: bytes) -> Secp256k1ECDSASignature
     message and public key.
 
     :param compact_sig: compact ECDSA signature serialization
-    :type compact_sig: bytes
     :return: initialized ECDSA signature
-    :rtype: Secp256k1ECDSASignature
     :raises ValueError: if compact_sig is not of type bytes and length 64
     :raises Libsecp256k1Exception: if compact_sig could not be parsed
     """
@@ -349,9 +339,7 @@ def ecdsa_signature_parse_der(der_sig: bytes) -> Secp256k1ECDSASignature:
     guaranteed to fail for every message and public key.
 
     :param der_sig: DER ECDSA signature serialization
-    :type der_sig: bytes
     :return: initialized ECDSA signature
-    :rtype: Secp256k1ECDSASignature
     :raises ValueError: if der_sig is not of type bytes and length 64
     :raises Libsecp256k1Exception: if der_sig could not be parsed
     """
@@ -383,9 +371,7 @@ def ecdsa_signature_serialize_der(sig: Secp256k1ECDSASignature) -> bytes:
     Serialize an ECDSA signature in DER format.
 
     :param sig: initialized ECDSA signature
-    :type sig: Secp256k1ECDSASignature
     :return: DER ECDSA signature serialization
-    :rtype: bytes
     :raises ValueError: if sig is invalid type
     :raises Libsecp256k1Exception: if not enough space was available to serialize
     """
@@ -419,9 +405,7 @@ def ecdsa_signature_serialize_compact(sig: Secp256k1ECDSASignature) -> bytes:
     Serialize an ECDSA signature in compact (64 byte) format.
 
     :param sig: initialized ECDSA signature
-    :type sig: Secp256k1ECDSASignature
     :return: compact ECDSA signature serialization
-    :rtype: bytes
     :raises ValueError: if sig is invalid type
     """
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
@@ -471,15 +455,11 @@ def ecdsa_verify(
     validation, but be aware that doing so results in malleable signatures.
 
     :param sig: initialized ECDSA signature
-    :type sig: Secp256k1ECDSASignature
     :param pubkey: initialized public key
-    :type pubkey: Secp256k1Pubkey
     :param msghash32: the 32-byte message hash being signed
-    :type msghash32: bytes
     :return: whether signature is correct or not (or unparseable)
-    :rtype: bool
     :raises ValueError: if arguments are invalid type
-    :raises ValueError: if msghash32 is not of length 32
+                        if msghash32 is not of length 32
     """
     result = lib.secp256k1_ecdsa_verify(
         secp256k1_context_verify, sig, msghash32, pubkey
@@ -539,9 +519,7 @@ def ecdsa_signature_normalize(
     Convert a signature to a normalized lower-S form.
 
     :param sig: initialized ECDSA signature
-    :type sig: Secp256k1ECDSASignature
     :return: initialized ECDSA signature in lower-S form
-    :rtype: Secp256k1ECDSASignature
     :raises ValueError: if sig is invalid type
     """
     lib.secp256k1_ecdsa_signature_normalize(secp256k1_context_verify, sig, sig)
@@ -572,13 +550,10 @@ def ecdsa_sign(seckey: bytes, msghash32: bytes) -> Secp256k1ECDSASignature:
     Create an ECDSA signature.
 
     :param seckey: 32-byte secret key
-    :type seckey: bytes
     :param msghash32: the 32-byte message hash being signed
-    :type msghash32: bytes
     :return: initialized ECDSA signature
-    :rtype: Secp256k1ECDSASignature
     :raises ValueError: if secret key is not of type bytes and length 32
-    :raises ValueError: if msghash32 is not of type bytes and length 32
+                        if msghash32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if nonce generation function failed,
                                    or the secret key was invalid
     """
@@ -615,7 +590,6 @@ def ec_seckey_verify(seckey: bytes) -> None:
     when interpreted as an integer (most significant byte first).
 
     :param seckey: 32-byte secret key
-    :type seckey: bytes
     :return: None
     :raises ValueError: if secret key is not of type bytes and length 32
     :raises Libsecp256k1Exception: if secret key is invalid
@@ -640,9 +614,7 @@ def ec_pubkey_create(seckey: bytes) -> Secp256k1Pubkey:
     Compute the public key for a secret key.
 
     :param seckey: 32-byte secret key
-    :type seckey: bytes
     :return: initialized public key
-    :rtype: Secp256k1Pubkey
     :raises ValueError: if secret key is not of type bytes and length 32
     :raises Libsecp256k1Exception: if secret key is invalid
     """
@@ -670,9 +642,7 @@ def ec_seckey_negate(seckey: bytes) -> bytes:
     Negates a secret key in place.
 
     :param seckey: 32-byte secret key
-    :type seckey: bytes
     :return: negated 32-byte secret key
-    :rtype: bytes
     :raises ValueError: if secret key is not of type bytes and length 32
     :raises Libsecp256k1Exception: if secret key is invalid
     """
@@ -696,9 +666,7 @@ def ec_pubkey_negate(pubkey: Secp256k1Pubkey) -> Secp256k1Pubkey:
     Negates a public key in place.
 
     :param pubkey: initialized public key
-    :type pubkey: Secp256k1Pubkey
     :return: negated public key
-    :rtype: Secp256k1Pubkey
     :raises ValueError: if pubkey is invalid type
     """
     lib.secp256k1_ec_pubkey_negate(secp256k1_context_verify, pubkey)
@@ -726,13 +694,10 @@ def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
     Tweak a secret key by adding tweak to it.
 
     :param seckey: 32-byte secret key
-    :type seckey: bytes
     :param tweak32: 32-byte tweak
-    :type tweak32: bytes
     :return: tweaked seckey
-    :rtype: bytes
     :raises ValueError: if secret key is not of type bytes and length 32
-    :raises ValueError: if tweak32 is not of type bytes and length 32
+                        if tweak32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: arguments are invalid or the resulting secret
                                    key would be invalid (only when the tweak
                                    is the negation of the secret key)
@@ -769,13 +734,10 @@ def ec_pubkey_tweak_add(pubkey: Secp256k1Pubkey, tweak32: bytes) -> Secp256k1Pub
     Tweak a public key by adding tweak times the generator to it.
 
     :param pubkey: initialized public key
-    :type pubkey: Secp256k1Pubkey
     :param tweak32: 32-byte tweak
-    :type tweak32: bytes
     :return: tweaked pubkey
-    :rtype: Secp256k1Pubkey
     :raises ValueError: if pubkey is invalid type
-    :raises ValueError: if tweak32 is not of type bytes and length 32
+                        if tweak32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: arguments are invalid or the resulting public
                                    key would be invalid (only when the tweak
                                    is the negation of the corresponding secret
@@ -812,13 +774,10 @@ def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
     Tweak a secret key by multiplying it by a tweak.
 
     :param seckey: 32-byte secret key
-    :type seckey: bytes
     :param tweak32: 32-byte tweak
-    :type tweak32: bytes
     :return: tweaked seckey
-    :rtype: bytes
     :raises ValueError: if secret key is not of type bytes and length 32
-    :raises ValueError: if tweak32 is not of type bytes and length 32
+                        if tweak32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: arguments are invalid
     """
     tweaked_seckey = ctypes.create_string_buffer(seckey)
@@ -848,13 +807,10 @@ def ec_pubkey_tweak_mul(pubkey: Secp256k1Pubkey, tweak32: bytes) -> Secp256k1Pub
     Tweak a public key by multiplying it by a tweak value.
 
     :param pubkey: initialized public key
-    :type pubkey: Secp256k1Pubkey
     :param tweak32: 32-byte tweak
-    :type tweak32: bytes
     :return: tweaked pubkey
-    :rtype: Secp256k1Pubkey
     :raises ValueError: if pubkey is invalid type
-    :raises ValueError: if tweak32 is not of type bytes and length 32
+                        if tweak32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: arguments are invalid
     """
     result = lib.secp256k1_ec_pubkey_tweak_mul(
@@ -902,10 +858,9 @@ def context_randomize(
     randomized with entropy from us.urandom.
 
     :param ctx: context object
-    :type ctx: Secp256k1Context
     :param seed32: 32-byte random seed
-    :type seed32: bytes
     :return: None
+    :raises Libsecp256k1Exception: if context randomization failed
     """
     if seed32 is None:
         seed32 = os.urandom(32)
@@ -930,11 +885,9 @@ def ec_pubkey_combine(pubkeys: List[Secp256k1Pubkey]) -> Secp256k1Pubkey:
     Add a number of public keys together.
 
     :param pubkeys: list of public keys
-    :type pubkeys: List[Secp256k1Pubkey]
     :return: resulting public key
-    :rtype: Secp256k1Pubkey
     :raises ValueError: if arguments are invalid type
-    :raises ValueError: if length of list is less than 2
+                        if length of list is less than 2
     :raises Libsecp256k1Exception: if the sum of the public keys is not valid
     """
     if len(pubkeys) <= 1:
@@ -980,11 +933,8 @@ def tagged_sha256(tag: bytes, msg: bytes) -> bytes:
     SHA256(SHA256(tag)||SHA256(tag)||msg).
 
     :param tag: tag
-    :type tag: bytes
     :param msg: message
-    :type msg: bytes
     :return: 32-byte hash
-    :rtype: byte
     :raises ValueError: if arguments are invalid type
     :raises Libsecp256k1Exception: arguments are invalid
     """
@@ -999,11 +949,6 @@ def tagged_sha256(tag: bytes, msg: bytes) -> bytes:
 
 
 __all__ = (
-    "context_create",
-    "context_clone",
-    "context_destroy",
-    "context_set_illegal_callback",
-    "context_set_error_callback",
     "ec_pubkey_parse",
     "ec_pubkey_serialize",
     "ec_pubkey_cmp",

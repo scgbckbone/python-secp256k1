@@ -36,13 +36,10 @@ def ecdh(seckey: bytes, pubkey: Secp256k1Pubkey) -> bytes:
     Compute an EC Diffie-Hellman secret in constant time.
 
     :param seckey: 32-byte scalar with which to multiply the point
-    :type seckey: bytes
     :param pubkey: initialized public key
-    :type pubkey: Secp256k1Pubkey
     :return: EC Diffie-Hellman secret
-    :rtype: bytes
     :raises ValueError: if secret key is not of type bytes and length 32
-    :raises ValueError: if pubkey is invalid type
+                        if pubkey is invalid type
     :raises Libsecp256k1Exception: if scalar was invalid (zero or overflow)
                                    or hashfp returned 0
     """

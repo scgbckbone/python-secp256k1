@@ -42,13 +42,10 @@ def ecdsa_recoverable_signature_parse_compact(
     Parse a compact ECDSA signature (64 bytes + recovery id).
 
     :param compact_sig: 64-byte compact signature serialization
-    :type compact_sig: bytes
     :param rec_id: recovery id (0, 1, 2 or 3)
-    :type rec_id: int
     :return: ECDSA recoverable signature
-    :rtype: Secp256k1ECDSARecoverableSignature
     :raises ValueError: if compact_sig is not of type bytes and length 64
-    :raises ValueError: if rec_id is not of type int and one of 0 or 1
+                        if rec_id is not of type int and one of 0 or 1
     """
     rec_sig = ctypes.create_string_buffer(INTERNAL_RECOVERABLE_SIGNATURE_LENGTH)
     result = lib.secp256k1_ecdsa_recoverable_signature_parse_compact(
@@ -75,9 +72,7 @@ def ecdsa_recoverable_signature_convert(
     Convert a recoverable signature into a normal signature.
 
     :param rec_sig: initialized ECDSA recoverable signature
-    :type rec_sig: Secp256k1ECDSARecoverableSignature
     :return: initialized ECDSA signature
-    :rtype: Secp256k1ECDSASignature
     :raises ValueError: if rec_sig is invalid type
     """
     sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_LENGTH)
@@ -103,9 +98,7 @@ def ecdsa_recoverable_signature_serialize_compact(
     Serialize an ECDSA signature in compact format (64 bytes + recovery id).
 
     :param rec_sig: initialized ECDSA recoverable signature
-    :type rec_sig: Secp256k1ECDSARecoverableSignature
     :return: 64-byte compact signature serialization and recovery id
-    :rtype: Tuple[bytes, int]
     :raises ValueError: if arguments are invalid
     """
     rec_id = ctypes.c_int()
@@ -138,13 +131,10 @@ def ecdsa_sign_recoverable(
     Create a recoverable ECDSA signature.
 
     :param seckey: 32-byte secret key
-    :type seckey: bytes
     :param msghash32: the 32-byte message hash being signed
-    :type msghash32: bytes
     :return: initialized ECDSA recoverable signature
-    :rtype: Secp256k1ECDSARecoverableSignature
     :raises ValueError: if secret key is not of type bytes and length 32
-    :raises ValueError: if msghash32 is not of type bytes and length 32
+                        if msghash32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if nonce generation function failed,
                                    or the secret key was invalid
     """
@@ -177,13 +167,10 @@ def ecdsa_recover(
     Recover an ECDSA public key from a signature.
 
     :param rec_sig: initialized ECDSA recoverable signature
-    :type rec_sig: Secp256k1ECDSARecoverableSignature
     :param msghash32: the 32-byte message hash being signed
-    :type msghash32: bytes
     :return: recovered public key
-    :rtype: Secp256k1Pubkey
     :raises ValueError: if rec_sig is invalid type
-    :raises ValueError: if msghash32 is not of type bytes and length 32
+                        if msghash32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if public key recovery failed
     """
     pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
