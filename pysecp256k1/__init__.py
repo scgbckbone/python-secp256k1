@@ -892,7 +892,21 @@ def ec_pubkey_tweak_mul(pubkey: Secp256k1Pubkey, tweak32: bytes) -> Secp256k1Pub
 # secp256k1_context_clone, resp.), and you may call this repeatedly afterwards.
 #
 @enforce_type
-def context_randomize(ctx: Secp256k1Context, seed32: Optional[bytes] = None) -> None:
+def context_randomize(
+    ctx: Secp256k1Context = secp256k1_context_sign, seed32: Optional[bytes] = None
+) -> None:
+    """
+    Updates the context randomization to protect against side-channel leakage.
+
+    If run without any arguments, default secp256k1_context_sign will be
+    randomized with entropy from us.urandom.
+
+    :param ctx: context object
+    :type ctx: Secp256k1Context
+    :param seed32: 32-byte random seed
+    :type seed32: bytes
+    :return: None
+    """
     if seed32 is None:
         seed32 = os.urandom(32)
     result = lib.secp256k1_context_randomize(ctx, seed32)
