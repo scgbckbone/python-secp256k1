@@ -53,7 +53,7 @@ def xonly_pubkey_parse(xonly_pubkey_ser: bytes) -> Secp256k1XonlyPubkey:
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("public key could not be parsed or is invalid")
+        raise Libsecp256k1Exception("xonly public key could not be parsed or is invalid")
     return xonly_pubkey
 
 
