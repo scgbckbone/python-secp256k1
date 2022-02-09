@@ -55,8 +55,8 @@ class Libsecp256k1Exception(EnvironmentError):
 _secp256k1_error_storage = {}
 
 
-_ctypes_functype = getattr(ctypes, "WINFUNCTYPE", getattr(ctypes, "CFUNCTYPE"))
-callback_func_type = _ctypes_functype(ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p)
+ctypes_functype = getattr(ctypes, "WINFUNCTYPE", getattr(ctypes, "CFUNCTYPE"))
+callback_func_type = ctypes_functype(ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p)
 
 
 @callback_func_type
@@ -514,4 +514,5 @@ __all__ = (
     "has_secp256k1_extrakeys",
     "has_secp256k1_recovery",
     "has_secp256k1_ecdh",
+    "ctypes_functype"
 )
