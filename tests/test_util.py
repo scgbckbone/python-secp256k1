@@ -1,6 +1,7 @@
+import os
 import unittest
-from pysecp256k1.low_level.util import assert_zero_return_code, enforce_length
-from pysecp256k1.low_level.constants import SECKEY_LENGTH, COMPACT_SIGNATURE_LENGTH
+from pysecp256k1.low_level.util import assert_zero_return_code, enforce_length, find_pysecp_env_var
+from pysecp256k1.low_level.constants import SECKEY_LENGTH, COMPACT_SIGNATURE_LENGTH, PYSECP_SO
 
 
 class TestUtil(unittest.TestCase):
@@ -22,3 +23,14 @@ class TestUtil(unittest.TestCase):
         self.assertEqual(
             str(exc.exception), "Length of 'signature_ser' must be one of [64, 72, 71]"
         )
+
+    def test_find_pysecp_env_var(self):
+        # make sure no PYSECP_SO in env
+        current = os.environ.get(PYSECP_SO, None)
+        if current:
+            del os.environ[PYSECP_SO]
+        assert find_pysecp_env_var() is None
+        target = "/random/path/to/libsecp256k1.so.0.0.0"
+        target = current or target
+        os.environ[PYSECP_SO] = target
+        assert find_pysecp_env_var() == target

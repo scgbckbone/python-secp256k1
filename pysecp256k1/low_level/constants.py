@@ -1,5 +1,6 @@
 import ctypes
 
+PYSECP_SO = "PYSECP_SO"
 
 SECP256K1_FLAGS_TYPE_CONTEXT = 1 << 0
 SECP256K1_FLAGS_BIT_CONTEXT_SIGN = 1 << 9
@@ -40,11 +41,3 @@ Secp256k1Keypair = ctypes.c_char * INTERNAL_KEYPAIR_LENGTH
 Secp256k1ECDSARecoverableSignature = (
     ctypes.c_char * INTERNAL_RECOVERABLE_SIGNATURE_LENGTH
 )
-
-
-class SchnorrsigExtraparams(ctypes.Structure):
-    _fields_ = [
-        ("magic", ctypes.c_char * 4),
-        ("noncefp", ctypes.c_void_p),
-        ("ndata", ctypes.c_void_p),
-    ]

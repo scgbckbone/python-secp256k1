@@ -1,6 +1,8 @@
+import os
 import typing
 import functools
 from pysecp256k1.low_level.constants import (
+    PYSECP_SO,
     SECKEY_LENGTH,
     PUBLIC_KEY_LENGTH,
     COMPRESSED_PUBLIC_KEY_LENGTH,
@@ -117,6 +119,10 @@ def enforce_length(value, name, length):
         # expect this to be iterable
         if len(value) not in length:
             raise ValueError(f"Length of '{name}' must be one of {length}")
+
+
+def find_pysecp_env_var():
+    return os.environ.get(PYSECP_SO, None)
 
 
 __all__ = ("assert_zero_return_code", "enforce_length", "enforce_type")

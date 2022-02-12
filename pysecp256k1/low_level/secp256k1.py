@@ -27,14 +27,15 @@ import logging
 import ctypes
 import ctypes.util
 from types import FunctionType
-from typing import Any, Optional, Dict, Union
+from typing import Any, Optional
 
 from pysecp256k1.low_level.constants import (
+    PYSECP_SO,
     SECP256K1_CONTEXT_SIGN,
     SECP256K1_CONTEXT_VERIFY,
     Secp256k1Context,
 )
-from pysecp256k1.low_level.util import assert_zero_return_code
+from pysecp256k1.low_level.util import assert_zero_return_code, find_pysecp_env_var
 
 
 _LOGGER = logging.getLogger(__name__)
@@ -496,7 +497,7 @@ def load_secp256k1_library(path: Optional[str] = None) -> ctypes.CDLL:
     return handle
 
 
-lib = load_secp256k1_library()
+lib = load_secp256k1_library(find_pysecp_env_var())
 
 secp256k1_context_sign = secp256k1_create_and_init_context(lib, SECP256K1_CONTEXT_SIGN)
 secp256k1_context_verify = secp256k1_create_and_init_context(

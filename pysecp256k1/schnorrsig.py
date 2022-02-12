@@ -12,7 +12,6 @@ from pysecp256k1.low_level import (
 from pysecp256k1.low_level.constants import (
     Secp256k1Keypair,
     Secp256k1XonlyPubkey,
-    SchnorrsigExtraparams,
     SCHNORRSIG_EXTRAPARAMS_MAGIC,
     COMPACT_SIGNATURE_LENGTH,
 )
@@ -23,6 +22,14 @@ if not has_secp256k1_schnorrsig:
         "use '--enable-module-schnorrsig' together with '--enable-experimental'"
         " during ./configure"
     )
+
+
+class SchnorrsigExtraparams(ctypes.Structure):
+    _fields_ = [
+        ("magic", ctypes.c_char * 4),
+        ("noncefp", ctypes.c_void_p),
+        ("ndata", ctypes.c_void_p),
+    ]
 
 
 # Create a Schnorr signature.
