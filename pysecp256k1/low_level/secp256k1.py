@@ -515,5 +515,5 @@ __all__ = (
     "has_secp256k1_extrakeys",
     "has_secp256k1_recovery",
     "has_secp256k1_ecdh",
-    "ctypes_functype"
+    "ctypes_functype",
 )

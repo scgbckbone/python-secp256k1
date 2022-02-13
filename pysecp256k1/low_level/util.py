@@ -125,4 +125,9 @@ def find_pysecp_env_var():
     return os.environ.get(PYSECP_SO, None)
 
 
-__all__ = ("assert_zero_return_code", "enforce_length", "enforce_type")
+__all__ = (
+    "assert_zero_return_code",
+    "enforce_length",
+    "enforce_type",
+    "find_pysecp_env_var",
+)

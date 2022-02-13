@@ -1,7 +1,15 @@
 import os
 import unittest
-from pysecp256k1.low_level.util import assert_zero_return_code, enforce_length, find_pysecp_env_var
-from pysecp256k1.low_level.constants import SECKEY_LENGTH, COMPACT_SIGNATURE_LENGTH, PYSECP_SO
+from pysecp256k1.low_level.util import (
+    assert_zero_return_code,
+    enforce_length,
+    find_pysecp_env_var,
+)
+from pysecp256k1.low_level.constants import (
+    SECKEY_LENGTH,
+    COMPACT_SIGNATURE_LENGTH,
+    PYSECP_SO,
+)
 
 
 class TestUtil(unittest.TestCase):
