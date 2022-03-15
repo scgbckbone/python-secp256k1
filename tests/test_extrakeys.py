@@ -365,7 +365,9 @@ class TestPysecp256k1Extrakeys(unittest.TestCase):
 
     def test_invalid_x_coordinate(self):
         # https://suredbits.com/taproot-funds-burned-on-the-bitcoin-blockchain/
-        invalid_key_hex = "658204033e46a1fa8cceb84013cfe2d376ca72d5f595319497b95b08aa64a970"
+        invalid_key_hex = (
+            "658204033e46a1fa8cceb84013cfe2d376ca72d5f595319497b95b08aa64a970"
+        )
         invalid_key_bytes = bytes.fromhex(invalid_key_hex)
         with self.assertRaises(Libsecp256k1Exception):
             xonly_pubkey_parse(invalid_key_bytes)
