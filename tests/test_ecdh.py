@@ -76,9 +76,8 @@ class TestPysecp256k1ECDH(unittest.TestCase):
         his_pubkey = b"\x82\xfbw\x91\xe1\xbbk|\x99Q\xd1\xfb\x90\x9b\xe4\x11\x9e\x80q\xdd&G\x16\xa0D\x130\x8asf!\x88\x9dG>\xbb\xc9:\xb5:#\r\x8e\xf4\x02\x16\x03\x91\x8d\xebbPf\x97\x90\x9f<\xc4L\x0bJ\x1c=\xe2"
         his_pubkey_p = ec_pubkey_parse(b"\x04" + his_pubkey)
 
+        # test vectors form https://github.com/switck/libngu/blob/master/ngu/ngu_tests/test_k1_gen.py
         test_vectors = [
-            # https://github.com/switck/libngu/blob/master/ngu/ngu_tests/test_k1_gen.py
-            # tuples of secret key, other pubkey and target shared secret
             (
                 b"12121212121212121212121212121212",
                 b"m\x9b*a\xfaXg\x95\xe3\x8d.\xe8\xbb\xc3\xd6o\xb5oa\x9e\xd9\xb0\xb5\xf1.v\xad\x9d\x98'\xe0|",
