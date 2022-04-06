@@ -15,7 +15,7 @@ This library aims to provide a standard way to wrap `libsecp256k1` using `ctypes
 and uses them the whole time, you do not need to worry about contexts. In case you need to randomize more often (to protect against side-channel leakage)
 use `pysecp256k1.context_randomize`.
 * way to provide own hash functions is not implemented - default hash functions are used
-* `schnorrsig_sign_custom` does not accept extraparams argument, instead accepts `aux_rand32` as `schnorrsig_sign` - same as passing `extraparams.ndata`
+* `schnorrsig_sign_custom` does not accept extraparams argument, instead accepts `aux_rand32` as `schnorrsig_sign32` - same as passing `extraparams.ndata`
 * Default illegal callback function (that is added to default contexts) logs to stderr. 
 * Method names are the same as in `libsecp256k1` but without 'secp256k1_' prefix (i.e. `secp256k1_ec_pubkey_serialize` -> `ec_pubkey_serialize`)
 * Modules are structured same as in secp256k1 `include/` directory but without 'secp256k1_' prefix.
@@ -46,15 +46,15 @@ to get bytes from `c_char_Array` use `.raw` (see examples).
 
 Apart from `ctypes.c_char_Array` and `ctypes.c_void_p` this library uses a limited number of standard python types.
 
-|            python type           |                                          usage                                          |
+|            python type           |                                           usage                                            |
 |:--------------------------------:|:------------------------------------------------------------------------------------------:|
-|               bool               |      result of signature verification functions `ecdsa_verify` and `schnorrsig_verify`     |
+|               bool               |     result of signature verification functions `ecdsa_verify` and `schnorrsig_verify`      |
 |                int               |        recovery id, pubkey parity, result of `ec_pubkey_cmp` and `xonly_pubkey_cmp`        |
 |               bytes              | tags, tweaks, messages, message hashes, serialized pubkeys, serialized signatures, seckeys |
-|       List[Secp256k1Pubkey]      |                     list of initialized pubkeys for `ec_pubkey_combine`                    |
-| Tuple[Secp256k1XonlyPubkey, int] |                         initialized xonly public key and its parity                        |
+|       List[Secp256k1Pubkey]      |                    list of initialized pubkeys for `ec_pubkey_combine`                     |
+| Tuple[Secp256k1XonlyPubkey, int] |                        initialized xonly public key and its parity                         |
 |         Tuple[bytes, int]        |                    serialized recoverable signature and its recovery id                    |
-|          Optional[bytes]         |                    optional random data for `schnorrsig_sign{,_custom}`                    |
+|          Optional[bytes]         |                   optional random data for `schnorrsig_sign{32,_custom}`                   |
 
 ## Installation and dependencies
 Only dependency of `pysecp256k1` is `python3.6+` and `libsecp256k1` itself.
@@ -62,14 +62,14 @@ To use full feature set build secp256k1 this way:
 ```shell
 git clone https://github.com/bitcoin-core/secp256k1.git
 cd secp256k1/
-git checkout e0508ee9db2725c5efbc1cad434e14c2ebf55427  # last tested
+git checkout 8746600eec5e7fcd35dabd480839a3a4bdfee87b  # need to have at least this commit as I already deprecated schnorrsig_sign in favor of schnorrsig_sign32
 ./autogen.sh
 ./configure --enable-module-ecdh --enable-module-recovery  --enable-module-schnorrsig --enable-experimental
 make
 make check
 sudo make install
 ```
-if one builds secp256k1 without schnorrsig for example and then tries to import from it `from pysecp256k1.schnorrsig import schnorrsig_sign`
+if one builds secp256k1 without schnorrsig for example and then tries to import from it `from pysecp256k1.schnorrsig import schnorrsig_sign32`
 `RuntimeError` is raised hinting that `libsecp256k1` is built without shnorrsig support. Same applies for all optional modules.
 
 This library uses the latest secp256k1 master. If one needs to have older version of libsecp256k1 installed in 
@@ -123,7 +123,7 @@ print("msg:", msg.decode())
 msg_hash = tagged_sha256(b"message", msg)
 print("msg hash:", msg_hash.hex())
 rand_32 = os.urandom(32)
-sig = schnorrsig_sign(keypair, msg_hash, aux_rand32=rand_32)
+sig = schnorrsig_sign32(keypair, msg_hash, aux_rand32=rand_32)
 print("schnorr signature:", sig.hex())
 print("Correct signature for xonly pubkey and msg hash:", schnorrsig_verify(sig, msg_hash, xonly_pubkey))
 # you can also sign variable length messages

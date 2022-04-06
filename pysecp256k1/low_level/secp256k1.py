@@ -403,11 +403,11 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
             ctypes.c_char_p,
         ]
 
-    if getattr(_secp256k1, "secp256k1_schnorrsig_sign", None):
+    if getattr(_secp256k1, "secp256k1_schnorrsig_sign32", None):
         has_secp256k1_schnorrsig = True
 
-        _secp256k1.secp256k1_schnorrsig_sign.restype = ctypes.c_int
-        _secp256k1.secp256k1_schnorrsig_sign.argtypes = [
+        _secp256k1.secp256k1_schnorrsig_sign32.restype = ctypes.c_int
+        _secp256k1.secp256k1_schnorrsig_sign32.argtypes = [
             ctypes.c_void_p,
             ctypes.c_char_p,
             ctypes.c_char_p,

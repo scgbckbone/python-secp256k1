@@ -21,7 +21,7 @@ if has_secp256k1_extrakeys:
     from pysecp256k1.extrakeys import keypair_create, keypair_xonly_pub
 if has_secp256k1_schnorrsig:
     from pysecp256k1.schnorrsig import (
-        schnorrsig_sign,
+        schnorrsig_sign32,
         schnorrsig_sign_custom,
         schnorrsig_verify,
     )
@@ -39,32 +39,32 @@ class TestPysecp256k1SchnorrsigValidation(unittest.TestCase):
         cls.keypair = keypair_create(valid_seckeys[1])
         cls.xonly_pubkey, cls.parity = keypair_xonly_pub(cls.keypair)
 
-    def test_schnorrsig_sign_invalid_input_type_keypair(self):
+    def test_schnorrsig_sign32_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
             with self.assertRaises(ValueError):
-                schnorrsig_sign(invalid_keypair, self.b32)
+                schnorrsig_sign32(invalid_keypair, self.b32)
 
         for invalid_type in not_c_char_array:
             with self.assertRaises(ValueError):
-                schnorrsig_sign(invalid_type, self.b32)
+                schnorrsig_sign32(invalid_type, self.b32)
 
-    def test_schnorrsig_sign_invalid_input_type_msg32(self):
+    def test_schnorrsig_sign32_invalid_input_type_msg32(self):
         for invalid_msg in invalid_seckey_length:
             with self.assertRaises(ValueError):
-                schnorrsig_sign(self.keypair, invalid_msg)
+                schnorrsig_sign32(self.keypair, invalid_msg)
 
         for invalid_type in not_bytes:
             with self.assertRaises(ValueError):
-                schnorrsig_sign(self.keypair, invalid_type)
+                schnorrsig_sign32(self.keypair, invalid_type)
 
-    def test_schnorrsig_sign_invalid_input_type_aux_rand32(self):
+    def test_schnorrsig_sign32_invalid_input_type_aux_rand32(self):
         for invalid_msg in invalid_seckey_length:
             with self.assertRaises(ValueError):
-                schnorrsig_sign(self.keypair, self.b32, aux_rand32=invalid_msg)
+                schnorrsig_sign32(self.keypair, self.b32, aux_rand32=invalid_msg)
 
         for invalid_type in not_bytes[1:]:  # omit None as it is optional
             with self.assertRaises(ValueError):
-                schnorrsig_sign(self.keypair, self.b32, aux_rand32=invalid_type)
+                schnorrsig_sign32(self.keypair, self.b32, aux_rand32=invalid_type)
 
     def test_schnorrsig_sign_custom_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
@@ -78,7 +78,7 @@ class TestPysecp256k1SchnorrsigValidation(unittest.TestCase):
     def test_schnorrsig_sign_custom_invalid_input_type_msg(self):
         for invalid_type in not_bytes:
             with self.assertRaises(ValueError):
-                schnorrsig_sign(self.keypair, invalid_type)
+                schnorrsig_sign_custom(self.keypair, invalid_type)
 
     def test_schnorrsig_verify_invalid_input_type_compact_sig(self):
         for invalid_sig in invalid_compact_sig_length:
@@ -110,7 +110,7 @@ class TestPysecp256k1Schnorrsig(unittest.TestCase):
         msg32 = hashlib.sha256(b"super secret message").digest()
         var_length_msg = msg32 + msg32  # 64 bytes
         with self.assertRaises(Libsecp256k1Exception):
-            schnorrsig_sign(ctypes.create_string_buffer(96), msg32)
+            schnorrsig_sign32(ctypes.create_string_buffer(96), msg32)
 
         with self.assertRaises(Libsecp256k1Exception):
             schnorrsig_sign_custom(ctypes.create_string_buffer(96), msg32)
@@ -118,11 +118,11 @@ class TestPysecp256k1Schnorrsig(unittest.TestCase):
         for seckey in valid_seckeys:
             keypair = keypair_create(seckey)
             xonly_pubkey, parity = keypair_xonly_pub(keypair)
-            signature0 = schnorrsig_sign(keypair, msg32)
+            signature0 = schnorrsig_sign32(keypair, msg32)
             signature0_custom = schnorrsig_sign_custom(keypair, msg32)
             self.assertEqual(signature0, signature0_custom)
             random_32 = os.urandom(32)
-            signature1 = schnorrsig_sign(keypair, msg32, aux_rand32=random_32)
+            signature1 = schnorrsig_sign32(keypair, msg32, aux_rand32=random_32)
             signature1_custom = schnorrsig_sign_custom(
                 keypair, msg32, aux_rand32=random_32
             )

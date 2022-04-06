@@ -57,7 +57,7 @@ class SchnorrsigExtraparams(ctypes.Structure):
 #               argument and for guidance if randomness is expensive.
 #
 @enforce_type
-def schnorrsig_sign(
+def schnorrsig_sign32(
     keypair: Secp256k1Keypair, msg32: bytes, aux_rand32: Optional[bytes] = None
 ) -> bytes:
     """
@@ -85,25 +85,25 @@ def schnorrsig_sign(
     :raises ValueError: if keypair is invalid type
                         if msg32 is not of type bytes and length 32
                         if aux_rand32 is not of type bytes and length 32
-    :raises Libsecp256k1Exception: if schnorrsig_sign returned failure
+    :raises Libsecp256k1Exception: if schnorrsig_sign32 returned failure
     """
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
-    result = lib.secp256k1_schnorrsig_sign(
+    result = lib.secp256k1_schnorrsig_sign32(
         secp256k1_context_sign, compact_sig, msg32, keypair, aux_rand32
     )
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("secp256k1_schnorrsig_sign returned failure")
+        raise Libsecp256k1Exception("secp256k1_schnorrsig_sign32 returned failure")
     return compact_sig.raw[:COMPACT_SIGNATURE_LENGTH]
 
 
 # Create a Schnorr signature with a more flexible API.
 #
-# Same arguments as secp256k1_schnorrsig_sign except that it allows signing
+# Same arguments as secp256k1_schnorrsig_sign32 except that it allows signing
 # variable length messages and accepts a pointer to an extraparams object that
 # allows customizing signing by passing additional arguments.
 #
-# Creates the same signatures as schnorrsig_sign if msglen is 32 and the
+# Creates the same signatures as schnorrsig_sign32 if msglen is 32 and the
 # extraparams.ndata is the same as aux_rand32.
 #
 # In:     msg: the message being signed. Can only be NULL if msglen is 0.
@@ -120,7 +120,7 @@ def schnorrsig_sign_custom(
     Same arguments as secp256k1_schnorrsig_sign except that it allows signing
     variable length messages.
 
-    Creates the same signatures as schnorrsig_sign if aux_rand32 is the same
+    Creates the same signatures as schnorrsig_sign32 if aux_rand32 is the same
     and msglen is 32.
 
     :param keypair: initialized keypair
@@ -188,4 +188,4 @@ def schnorrsig_verify(
     return True
 
 
-__all__ = ("schnorrsig_sign", "schnorrsig_sign_custom", "schnorrsig_verify")
+__all__ = ("schnorrsig_sign32", "schnorrsig_sign_custom", "schnorrsig_verify")
