@@ -62,9 +62,9 @@ To use full feature set build secp256k1 this way:
 ```shell
 git clone https://github.com/bitcoin-core/secp256k1.git
 cd secp256k1/
-git checkout 8746600eec5e7fcd35dabd480839a3a4bdfee87b  # need to have at least this commit as I already deprecated schnorrsig_sign in favor of schnorrsig_sign32
+git checkout 3efeb9da21368c02cad58435b2ccdf6eb4b359c3
 ./autogen.sh
-./configure --enable-module-ecdh --enable-module-recovery  --enable-module-schnorrsig --enable-experimental
+./configure --enable-module-ecdh --enable-module-recovery  --enable-module-schnorrsig
 make
 make check
 sudo make install
