@@ -78,7 +78,7 @@ export absolute path to desired `.so` file in environment variable.
 ```shell
 export PYSECP_SO=/home/johndoe/secp256k1/.libs/libsecp256k1.so.0.0.0
 ```
-I only plan to release when secp256k1 releases. So until then install like this: 
+I only plan to release when secp256k1 releases. Until then install like this: 
 ```shell
 python3 -m pip install -U pip wheel
 python3 -m pip install git+https://github.com/scgbckbone/python-secp256k1.git
