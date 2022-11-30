@@ -62,9 +62,12 @@ To use full feature set build secp256k1 this way:
 ```shell
 git clone https://github.com/bitcoin-core/secp256k1.git
 cd secp256k1/
-git checkout a43e982bca580f4fba19d7ffaf9b5ee3f51641cb
+git checkout 751c4354d51fb5b10a80764df627b84e1a5ccd4f
 ./autogen.sh
+# before 2286f8090242098a33f0d85b27c48e58d4235df1
 ./configure --enable-module-ecdh --enable-module-recovery  --enable-module-schnorrsig
+# after 2286f8090242098a33f0d85b27c48e58d4235df1 shnorrsig, extrakeys, and ecdh included in the default build options
+./configure --enable-module-recovery
 make
 make check
 sudo make install
