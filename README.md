@@ -62,11 +62,8 @@ To use full feature set build secp256k1 this way:
 ```shell
 git clone https://github.com/bitcoin-core/secp256k1.git
 cd secp256k1/
-git checkout 751c4354d51fb5b10a80764df627b84e1a5ccd4f
+git checkout v0.2.0
 ./autogen.sh
-# before 2286f8090242098a33f0d85b27c48e58d4235df1
-./configure --enable-module-ecdh --enable-module-recovery  --enable-module-schnorrsig
-# after 2286f8090242098a33f0d85b27c48e58d4235df1 shnorrsig, extrakeys, and ecdh included in the default build options
 ./configure --enable-module-recovery
 make
 make check
@@ -75,16 +72,15 @@ sudo make install
 if one builds secp256k1 without schnorrsig for example and then tries to import from it `from pysecp256k1.schnorrsig import schnorrsig_sign32`
 `RuntimeError` is raised hinting that `libsecp256k1` is built without shnorrsig support. Same applies for all optional modules.
 
-This library uses the latest secp256k1 master. If one needs to have older version of libsecp256k1 installed in 
-standard path and recent one for this library, do NOT do last step from above (`sudo make install`) and instead 
-export absolute path to desired `.so` file in environment variable.
+If one needs to have older version of libsecp256k1 installed in standard path and recent one for this library, 
+do NOT do last step from above (`sudo make install`) and instead export absolute path to desired `.so` file in environment variable.
 ```shell
 export PYSECP_SO=/home/johndoe/secp256k1/.libs/libsecp256k1.so.0.0.0
 ```
-I only plan to release when secp256k1 releases. Until then install like this: 
+Install `python-secp256k1` python package from pypi: 
 ```shell
 python3 -m pip install -U pip wheel
-python3 -m pip install git+https://github.com/scgbckbone/python-secp256k1.git
+python3 -m pip install python-secp256k1
 ```
 
 ## Examples

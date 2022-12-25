@@ -3,7 +3,7 @@
 import os
 from setuptools import setup
 
-__version__ = "0.0.1"
+__version__ = "0.2.0"
 
 here = os.path.abspath(os.path.dirname(__file__))
 with open(os.path.join(here, "README.md")) as f:
@@ -15,8 +15,8 @@ setup(
     name="python-secp256k1",
     version=__version__,
     license="MIT",
-    author="Andrej Virgovic",
-    author_email="virgovica@gmail.com",
+    author="scg",
+    author_email="scgbckbone@proton.me",
     description="Ctypes Python3 FFI bindings for libsecp256k1",
     long_description=README,
     long_description_content_type="text/markdown",
