@@ -17,8 +17,8 @@ use `pysecp256k1.context_randomize`.
 * way to provide own hash functions is not implemented - default hash functions are used
 * `schnorrsig_sign_custom` does not accept extraparams argument, instead accepts `aux_rand32` as `schnorrsig_sign32` - same as passing `extraparams.ndata`
 * Default illegal callback function (that is added to default contexts) logs to stderr. 
-* Method names are the same as in `libsecp256k1` but without 'secp256k1_' prefix (i.e. `secp256k1_ec_pubkey_serialize` -> `ec_pubkey_serialize`)
-* Modules are structured same as in secp256k1 `include/` directory but without 'secp256k1_' prefix.
+* Method names are the same as in `libsecp256k1` but without `secp256k1_` prefix (i.e. `secp256k1_ec_pubkey_serialize` -> `ec_pubkey_serialize`)
+* Modules are structured same as in secp256k1 `include/` directory but without `secp256k1_` prefix.
 
 |    secp256k1 modules   |    pysecp256k1 modules    |               importing              |
 |:----------------------:|:-------------------------:|:------------------------------------:|
