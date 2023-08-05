@@ -7,7 +7,7 @@ A big welcome and thank you for considering contributing to python-pysecp256k1 o
 Contributions are made to this repo via Issues and Pull Requests (PRs). A few general guidelines that cover both:
 
 - To report security vulnerabilities in `secp256k1` go [here](https://github.com/bitcoin-core/secp256k1/blob/master/SECURITY.md).
-- To report security vulnerabilities in `pysecp256k1` send email to virgovica@gmail.com. Following key 35B41FB07EFCCF36A1EA89D3A940F7604E73741B may be used to communicate sensitive information. 
+- To report security vulnerabilities in `pysecp256k1` send email to scgbckbone@proton.me. Following key 35B41FB07EFCCF36A1EA89D3A940F7604E73741B may be used to communicate sensitive information. 
 - Search for existing Issues and PRs before creating your own.
 
 ### Issues
