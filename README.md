@@ -62,7 +62,7 @@ To use full feature set build secp256k1 this way:
 ```shell
 git clone https://github.com/bitcoin-core/secp256k1.git
 cd secp256k1/
-git checkout v0.3.2
+git checkout d373bf6d08c82ac5496bf8103698c9f54d8d99d2  # v0.4.1
 ./autogen.sh
 ./configure --enable-module-recovery
 make
