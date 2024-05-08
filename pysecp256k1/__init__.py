@@ -268,6 +268,39 @@ def ec_pubkey_cmp(pubkey0: Secp256k1Pubkey, pubkey1: Secp256k1Pubkey) -> int:
     return lib.secp256k1_ec_pubkey_cmp(secp256k1_context_sign, pubkey0, pubkey1)
 
 
+# Sort public keys using lexicographic (of compressed serialization) order
+#
+# Returns: 0 if the arguments are invalid. 1 otherwise.
+#
+# Args:     ctx: pointer to a context object
+# In:   pubkeys: array of pointers to pubkeys to sort
+#     n_pubkeys: number of elements in the pubkeys array
+#
+@enforce_type
+def ec_pubkey_sort(pubkeys: List[Secp256k1Pubkey]) -> List[Secp256k1Pubkey]:
+    """
+    Sort public keys using lexicographic (of compressed serialization) order.
+
+    :param pubkeys: list of initialized public keys to sort
+    :return: sorted list of intitalized public keys
+    :raises ValueError: if arguments are invalid type
+    :raises Libsecp256k1Exception: if pubkey is invalid or could not be parsed
+    """
+    length = len(pubkeys)
+    arr = (ctypes.POINTER(Secp256k1Pubkey) * length)()
+    for i, pk in enumerate(pubkeys):
+        arr[i] = ctypes.pointer(pk)
+
+    result = lib.secp256k1_ec_pubkey_sort(
+        secp256k1_context_verify, arr, length
+    )
+    if result != 1:
+        assert_zero_return_code(result)
+        raise Libsecp256k1Exception("pubkeys could not be parsed or are invalid")
+
+    return [arr[i].contents for i in range(length)]
+
+
 # Parse an ECDSA signature in compact (64 bytes) format.
 #
 # Returns: 1 when the signature could be parsed, 0 otherwise.

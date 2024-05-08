@@ -102,6 +102,13 @@ def enforce_type(func):
                 for i, element in enumerate(result):
                     if not isinstance(element, _args[i]):
                         raise ValueError(f"Element {i} of result must be {_args}")
+            elif origin in [list, typing.List]:
+                if not isinstance(result, list):
+                    raise ValueError(f"Result must be of type {origin}")
+                _args = getattr(type_hints["return"], "__args__", None)
+                for element in result:
+                    if not isinstance(element, _args[0]):
+                        raise ValueError(f"Element of result must be {_args}")
             else:
                 if not isinstance(result, type_hints["return"]):
                     raise ValueError(f"Result must be of type {type_hints['return']}")

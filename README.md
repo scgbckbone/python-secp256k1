@@ -46,15 +46,15 @@ to get bytes from `c_char_Array` use `.raw` (see examples).
 
 Apart from `ctypes.c_char_Array` and `ctypes.c_void_p` this library uses a limited number of standard python types.
 
-|            python type           |                                           usage                                            |
-|:--------------------------------:|:------------------------------------------------------------------------------------------:|
-|               bool               |     result of signature verification functions `ecdsa_verify` and `schnorrsig_verify`      |
-|                int               |        recovery id, pubkey parity, result of `ec_pubkey_cmp` and `xonly_pubkey_cmp`        |
-|               bytes              | tags, tweaks, messages, message hashes, serialized pubkeys, serialized signatures, seckeys |
-|       List[Secp256k1Pubkey]      |                    list of initialized pubkeys for `ec_pubkey_combine`                     |
-| Tuple[Secp256k1XonlyPubkey, int] |                        initialized xonly public key and its parity                         |
-|         Tuple[bytes, int]        |                    serialized recoverable signature and its recovery id                    |
-|          Optional[bytes]         |                   optional random data for `schnorrsig_sign{32,_custom}`                   |
+|            python type           |                                                     usage                                                     |
+|:--------------------------------:|:-------------------------------------------------------------------------------------------------------------:|
+|               bool               |               result of signature verification functions `ecdsa_verify` and `schnorrsig_verify`               |
+|                int               |                 recovery id, pubkey parity, result of `ec_pubkey_cmp` and `xonly_pubkey_cmp`                  |
+|               bytes              |          tags, tweaks, messages, message hashes, serialized pubkeys, serialized signatures, seckeys           |
+|       List[Secp256k1Pubkey]      |                   list of initialized pubkeys for `ec_pubkey_combine`, and `ec_pubkey_sort`                   |
+| Tuple[Secp256k1XonlyPubkey, int] |                                  initialized xonly public key and its parity                                  |
+|         Tuple[bytes, int]        |                             serialized recoverable signature and its recovery id                              |
+|          Optional[bytes]         |                            optional random data for `schnorrsig_sign{32,_custom}`                             |
 
 ## Installation and dependencies
 Only dependency of `pysecp256k1` is `python3.6+` and `libsecp256k1` itself.

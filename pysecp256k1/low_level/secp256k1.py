@@ -34,6 +34,7 @@ from pysecp256k1.low_level.constants import (
     SECP256K1_CONTEXT_SIGN,
     SECP256K1_CONTEXT_VERIFY,
     Secp256k1Context,
+    Secp256k1Pubkey,
 )
 from pysecp256k1.low_level.util import assert_zero_return_code, find_pysecp_env_var
 
@@ -141,6 +142,13 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
         ctypes.c_void_p,
         ctypes.c_char_p,
         ctypes.c_char_p,
+    ]
+
+    _secp256k1.secp256k1_ec_pubkey_sort.restype = ctypes.c_int
+    _secp256k1.secp256k1_ec_pubkey_sort.argtypes = [
+        ctypes.c_void_p,
+        ctypes.POINTER(ctypes.POINTER(Secp256k1Pubkey)),
+        ctypes.c_size_t,
     ]
 
     _secp256k1.secp256k1_ecdsa_signature_parse_compact.restype = ctypes.c_int
