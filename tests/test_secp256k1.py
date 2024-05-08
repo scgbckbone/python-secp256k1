@@ -24,6 +24,7 @@ from pysecp256k1 import (
     ec_pubkey_create,
     ec_pubkey_serialize,
     ec_pubkey_cmp,
+    ec_pubkey_sort,
     ec_pubkey_parse,
     ec_seckey_negate,
     ec_pubkey_negate,
@@ -104,6 +105,22 @@ class TestPysecp256k1Validation(unittest.TestCase):
         for invalid_type in not_c_char_array:
             with self.assertRaises(ValueError):
                 ec_pubkey_cmp(invalid_type, self.pubkey1)
+
+    def test_ec_pubkey_sort_invalid_input_type_pubkeys(self):
+        with self.assertRaises(ValueError):
+            ec_pubkey_sort(invalid_pubkey_length)
+
+        with self.assertRaises(ValueError):
+            ec_pubkey_sort([invalid_pubkey_length[0],
+                            ec_pubkey_create(valid_seckeys[0])])
+
+        with self.assertRaises(ValueError):
+            ec_pubkey_sort([ec_pubkey_create(valid_seckeys[0]),
+                            invalid_pubkey_length[1]])
+
+        for invalid_type in not_c_char_array:
+            with self.assertRaises(ValueError):
+                ec_pubkey_sort(invalid_type)
 
     def test_ecdsa_signature_parse_compact_invalid_input_type_compact_sig(self):
         for invalid_sig in invalid_compact_sig_length:
@@ -392,6 +409,12 @@ class TestPysecp256k1(unittest.TestCase):
             ec_pubkey_cmp(pubkey2, pubkey0)
             > 0
         )
+
+    def test_ec_pubkey_sort(self):
+        pks = [ec_pubkey_parse(pk) for pk in serialized_pubkeys_compressed]
+        pks_sorted = ec_pubkey_sort(pks)
+        self.assertEqual([ec_pubkey_serialize(pk) for pk in pks_sorted],
+                         sorted(serialized_pubkeys_compressed))
 
     def test_ecdsa_signature_parse_ser_compact(self):
         # NULL
