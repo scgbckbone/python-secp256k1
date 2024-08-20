@@ -16,6 +16,7 @@ from pysecp256k1.low_level import (
     has_secp256k1_schnorrsig,
     has_secp256k1_extrakeys,
 )
+from pysecp256k1.low_level.constants import SCHNORRSIG_EXTRAPARAMS_MAGIC
 
 if has_secp256k1_extrakeys:
     from pysecp256k1.extrakeys import keypair_create, keypair_xonly_pub
@@ -24,6 +25,7 @@ if has_secp256k1_schnorrsig:
         schnorrsig_sign32,
         schnorrsig_sign_custom,
         schnorrsig_verify,
+        SchnorrsigExtraparams,
     )
 
 
@@ -123,8 +125,13 @@ class TestPysecp256k1Schnorrsig(unittest.TestCase):
             self.assertEqual(signature0, signature0_custom)
             random_32 = os.urandom(32)
             signature1 = schnorrsig_sign32(keypair, msg32, aux_rand32=random_32)
+            extraparams = SchnorrsigExtraparams(
+                SCHNORRSIG_EXTRAPARAMS_MAGIC,
+                None,  # custom nonce function goes here
+                ctypes.cast(ctypes.create_string_buffer(random_32), ctypes.c_void_p),
+            )
             signature1_custom = schnorrsig_sign_custom(
-                keypair, msg32, aux_rand32=random_32
+                keypair, msg32, extraparams
             )
             self.assertEqual(signature1, signature1_custom)
             self.assertTrue(schnorrsig_verify(signature0, msg32, xonly_pubkey))

@@ -15,7 +15,6 @@ This library aims to provide a standard way to wrap `libsecp256k1` using `ctypes
 and uses them the whole time, you do not need to worry about contexts. In case you need to randomize more often (to protect against side-channel leakage)
 use `pysecp256k1.context_randomize`.
 * way to provide own hash functions is not implemented - default hash functions are used
-* `schnorrsig_sign_custom` does not accept extraparams argument, instead accepts `aux_rand32` as `schnorrsig_sign32` - same as passing `extraparams.ndata`
 * Default illegal callback function (that is added to default contexts) logs to stderr. 
 * Method names are the same as in `libsecp256k1` but without `secp256k1_` prefix (i.e. `secp256k1_ec_pubkey_serialize` -> `ec_pubkey_serialize`)
 * Modules are structured same as in secp256k1 `include/` directory but without `secp256k1_` prefix.
@@ -108,6 +107,7 @@ print("Correct signature for pubkey and msg hash:", ecdsa_verify(sig, pubkey, ms
 ```python
 import os
 from pysecp256k1 import tagged_sha256
+from pysecp256k1.low_level.constants import *
 from pysecp256k1.extrakeys import *
 from pysecp256k1.schnorrsig import *
 
@@ -126,8 +126,12 @@ sig = schnorrsig_sign32(keypair, msg_hash, aux_rand32=rand_32)
 print("schnorr signature:", sig.hex())
 print("Correct signature for xonly pubkey and msg hash:", schnorrsig_verify(sig, msg_hash, xonly_pubkey))
 # you can also sign variable length messages
-# instead of passing extraparams pointer as in secp256k1 custom takes aux_rand (equivalent of extraparams.ndata)
-sig0 = schnorrsig_sign_custom(keypair, msg, aux_rand32=rand_32)
+extraparams = SchnorrsigExtraparams(
+    SCHNORRSIG_EXTRAPARAMS_MAGIC,
+    None,  # custom nonce function goes here
+    ctypes.cast(ctypes.create_string_buffer(rand_32), ctypes.c_void_p),
+)
+sig0 = schnorrsig_sign_custom(keypair, msg, extraparams)
 print("schnorr signature:", sig0.hex())
 print("Correct signature for xonly pubkey and msg hash:", schnorrsig_verify(sig0, msg, xonly_pubkey))
 ```
