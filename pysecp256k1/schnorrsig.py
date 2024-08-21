@@ -8,6 +8,7 @@ from pysecp256k1.low_level import (
     assert_zero_return_code,
     has_secp256k1_schnorrsig,
     Libsecp256k1Exception,
+    ctypes_functype
 )
 from pysecp256k1.low_level.constants import (
     Secp256k1Keypair,
@@ -22,6 +23,19 @@ if not has_secp256k1_schnorrsig:
         "use '--enable-module-schnorrsig' together with '--enable-experimental'"
         " during ./configure"
     )
+
+
+SCHNORRSIG_NONCEFP_CLS = ctypes_functype(
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_char * 32),  # nonce32
+    ctypes.POINTER(ctypes.c_char * 32),  # msg
+    ctypes.c_size_t,
+    ctypes.POINTER(ctypes.c_char * 32),  # secret key
+    ctypes.POINTER(ctypes.c_char * 32),  # xonly pubkey
+    ctypes.POINTER(ctypes.c_char * 32),  # algo
+    ctypes.c_size_t,  # algolen
+    ctypes.c_void_p,  # void *data
+)
 
 
 class SchnorrsigExtraparams(ctypes.Structure):
