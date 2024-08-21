@@ -9,6 +9,7 @@ from pysecp256k1.low_level import (
     assert_zero_return_code,
     Libsecp256k1Exception,
     callback_func_type,
+    ctypes_functype,
 )
 from pysecp256k1.low_level.constants import (
     Secp256k1Context,
@@ -26,6 +27,17 @@ from pysecp256k1.low_level.constants import (
     SECP256K1_CONTEXT_VERIFY,
     SECKEY_LENGTH,
     HASH32,
+)
+
+
+ECDSA_NONCEFP_CLS = ctypes_functype(
+    ctypes.c_int,
+    ctypes.POINTER(ctypes.c_char * 32),  # nonce32
+    ctypes.POINTER(ctypes.c_char * 32),  # msg32
+    ctypes.POINTER(ctypes.c_char * 32),  # secret key
+    ctypes.POINTER(ctypes.c_char * 32),  # algo16
+    ctypes.c_void_p,  # void *data
+    ctypes.c_uint,  # counter
 )
 
 
