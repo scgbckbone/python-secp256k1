@@ -578,12 +578,15 @@ def ecdsa_signature_normalize(
 # secp256k1_ecdsa_signature_normalize for more details.
 #
 @enforce_type
-def ecdsa_sign(seckey: bytes, msghash32: bytes) -> Secp256k1ECDSASignature:
+def ecdsa_sign(seckey: bytes, msghash32: bytes, noncefp: ctypes.c_void_p = None,
+               ndata: ctypes.c_void_p = None) -> Secp256k1ECDSASignature:
     """
     Create an ECDSA signature.
 
     :param seckey: 32-byte secret key
     :param msghash32: the 32-byte message hash being signed
+    :param noncefp: pointer to a nonce generation function
+    :param ndata: pointer to arbitrary data used by the nonce generation function
     :return: initialized ECDSA signature
     :raises ValueError: if secret key is not of type bytes and length 32
                         if msghash32 is not of type bytes and length 32
@@ -592,7 +595,7 @@ def ecdsa_sign(seckey: bytes, msghash32: bytes) -> Secp256k1ECDSASignature:
     """
     sig = ctypes.create_string_buffer(INTERNAL_SIGNATURE_LENGTH)
     result = lib.secp256k1_ecdsa_sign(
-        secp256k1_context_sign, sig, msghash32, seckey, None, None
+        secp256k1_context_sign, sig, msghash32, seckey, noncefp, ndata
     )
     if result != 1:
         assert_zero_return_code(result)
