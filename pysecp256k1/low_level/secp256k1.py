@@ -34,7 +34,7 @@ from pysecp256k1.low_level.constants import (
     SECP256K1_CONTEXT_SIGN,
     SECP256K1_CONTEXT_VERIFY,
     Secp256k1Context,
-    Secp256k1Pubkey,
+    Secp256k1Pubkey, MuSigPubNonce, MuSigPartialSig
 )
 from pysecp256k1.low_level.util import assert_zero_return_code, find_pysecp_env_var
 
@@ -48,6 +48,7 @@ has_secp256k1_recovery = False
 has_secp256k1_ecdh = False
 has_secp256k1_extrakeys = False
 has_secp256k1_schnorrsig = False
+has_secp256k1_musig = False
 
 
 class Libsecp256k1Exception(EnvironmentError):
@@ -94,6 +95,7 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
     global has_secp256k1_extrakeys
     global has_secp256k1_schnorrsig
     global has_secp256k1_ecdh
+    global has_secp256k1_musig
 
     _secp256k1.secp256k1_context_create.restype = ctypes.c_void_p
     _secp256k1.secp256k1_context_create.errcheck = _check_ressecp256k1_void_p
@@ -442,6 +444,154 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
             ctypes.c_char_p,
         ]
 
+    if getattr(_secp256k1, "secp256k1_musig_partial_sig_agg", None):
+        has_secp256k1_musig = True
+
+        _secp256k1.secp256k1_musig_pubnonce_parse.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_pubnonce_parse.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_pubnonce_serialize.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_pubnonce_serialize.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_aggnonce_parse.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_aggnonce_parse.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_aggnonce_serialize.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_aggnonce_serialize.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_partial_sig_parse.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_partial_sig_parse.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_partial_sig_serialize.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_partial_sig_serialize.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_pubkey_agg.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_pubkey_agg.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.POINTER(ctypes.POINTER(Secp256k1Pubkey)),
+            ctypes.c_size_t,
+        ]
+
+        _secp256k1.secp256k1_musig_pubkey_get.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_pubkey_get.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_pubkey_ec_tweak_add.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_pubkey_ec_tweak_add.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_pubkey_xonly_tweak_add.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_pubkey_xonly_tweak_add.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_nonce_gen.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_nonce_gen.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_nonce_gen_counter.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_nonce_gen_counter.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_uint64,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_nonce_agg.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_nonce_agg.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.POINTER(ctypes.POINTER(MuSigPubNonce)),
+            ctypes.c_size_t,
+        ]
+
+        _secp256k1.secp256k1_musig_nonce_process.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_nonce_process.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_partial_sign.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_partial_sign.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_partial_sig_verify.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_partial_sig_verify.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+        ]
+
+        _secp256k1.secp256k1_musig_partial_sig_agg.restype = ctypes.c_int
+        _secp256k1.secp256k1_musig_partial_sig_agg.argtypes = [
+            ctypes.c_void_p,
+            ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.POINTER(ctypes.POINTER(MuSigPartialSig)),
+            ctypes.c_size_t,
+        ]
 
 def secp256k1_create_and_init_context(
     _secp256k1: ctypes.CDLL, flags: int
@@ -523,5 +673,6 @@ __all__ = (
     "has_secp256k1_extrakeys",
     "has_secp256k1_recovery",
     "has_secp256k1_ecdh",
+    "has_secp256k1_musig",
     "ctypes_functype",
 )

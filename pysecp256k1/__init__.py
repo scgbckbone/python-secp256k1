@@ -252,7 +252,7 @@ def ec_pubkey_serialize(pubkey: Secp256k1Pubkey, compressed: bool = True) -> byt
         pubkey,
         SECP256K1_EC_COMPRESSED if compressed else SECP256K1_EC_UNCOMPRESSED,
     )
-    return pubkey_ser.raw[: pub_size.value]
+    return pubkey_ser.raw[:pub_size.value]
 
 
 # Compare two public keys using lexicographic (of compressed serialization) order

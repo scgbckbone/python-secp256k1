@@ -31,6 +31,8 @@ INTERNAL_PUBKEY_LENGTH = 64
 INTERNAL_SIGNATURE_LENGTH = 64
 INTERNAL_KEYPAIR_LENGTH = 96
 INTERNAL_RECOVERABLE_SIGNATURE_LENGTH = 65
+INTERNAL_MUSIG_KEY_AGG_CACHE_LENGTH = 197
+INTERNAL_MUSIG_NONCE_LENGTH = 132
 
 # Opaque secp256k1 data structures
 Secp256k1Context = ctypes.c_void_p
@@ -41,3 +43,11 @@ Secp256k1Keypair = ctypes.c_char * INTERNAL_KEYPAIR_LENGTH
 Secp256k1ECDSARecoverableSignature = (
     ctypes.c_char * INTERNAL_RECOVERABLE_SIGNATURE_LENGTH
 )
+
+# MuSig2
+MuSigKeyAggCache = ctypes.c_char * INTERNAL_MUSIG_KEY_AGG_CACHE_LENGTH
+MuSigSecNonce = ctypes.c_char * INTERNAL_MUSIG_NONCE_LENGTH
+MuSigPubNonce = ctypes.c_char * INTERNAL_MUSIG_NONCE_LENGTH
+MuSigAggNonce = ctypes.c_char * INTERNAL_MUSIG_NONCE_LENGTH
+MuSigSession = ctypes.c_char * 133
+MuSigPartialSig = ctypes.c_char * 36
