@@ -238,6 +238,93 @@ assert seckey == ec_seckey_negate(ec_seckey_negate(seckey))
 assert pubkey.raw == ec_pubkey_negate(ec_pubkey_negate(pubkey)).raw
 
 ```
+
+### MuSig2
+```python
+import ctypes, os
+from pysecp256k1 import ec_pubkey_sort, ec_pubkey_serialize, ec_seckey_verify, ec_pubkey_create
+from pysecp256k1.extrakeys import xonly_pubkey_from_pubkey, keypair_create, xonly_pubkey_serialize
+from pysecp256k1.schnorrsig import schnorrsig_verify
+from pysecp256k1.musig import (musig_nonce_gen, musig_pubnonce_serialize, musig_pubkey_agg,
+                               musig_pubkey_ec_tweak_add, musig_pubkey_xonly_tweak_add,
+                               musig_nonce_agg, musig_nonce_process, musig_partial_sign,
+                               musig_partial_sig_serialize, musig_partial_sig_agg,
+                               musig_partial_sig_verify, musig_aggnonce_serialize)
+from pysecp256k1.low_level.constants import INTERNAL_MUSIG_KEY_AGG_CACHE_LENGTH
+
+session = ctypes.create_string_buffer(133)
+cache = ctypes.create_string_buffer(INTERNAL_MUSIG_KEY_AGG_CACHE_LENGTH)
+msg = 32*b"b"
+tweak_bip32 = 32*b"a"
+xonly_tweak = 32*b"c"
+
+signers = []
+pubkeys = []
+N_signers = 3
+
+for i in range(N_signers):
+    sk = os.urandom(32)
+    ec_seckey_verify(sk)
+    pk = ec_pubkey_create(sk)
+    print("Signer %d" % i)
+    print("seckey", sk.hex())
+    print("pubkey", ec_pubkey_serialize(pk).hex())
+    print(80 * "=")
+    signers.append([sk, pk])
+    pubkeys.append(pk)
+print()
+
+pubkeys = ec_pubkey_sort(pubkeys)
+agg_key = musig_pubkey_agg(pubkeys, cache)
+print("aggregate pubkey", ec_pubkey_serialize(agg_key).hex())
+
+tweaked_pk = musig_pubkey_ec_tweak_add(tweak_bip32, cache)
+print("tweak bip32", tweak_bip32.hex())
+print("tweaked key", ec_pubkey_serialize(tweaked_pk).hex())
+
+tweaked_pk = musig_pubkey_xonly_tweak_add(xonly_tweak, cache)
+print("xonly tweak", xonly_tweak.hex())
+print("tweaked key", ec_pubkey_serialize(tweaked_pk).hex())
+
+tweaked_xpk, _ = xonly_pubkey_from_pubkey(tweaked_pk)
+print("aggregate & tweaked xonly pubkey", xonly_pubkey_serialize(tweaked_xpk).hex())
+print()
+
+pubnonces = []
+for i, slist in enumerate(signers):
+    session_sec = os.urandom(32)
+    sn, pn = musig_nonce_gen(slist[1], session_secrand32=session_sec, seckey=slist[0],
+                             msg32=msg, keyagg_cache=cache)
+    pubnonces.append(pn)
+    print("Signer %d pubnonce:" % i, musig_pubnonce_serialize(pn).hex())
+    slist.append(sn)
+
+agg_nonce = musig_nonce_agg(pubnonces)
+print("aggregate nonce", musig_aggnonce_serialize(agg_nonce).hex())
+print()
+
+partial_sigs = []
+for i, (sk, pk, secn) in enumerate(signers):
+    musig_nonce_process(session, agg_nonce, msg, cache)
+    sig = musig_partial_sign(secn, keypair_create(sk), cache, session)
+    print("Signer %d part sig" % i, musig_partial_sig_serialize(sig).hex())
+    partial_sigs.append(sig)
+
+
+for i, sig in enumerate(partial_sigs):
+    assert musig_partial_sig_verify(sig, pubnonces[i], signers[i][1], cache, session)
+    print("Signer %d part sig verifies OK" % i)
+print()
+
+agg_sig = musig_partial_sig_agg(session, partial_sigs)
+print("aggregate signature", agg_sig.hex())
+assert schnorrsig_verify(agg_sig, msg, tweaked_xpk)
+print("verifies OK")
+print("msg", msg.hex())
+print("pubkey", xonly_pubkey_serialize(tweaked_xpk).hex())
+
+```
+
 ## Testing
 ```shell
 cd python-secp256k1
