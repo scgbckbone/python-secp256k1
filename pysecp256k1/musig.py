@@ -8,7 +8,6 @@ from pysecp256k1.low_level import (
     assert_zero_return_code,
     has_secp256k1_musig,
     Libsecp256k1Exception,
-    ctypes_functype
 )
 from pysecp256k1.low_level.constants import (
     INTERNAL_MUSIG_NONCE_LENGTH,
@@ -16,6 +15,8 @@ from pysecp256k1.low_level.constants import (
     INTERNAL_SIGNATURE_LENGTH,
     INTERNAL_MUSIG_SESSION_LENGTH,
     INTERNAL_MUSIG_PARTIAL_SIG_LENGTH,
+    MUSIG_NONCE_LENGTH,
+    MUSIG_PARTIAL_SIG_LENGTH,
     Secp256k1Pubkey,
     Secp256k1Keypair,
     Secp256k1XonlyPubkey,
@@ -32,8 +33,8 @@ if not has_secp256k1_musig:
     raise RuntimeError("secp256k1 does not provide musig support")
 
 
-def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: bytes = None, seckey: bytes = None, msg32=None,
-                    keyagg_cache: MuSigKeyAggCache = None, extra_input32=None
+def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: bytes = None, seckey: bytes = None,
+                    msg32=None, keyagg_cache: MuSigKeyAggCache = None, extra_input32=None
                     ) -> Tuple[MuSigSecNonce, MuSigPubNonce]:
     if session_secrand32 is None:
         session_secrand32 = os.urandom(32)
@@ -41,7 +42,8 @@ def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: bytes = None, se
     secnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
     pubnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
     result = lib.secp256k1_musig_nonce_gen(secp256k1_context_sign, secnonce, pubnonce,
-                                           session_secrand32, seckey, pubkey, msg32, keyagg_cache, extra_input32)
+                                           session_secrand32, seckey, pubkey, msg32, keyagg_cache,
+                                           extra_input32)
     if result != 1:
         assert_zero_return_code(result)
         raise Libsecp256k1Exception("invalid arguemnts")
@@ -65,6 +67,7 @@ def musig_nonce_agg(pubnonces: List[MuSigPubNonce]) -> MuSigAggNonce:
 
 def musig_nonce_process(agg_nonce: MuSigAggNonce, msg32: bytes,
                         keyagg_cache: MuSigKeyAggCache) -> MuSigSession:
+
     session = ctypes.create_string_buffer(INTERNAL_MUSIG_SESSION_LENGTH)
     result = lib.secp256k1_musig_nonce_process(secp256k1_context_sign, session, agg_nonce,
                                                msg32, keyagg_cache)
@@ -74,12 +77,12 @@ def musig_nonce_process(agg_nonce: MuSigAggNonce, msg32: bytes,
 
     return session
 
-def musig_pubnonce_serialize(pubnonce: MuSigPubNonce):
-    pubnonce_ser = ctypes.create_string_buffer(66)
+def musig_pubnonce_serialize(pubnonce: MuSigPubNonce) -> bytes:
+    pubnonce_ser = ctypes.create_string_buffer(MUSIG_NONCE_LENGTH)
     assert lib.secp256k1_musig_pubnonce_serialize(secp256k1_context_verify, pubnonce_ser, pubnonce)
     return pubnonce_ser.raw
 
-def musig_pubnonce_parse(pubnonce66: bytes):
+def musig_pubnonce_parse(pubnonce66: bytes) -> MuSigPubNonce:
     pubnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
     result = lib.secp256k1_musig_pubnonce_parse(secp256k1_context_verify, pubnonce, pubnonce66)
     if result != 1:
@@ -87,12 +90,12 @@ def musig_pubnonce_parse(pubnonce66: bytes):
         raise Libsecp256k1Exception("invalid arguemnts")
     return pubnonce
 
-def musig_aggnonce_serialize(aggnonce: MuSigAggNonce):
-    aggnonce_ser = ctypes.create_string_buffer(66)
+def musig_aggnonce_serialize(aggnonce: MuSigAggNonce) -> bytes:
+    aggnonce_ser = ctypes.create_string_buffer(MUSIG_NONCE_LENGTH)
     assert lib.secp256k1_musig_aggnonce_serialize(secp256k1_context_verify, aggnonce_ser, aggnonce)
     return aggnonce_ser.raw
 
-def musig_aggnonce_parse(aggnonce66: bytes):
+def musig_aggnonce_parse(aggnonce66: bytes) -> MuSigAggNonce:
     aggnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
     result = lib.secp256k1_musig_aggnonce_parse(secp256k1_context_verify, aggnonce, aggnonce66)
     if result != 1:
@@ -100,7 +103,7 @@ def musig_aggnonce_parse(aggnonce66: bytes):
         raise Libsecp256k1Exception("invalid arguemnts")
     return aggnonce
 
-def musig_pubkey_agg(pubkeys: List[Secp256k1Pubkey], keyagg_cache: MuSigKeyAggCache = None) -> Secp256k1XonlyPubkey:
+def musig_pubkey_agg(pubkeys: List[Secp256k1Pubkey], keyagg_cache: MuSigKeyAggCache=None) -> Secp256k1XonlyPubkey:
     length = len(pubkeys)
     arr = (ctypes.POINTER(Secp256k1Pubkey) * length)()
     for i, pk in enumerate(pubkeys):
@@ -147,22 +150,21 @@ def musig_pubkey_xonly_tweak_add(tweak32: bytes, keyagg_cache: MuSigKeyAggCache)
 
     return tweaked_pubkey
 
-def musig_partial_sig_serialize(sig: MuSigPartialSig):
-    res = ctypes.create_string_buffer(32)  # constants
+def musig_partial_sig_serialize(sig: MuSigPartialSig) -> bytes:
+    res = ctypes.create_string_buffer(MUSIG_PARTIAL_SIG_LENGTH)
     assert lib.secp256k1_musig_partial_sig_serialize(secp256k1_context_verify, res, sig)
     return res.raw[:32]  # is this needed ?
 
 
-def musig_partial_sig_parse(sig32: bytes):
+def musig_partial_sig_parse(sig32: bytes) -> MuSigPartialSig:
     sig = ctypes.create_string_buffer(INTERNAL_MUSIG_PARTIAL_SIG_LENGTH)
     assert lib.secp256k1_musig_partial_sig_parse(secp256k1_context_verify, sig, sig32)
     return sig
 
 def musig_partial_sign(secnonce: MuSigSecNonce, keypair: Secp256k1Keypair,
-                       keyagg_cache: MuSigKeyAggCache, session: MuSigSession
-                       ) -> MuSigPartialSig:
+                       keyagg_cache: MuSigKeyAggCache, session: MuSigSession) -> MuSigPartialSig:
 
-    sig = ctypes.create_string_buffer(36)  # constants
+    sig = ctypes.create_string_buffer(INTERNAL_MUSIG_PARTIAL_SIG_LENGTH)
     result = lib.secp256k1_musig_partial_sign(secp256k1_context_sign, sig, secnonce, keypair,
                                                         keyagg_cache, session)
     if result != 1:
@@ -173,6 +175,7 @@ def musig_partial_sign(secnonce: MuSigSecNonce, keypair: Secp256k1Keypair,
 
 def musig_partial_sig_verify(sig: MuSigPartialSig, pubnonce: MuSigPubNonce, pubkey: Secp256k1Pubkey,
                              keyagg_cache: MuSigKeyAggCache, session: MuSigSession) -> bool:
+
     result = lib.secp256k1_musig_partial_sig_verify(secp256k1_context_verify, sig, pubnonce, pubkey,
                                                     keyagg_cache, session)
     return bool(result)
