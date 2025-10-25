@@ -252,7 +252,6 @@ from pysecp256k1.musig import (musig_nonce_gen, musig_pubnonce_serialize, musig_
                                musig_partial_sig_verify, musig_aggnonce_serialize)
 from pysecp256k1.low_level.constants import INTERNAL_MUSIG_KEY_AGG_CACHE_LENGTH
 
-session = ctypes.create_string_buffer(133)
 cache = ctypes.create_string_buffer(INTERNAL_MUSIG_KEY_AGG_CACHE_LENGTH)
 msg = 32*b"b"
 tweak_bip32 = 32*b"a"
@@ -305,7 +304,7 @@ print()
 
 partial_sigs = []
 for i, (sk, pk, secn) in enumerate(signers):
-    musig_nonce_process(session, agg_nonce, msg, cache)
+    session = musig_nonce_process(agg_nonce, msg, cache)
     sig = musig_partial_sign(secn, keypair_create(sk), cache, session)
     print("Signer %d part sig" % i, musig_partial_sig_serialize(sig).hex())
     partial_sigs.append(sig)

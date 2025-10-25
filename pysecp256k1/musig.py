@@ -14,6 +14,8 @@ from pysecp256k1.low_level.constants import (
     INTERNAL_MUSIG_NONCE_LENGTH,
     INTERNAL_PUBKEY_LENGTH,
     INTERNAL_SIGNATURE_LENGTH,
+    INTERNAL_MUSIG_SESSION_LENGTH,
+    INTERNAL_MUSIG_PARTIAL_SIG_LENGTH,
     Secp256k1Pubkey,
     Secp256k1Keypair,
     Secp256k1XonlyPubkey,
@@ -61,14 +63,16 @@ def musig_nonce_agg(pubnonces: List[MuSigPubNonce]) -> MuSigAggNonce:
 
     return agg_nonce
 
-def musig_nonce_process(session: MuSigSession, agg_nonce: MuSigAggNonce, msg32: bytes,
-                        keyagg_cache: MuSigKeyAggCache):
+def musig_nonce_process(agg_nonce: MuSigAggNonce, msg32: bytes,
+                        keyagg_cache: MuSigKeyAggCache) -> MuSigSession:
+    session = ctypes.create_string_buffer(INTERNAL_MUSIG_SESSION_LENGTH)
     result = lib.secp256k1_musig_nonce_process(secp256k1_context_sign, session, agg_nonce,
                                                msg32, keyagg_cache)
     if result != 1:
         assert_zero_return_code(result)
         raise Libsecp256k1Exception("invalid arguemnts")
 
+    return session
 
 def musig_pubnonce_serialize(pubnonce: MuSigPubNonce):
     pubnonce_ser = ctypes.create_string_buffer(66)
@@ -150,7 +154,7 @@ def musig_partial_sig_serialize(sig: MuSigPartialSig):
 
 
 def musig_partial_sig_parse(sig32: bytes):
-    sig = ctypes.create_string_buffer(36)  # constants
+    sig = ctypes.create_string_buffer(INTERNAL_MUSIG_PARTIAL_SIG_LENGTH)
     assert lib.secp256k1_musig_partial_sig_parse(secp256k1_context_verify, sig, sig32)
     return sig
 
