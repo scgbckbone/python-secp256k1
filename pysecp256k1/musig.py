@@ -4,7 +4,6 @@ from pysecp256k1.low_level import (
     lib,
     secp256k1_context_sign,
     secp256k1_context_verify,
-    enforce_type,
     assert_zero_return_code,
     has_secp256k1_musig,
     Libsecp256k1Exception,
