@@ -69,7 +69,7 @@ make check
 sudo make install
 ```
 if one builds secp256k1 without schnorrsig for example and then tries to import from it `from pysecp256k1.schnorrsig import schnorrsig_sign32`
-`RuntimeError` is raised hinting that `libsecp256k1` is built without shnorrsig support. Same applies for all optional modules.
+`RuntimeError` is raised hinting that `libsecp256k1` is built without schnorrsig support. Same applies for all optional modules.
 
 If one needs to have older version of libsecp256k1 installed in standard path and recent one for this library, 
 do NOT do last step from above (`sudo make install`) and instead export absolute path to desired `.so` file in environment variable.
