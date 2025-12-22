@@ -15,7 +15,7 @@ setup(
     name="python-secp256k1",
     version=__version__,
     license="MIT",
-    author="scg",
+    author="scgbckbone",
     author_email="scgbckbone@proton.me",
     description="Ctypes Python3 FFI bindings for libsecp256k1",
     long_description=README,
