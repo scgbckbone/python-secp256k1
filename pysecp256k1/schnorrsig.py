@@ -198,5 +198,6 @@ __all__ = (
     "schnorrsig_sign32",
     "schnorrsig_sign_custom",
     "schnorrsig_verify",
-    "SchnorrsigExtraparams"
+    "SchnorrsigExtraparams",
+    "SCHNORRSIG_NONCEFP_CLS",
 )

@@ -41,9 +41,7 @@ ECDH_HASHFP_CLS = ctypes_functype(
 #                      (can be NULL for secp256k1_ecdh_hash_function_sha256).
 #
 @enforce_type
-def ecdh(
-    seckey: bytes, pubkey: Secp256k1Pubkey, hashfp: ECDH_HASHFP_CLS = None
-) -> bytes:
+def ecdh(seckey: bytes, pubkey: Secp256k1Pubkey, hashfp: ECDH_HASHFP_CLS = None) -> bytes:
     """
     Compute an EC Diffie-Hellman secret in constant time.
 
@@ -68,4 +66,7 @@ def ecdh(
     return output.raw[:SECKEY_LENGTH]
 
 
-__all__ = "ecdh"
+__all__ = (
+    "ecdh",
+    "ECDH_HASHFP_CLS",
+)
