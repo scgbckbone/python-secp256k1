@@ -268,3 +268,23 @@ def musig_partial_sig_agg(session: MuSigSession, partial_sigs: List[MuSigPartial
         raise Libsecp256k1Exception("invalid arguemnts")
 
     return sig64.raw
+
+
+__all__ = (
+    "musig_pubnonce_parse",
+    "musig_pubnonce_serialize",
+    "musig_aggnonce_parse",
+    "musig_aggnonce_serialize",
+    "musig_partial_sig_parse",
+    "musig_partial_sig_serialize",
+    "musig_pubkey_agg",
+    "musig_pubkey_get",
+    "musig_pubkey_ec_tweak_add",
+    "musig_pubkey_xonly_tweak_add",
+    "musig_nonce_gen",
+    "musig_nonce_agg",
+    "musig_nonce_process",
+    "musig_partial_sign",
+    "musig_partial_sig_verify",
+    "musig_partial_sig_agg",
+)
