@@ -1,5 +1,5 @@
 import ctypes, os
-from typing import List, Tuple
+from typing import List, Tuple, Optional
 from pysecp256k1.low_level import (
     lib,
     secp256k1_context_sign,
@@ -34,7 +34,7 @@ if not has_secp256k1_musig:
 
 def musig_pubnonce_parse(pubnonce66: bytes) -> MuSigPubNonce:
 
-    assert len(pubnonce66) == MUSIG_NONCE_LENGTH
+    assert isinstance(pubnonce66, bytes) and len(pubnonce66) == MUSIG_NONCE_LENGTH
 
     pubnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
     result = lib.secp256k1_musig_pubnonce_parse(secp256k1_context_verify, pubnonce, pubnonce66)
@@ -55,7 +55,7 @@ def musig_pubnonce_serialize(pubnonce: MuSigPubNonce) -> bytes:
 
 def musig_aggnonce_parse(aggnonce66: bytes) -> MuSigAggNonce:
 
-    assert len(aggnonce66) == MUSIG_NONCE_LENGTH
+    assert isinstance(aggnonce66, bytes) and len(aggnonce66) == MUSIG_NONCE_LENGTH
 
     aggnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
     result = lib.secp256k1_musig_aggnonce_parse(secp256k1_context_verify, aggnonce, aggnonce66)
@@ -76,7 +76,7 @@ def musig_aggnonce_serialize(aggnonce: MuSigAggNonce) -> bytes:
 
 def musig_partial_sig_parse(sig32: bytes) -> MuSigPartialSig:
 
-    assert len(sig32) == MUSIG_PARTIAL_SIG_LENGTH
+    assert isinstance(sig32, bytes) and len(sig32) == MUSIG_PARTIAL_SIG_LENGTH
 
     sig = ctypes.create_string_buffer(INTERNAL_MUSIG_PARTIAL_SIG_LENGTH)
     assert lib.secp256k1_musig_partial_sig_parse(secp256k1_context_verify, sig, sig32)
@@ -92,7 +92,8 @@ def musig_partial_sig_serialize(sig: MuSigPartialSig) -> bytes:
     return res.raw[:MUSIG_PARTIAL_SIG_LENGTH]
 
 
-def musig_pubkey_agg(pubkeys: List[Secp256k1Pubkey], keyagg_cache: MuSigKeyAggCache=None) -> Secp256k1XonlyPubkey:
+def musig_pubkey_agg(pubkeys: List[Secp256k1Pubkey],
+                     keyagg_cache: Optional[MuSigKeyAggCache] = None) -> Secp256k1XonlyPubkey:
 
     assert isinstance(keyagg_cache, MuSigKeyAggCache)
 
@@ -127,7 +128,7 @@ def musig_pubkey_get(keyagg_cache: MuSigKeyAggCache) -> Secp256k1Pubkey:
 
 def musig_pubkey_ec_tweak_add(tweak32: bytes, keyagg_cache: MuSigKeyAggCache) -> Secp256k1Pubkey:
 
-    assert len(tweak32) == 32
+    assert isinstance(tweak32, bytes) and len(tweak32) == 32
     assert isinstance(keyagg_cache, MuSigKeyAggCache)
 
     tweaked_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
@@ -142,7 +143,7 @@ def musig_pubkey_ec_tweak_add(tweak32: bytes, keyagg_cache: MuSigKeyAggCache) ->
 
 def musig_pubkey_xonly_tweak_add(tweak32: bytes, keyagg_cache: MuSigKeyAggCache) -> Secp256k1Pubkey:
 
-    assert len(tweak32) == 32
+    assert isinstance(tweak32, bytes) and len(tweak32) == 32
     assert isinstance(keyagg_cache, MuSigKeyAggCache)
 
     tweaked_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
@@ -155,22 +156,23 @@ def musig_pubkey_xonly_tweak_add(tweak32: bytes, keyagg_cache: MuSigKeyAggCache)
     return tweaked_pubkey
 
 
-def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: bytes = None, seckey: bytes = None,
-                    msg32: bytes = None, keyagg_cache: MuSigKeyAggCache = None, extra_input32=None
-                    ) -> Tuple[MuSigSecNonce, MuSigPubNonce]:
+def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: Optional[bytes] = None,
+                    seckey: Optional[bytes] = None, msg32: Optional[bytes] = None,
+                    keyagg_cache: Optional[MuSigKeyAggCache] = None,
+                    extra_input32: Optional[bytes]=None) -> Tuple[MuSigSecNonce, MuSigPubNonce]:
 
     assert isinstance(pubkey, Secp256k1Pubkey)
     if session_secrand32 is None:
         session_secrand32 = os.urandom(32)
-    assert len(session_secrand32) == 32
+    assert isinstance(session_secrand32, bytes) and len(session_secrand32) == 32
     if seckey:
-        assert len(seckey) == 32
+        assert isinstance(seckey, bytes) and len(seckey) == 32
     if msg32:
-        assert len(msg32) == 32
+        assert isinstance(msg32, bytes) and len(msg32) == 32
     if keyagg_cache:
         assert isinstance(keyagg_cache, MuSigKeyAggCache)
     if extra_input32:
-        assert len(extra_input32) == 32
+        assert isinstance(extra_input32, bytes) and len(extra_input32) == 32
 
     # seckey -> pubkey should be verified
     secnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
@@ -205,7 +207,7 @@ def musig_nonce_process(agg_nonce: MuSigAggNonce, msg32: bytes,
                         keyagg_cache: MuSigKeyAggCache) -> MuSigSession:
 
     assert isinstance(agg_nonce, MuSigAggNonce)
-    assert len(msg32) == 32
+    assert isinstance(msg32, bytes) and len(msg32) == 32
     assert isinstance(keyagg_cache, MuSigKeyAggCache)
 
     session = ctypes.create_string_buffer(INTERNAL_MUSIG_SESSION_LENGTH)
