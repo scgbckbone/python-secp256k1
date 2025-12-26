@@ -13,7 +13,6 @@ from pysecp256k1.low_level import (
 from pysecp256k1.low_level.constants import (
     Secp256k1Keypair,
     Secp256k1XonlyPubkey,
-    SCHNORRSIG_EXTRAPARAMS_MAGIC,
     COMPACT_SIGNATURE_LENGTH,
 )
 
@@ -71,9 +70,7 @@ class SchnorrsigExtraparams(ctypes.Structure):
 #               argument and for guidance if randomness is expensive.
 #
 @enforce_type
-def schnorrsig_sign32(
-    keypair: Secp256k1Keypair, msg32: bytes, aux_rand32: Optional[bytes] = None
-) -> bytes:
+def schnorrsig_sign32(keypair: Secp256k1Keypair, msg32: bytes, aux_rand32: Optional[bytes] = None) -> bytes:
     """
     Create a Schnorr signature.
 
@@ -125,11 +122,8 @@ def schnorrsig_sign32(
 # extraparams: pointer to a extraparams object (can be NULL)
 #
 @enforce_type
-def schnorrsig_sign_custom(
-    keypair: Secp256k1Keypair,
-    msg: bytes,
-    extraparams: Optional[SchnorrsigExtraparams] = None
-) -> bytes:
+def schnorrsig_sign_custom(keypair: Secp256k1Keypair, msg: bytes,
+                           extraparams: Optional[SchnorrsigExtraparams] = None) -> bytes:
     """
     Create a Schnorr signature with a more flexible API.
 
@@ -171,9 +165,7 @@ def schnorrsig_sign_custom(
 #       pubkey: pointer to an x-only public key to verify with (cannot be NULL)
 #
 @enforce_type
-def schnorrsig_verify(
-    compact_sig: bytes, msg: bytes, xonly_pubkey: Secp256k1XonlyPubkey
-) -> bool:
+def schnorrsig_verify(compact_sig: bytes, msg: bytes, xonly_pubkey: Secp256k1XonlyPubkey) -> bool:
     """
     Verify a Schnorr signature.
 
