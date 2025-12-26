@@ -14,18 +14,18 @@ This library aims to provide a standard way to wrap `libsecp256k1` using `ctypes
 * This library creates default contexts (sign/verify) at the initialization phase, randomizes them 
 and uses them the whole time, you do not need to worry about contexts. In case you need to randomize more often (to protect against side-channel leakage)
 use `pysecp256k1.context_randomize`.
-* way to provide own hash functions is not implemented - default hash functions are used
 * Default illegal callback function (that is added to default contexts) logs to stderr. 
 * Method names are the same as in `libsecp256k1` but without `secp256k1_` prefix (i.e. `secp256k1_ec_pubkey_serialize` -> `ec_pubkey_serialize`)
 * Modules are structured same as in secp256k1 `include/` directory but without `secp256k1_` prefix.
 
-|    secp256k1 modules   |    pysecp256k1 modules    |               importing              |
-|:----------------------:|:-------------------------:|:------------------------------------:|
-|       secp256k1.h      | pysecp256k1.\_\_init__.py |       from pysecp256k1 import *      |
-|    secp256k1_ecdh.h    |    pysecp256k1.ecdh.py    |    from pysecp256k1.ecdh import *    |
-|  secp256k1_extrakeys.h |  pysecp256k1.extrakeys.py |  from pysecp256k1.extrakeys import * |
-|  secp256k1_recovery.h  |  pysecp256k1.recovery.py  |  from pysecp256k1.recovery import *  |
-| secp256k1_schnorrsig.h | pysecp256k1.schnorrsig.py | from pysecp256k1.schnorrsig import * |
+|     secp256k1 modules     |    pysecp256k1 modules    |              importing               |
+|:-------------------------:|:-------------------------:|:------------------------------------:|
+|        secp256k1.h        | pysecp256k1.\_\_init__.py |      from pysecp256k1 import *       |
+|     secp256k1_ecdh.h      |    pysecp256k1.ecdh.py    |    from pysecp256k1.ecdh import *    |
+|   secp256k1_extrakeys.h   | pysecp256k1.extrakeys.py  | from pysecp256k1.extrakeys import *  |
+|   secp256k1_recovery.h    |  pysecp256k1.recovery.py  |  from pysecp256k1.recovery import *  |
+|  secp256k1_schnorrsig.h   | pysecp256k1.schnorrsig.py | from pysecp256k1.schnorrsig import * |
+|     secp256k1_musig.h     |   pysecp256k1.musig.py    |   from pysecp256k1.musig import *    |
 
 #### Validation and data types
 This library tries to supplement `libsecp256k1` with valid data ONLY, therefore heavy input type validation is in place. 
@@ -34,26 +34,35 @@ Validation is implemented via `enforce_type`((can be found in `pysecp256k1.low_l
 Internal (opaque) secp256k1 data structures are represented as `ctypes.c_char_Array`
 to get bytes from `c_char_Array` use `.raw` (see examples).
 
-|          pysecp256k1 class         |       type      |
-|:----------------------------------:|:---------------:|
-|           Secp256k1Pubkey          | c_char_Array_64 |
-|       Secp256k1ECDSASignature      | c_char_Array_64 |
-|        Secp256k1XonlyPubkey        | c_char_Array_64 |
-|          Secp256k1Keypair          | c_char_Array_96 |
-| Secp256k1ECDSARecoverableSignature | c_char_Array_65 |
-|          Secp256k1Context          |     c_void_p    |
+|         pysecp256k1 class          |       type       |
+|:----------------------------------:|:----------------:|
+|          Secp256k1Pubkey           | c_char_Array_64  |
+|      Secp256k1ECDSASignature       | c_char_Array_64  |
+|        Secp256k1XonlyPubkey        | c_char_Array_64  |
+|          Secp256k1Keypair          | c_char_Array_96  |
+| Secp256k1ECDSARecoverableSignature | c_char_Array_65  |
+|          Secp256k1Context          |     c_void_p     |
+|          MuSigKeyAggCache          | c_char_Array_197 |
+|           MuSigSecNonce            | c_char_Array_132 |
+|           MuSigPubNonce            | c_char_Array_132 |
+|           MuSigAggNonce            | c_char_Array_132 |
+|            MuSigSession            | c_char_Array_133 |
+|          MuSigPartialSig           | c_char_Array_36  |
 
 Apart from `ctypes.c_char_Array` and `ctypes.c_void_p` this library uses a limited number of standard python types.
 
-|            python type           |                                                     usage                                                     |
-|:--------------------------------:|:-------------------------------------------------------------------------------------------------------------:|
-|               bool               |               result of signature verification functions `ecdsa_verify` and `schnorrsig_verify`               |
-|                int               |                 recovery id, pubkey parity, result of `ec_pubkey_cmp` and `xonly_pubkey_cmp`                  |
-|               bytes              |          tags, tweaks, messages, message hashes, serialized pubkeys, serialized signatures, seckeys           |
-|       List[Secp256k1Pubkey]      |                   list of initialized pubkeys for `ec_pubkey_combine`, and `ec_pubkey_sort`                   |
-| Tuple[Secp256k1XonlyPubkey, int] |                                  initialized xonly public key and its parity                                  |
-|         Tuple[bytes, int]        |                             serialized recoverable signature and its recovery id                              |
-|          Optional[bytes]         |                            optional random data for `schnorrsig_sign{32,_custom}`                             |
+|                    python type                    |                                                                usage                                                                |
+|:-------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------:|
+|                       bool                        |           result of signature verification functions `ecdsa_verify`, `schnorrsig_verify`, and `musig_partial_sig_verify`            |
+|                        int                        |                            recovery id, pubkey parity, result of `ec_pubkey_cmp` and `xonly_pubkey_cmp`                             |
+|                       bytes                       |         tags, tweaks, messages, message hashes, serialized pubkeys, serialized signatures, seckeys, serialized musig nonces         |
+|               List[Secp256k1Pubkey]               |                    list of initialized pubkeys for `ec_pubkey_combine`, `ec_pubkey_sort`, and `musig_pubkey_agg`                    |
+|                List[MuSigPubNonce]                |                                         list of initialized pubnonces for `musig_nonce_agg`                                         |
+|               List[MuSigPartialSig]               |                              list of initialized musig partial signatures for `musig_partial_sig_agg`                               |
+|         Tuple[Secp256k1XonlyPubkey, int]          |                                             initialized xonly public key and its parity                                             |
+|                 Tuple[bytes, int]                 |                                        serialized recoverable signature and its recovery id                                         |
+|        Tuple[MuSigSecNonce, MuSigPubNonce]        |                                   initialized secnonce & pubnonce returned from `musig_nonce_gen`                                   |
+|                     Optional                      |                                              optional data not requires for operation                                               |
 
 ## Installation and dependencies
 Only dependency of `pysecp256k1` is `python3.6+` and `libsecp256k1` itself.
