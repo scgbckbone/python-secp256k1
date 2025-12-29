@@ -27,168 +27,168 @@ class TestPysecp256k1ExtrakeysValidation(unittest.TestCase):
 
     def test_xonly_pubkey_parse_invalid_input_type_xonly_pubkey_ser(self):
         for invalid_xonly_ser in invalid_xonly_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_parse(invalid_xonly_ser)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_parse(invalid_type)
 
     def test_xonly_pubkey_serialize_invalid_input_type_xonly_pubkey(self):
         for invalid_xonly_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_serialize(invalid_xonly_pubkey)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_serialize(invalid_type)
 
     def test_xonly_pubkey_cmp_invalid_input_type_xonly_pubkey(self):
         for invalid_xonly_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_cmp(invalid_xonly_pubkey, self.xonly_pubkey)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_cmp(invalid_type, self.xonly_pubkey)
 
         for invalid_xonly_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_cmp(self.xonly_pubkey, invalid_xonly_pubkey)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_cmp(self.xonly_pubkey, invalid_type)
 
     def test_xonly_pubkey_from_pubkey_invalid_input_type_pubkey(self):
         for invalid_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_from_pubkey(invalid_pubkey)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_from_pubkey(invalid_type)
 
     def test_xonly_pubkey_tweak_add_invalid_input_type_xonly_pubkey(self):
         for invalid_xonly_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add(invalid_xonly_pubkey, self.b32)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add(invalid_type, self.b32)
 
     def test_xonly_pubkey_tweak_add_invalid_input_type_tweak32(self):
         for invalid_tweak in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add(self.xonly_pubkey, invalid_tweak)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add(self.xonly_pubkey, invalid_type)
 
     def test_xonly_pubkey_tweak_add_check_invalid_input_type_tweaked_pubkey32(self):
         for invalid_xonly_ser in invalid_xonly_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add_check(
                     invalid_xonly_ser, 0, self.xonly_pubkey, self.b32
                 )
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add_check(
                     invalid_type, 0, self.xonly_pubkey, self.b32
                 )
 
     def test_xonly_pubkey_tweak_add_check_invalid_input_type_tweaked_pk_parity(self):
         for invalid_pk_parity in [-1, 2, 3]:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add_check(
                     self.b32, invalid_pk_parity, self.xonly_pubkey, self.b32
                 )
 
         for invalid_type in not_int:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add_check(
                     self.b32, invalid_type, self.xonly_pubkey, self.b32
                 )
 
     def test_xonly_pubkey_tweak_add_check_invalid_input_type_internal_pubkey(self):
         for invalid_xonly_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add_check(
                     self.b32, 0, invalid_xonly_pubkey, self.b32
                 )
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add_check(self.b32, 0, invalid_type, self.b32)
 
     def test_xonly_pubkey_tweak_add_check_invalid_input_type_tweak32(self):
         for invalid_tweak in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add_check(
                     self.b32, 0, self.xonly_pubkey, invalid_tweak
                 )
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 xonly_pubkey_tweak_add_check(
                     self.b32, 0, self.xonly_pubkey, invalid_type
                 )
 
     def test_keypair_create_invalid_input_type_seckey(self):
         for invalid_seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_create(invalid_seckey)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_create(invalid_type)
 
     def test_keypair_sec_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_sec(invalid_keypair)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_sec(invalid_type)
 
     def test_keypair_pub_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_pub(invalid_keypair)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_pub(invalid_type)
 
     def test_keypair_xonly_pub_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_xonly_pub(invalid_keypair)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_xonly_pub(invalid_type)
 
     def test_keypair_xonly_tweak_add_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_xonly_tweak_add(invalid_keypair, self.b32)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_xonly_tweak_add(invalid_type, self.b32)
 
     def test_keypair_xonly_tweak_add_invalid_input_type_tweak32(self):
         for invalid_tweak in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_xonly_tweak_add(self.keypair, invalid_tweak)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 keypair_xonly_tweak_add(self.keypair, invalid_type)
 
 
