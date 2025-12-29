@@ -1,6 +1,6 @@
 import ctypes
 from typing import Tuple
-from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
+from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_context_verify,
                                    assert_zero_return_code, has_secp256k1_extrakeys,
                                    Libsecp256k1Exception)
 from pysecp256k1.low_level.constants import (Secp256k1Pubkey, Secp256k1XonlyPubkey, Secp256k1Keypair,

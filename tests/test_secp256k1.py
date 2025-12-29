@@ -68,283 +68,283 @@ class TestPysecp256k1Validation(unittest.TestCase):
 
     def test_ec_pubkey_parse_invalid_input_type_pubkey_ser(self):
         for invalid_pubkey_ser in invalid_pubkey_serialization_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_parse(invalid_pubkey_ser)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_parse(invalid_type)
 
     def test_ec_pubkey_serialize_invalid_input_type_pubkey(self):
         for invalid_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_serialize(invalid_pubkey)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_serialize(invalid_type)
 
     def test_ec_pubkey_serialize_invalid_input_type_compressed(self):
         for invalid_type in not_bool:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_serialize(self.pubkey0, invalid_type)
 
     def test_ec_pubkey_cmp_invalid_input_type_pubkey(self):
         for invalid_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_cmp(self.pubkey0, invalid_pubkey)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_cmp(self.pubkey0, invalid_type)
 
         for invalid_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_cmp(invalid_pubkey, self.pubkey1)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_cmp(invalid_type, self.pubkey1)
 
     def test_ec_pubkey_sort_invalid_input_type_pubkeys(self):
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             ec_pubkey_sort(invalid_pubkey_length)
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             ec_pubkey_sort([invalid_pubkey_length[0],
                             ec_pubkey_create(valid_seckeys[0])])
 
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             ec_pubkey_sort([ec_pubkey_create(valid_seckeys[0]),
                             invalid_pubkey_length[1]])
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_sort(invalid_type)
 
     def test_ecdsa_signature_parse_compact_invalid_input_type_compact_sig(self):
         for invalid_sig in invalid_compact_sig_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_parse_compact(invalid_sig)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_parse_compact(invalid_type)
 
     def test_ecdsa_signature_parse_der_invalid_input_type_der_sig(self):
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_parse_der(invalid_type)
 
     def test_ecdsa_signature_serialize_der_invalid_input_type_sig(self):
         for invalid_sig in invalid_signature_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_serialize_der(invalid_sig)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_serialize_der(invalid_type)
 
     def test_ecdsa_signature_serialize_compact_invalid_input_type_sig(self):
         for invalid_sig in invalid_signature_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_serialize_compact(invalid_sig)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_serialize_compact(invalid_type)
 
     def test_ecdsa_verify_invalid_input_type_sig(self):
         for invalid_sig in invalid_signature_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_verify(invalid_sig, self.pubkey0, self.b32)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_verify(invalid_type, self.pubkey0, self.b32)
 
     def test_ecdsa_verify_invalid_input_type_pubkey(self):
         sig = ctypes.create_string_buffer(64)
         for invalid_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_verify(sig, invalid_pubkey, self.b32)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_verify(sig, invalid_type, self.b32)
 
     def test_ecdsa_verify_invalid_input_type_msghash32(self):
         sig = ctypes.create_string_buffer(64)
         for invalid_msg in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_verify(sig, self.pubkey0, invalid_msg)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_verify(sig, self.pubkey1, invalid_type)
 
     def test_ecdsa_signature_normalize_invalid_input_type_sig(self):
         for invalid_sig in invalid_signature_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_normalize(invalid_sig)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_signature_normalize(invalid_type)
 
     def test_ecdsa_sign_invalid_input_type_seckey(self):
         for invalid_seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_sign(invalid_seckey, self.b32)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_sign(invalid_type, self.b32)
 
     def test_ecdsa_sign_invalid_input_type_msghash32(self):
         for invalid_msghash32 in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_sign(valid_seckeys[0], invalid_msghash32)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_sign(valid_seckeys[1], invalid_type)
 
     def test_ec_seckey_verify_invalid_input_type_seckey(self):
         for invalid_seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_verify(invalid_seckey)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_verify(invalid_type)
 
     def test_ec_pubkey_create_invalid_input_type_seckey(self):
         for invalid_seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_create(invalid_seckey)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_create(invalid_type)
 
     def test_ec_seckey_negate_invalid_input_type_seckey(self):
         for invalid_seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_negate(invalid_seckey)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_negate(invalid_type)
 
     def test_ec_pubkey_negate_invalid_input_type_pubkey(self):
         for invalid_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_negate(invalid_pubkey)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_negate(invalid_type)
 
     def test_ec_seckey_tweak_add_invalid_input_type_seckey(self):
         for invalid_seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_tweak_add(invalid_seckey, self.b32)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_tweak_add(invalid_type, self.b32)
 
     def test_ec_seckey_tweak_add_invalid_input_type_tweak32(self):
         for invalid_tweak in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_tweak_add(valid_seckeys[0], invalid_tweak)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_tweak_add(valid_seckeys[1], invalid_type)
 
     def test_ec_pubkey_tweak_add_invalid_input_type_pubkey(self):
         for invalid_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_tweak_add(invalid_pubkey, self.b32)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_tweak_add(invalid_type, self.b32)
 
     def test_ec_pubkey_tweak_add_invalid_input_type_tweak32(self):
         for invalid_tweak in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_tweak_add(self.pubkey0, invalid_tweak)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_tweak_add(self.pubkey1, invalid_type)
 
     def test_ec_seckey_tweak_mul_invalid_input_type_seckey(self):
         for invalid_seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_tweak_mul(invalid_seckey, self.b32)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_tweak_mul(invalid_type, self.b32)
 
     def test_ec_seckey_tweak_mul_invalid_input_type_tweak32(self):
         for invalid_tweak in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_tweak_mul(valid_seckeys[0], invalid_tweak)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_seckey_tweak_mul(valid_seckeys[1], invalid_type)
 
     def test_ec_pubkey_tweak_mul_invalid_input_type_pubkey(self):
         for invalid_pubkey in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_tweak_mul(invalid_pubkey, self.b32)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_tweak_mul(invalid_type, self.b32)
 
     def test_ec_pubkey_tweak_mul_invalid_input_type_tweak32(self):
         for invalid_tweak in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_tweak_mul(self.pubkey1, invalid_tweak)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_tweak_mul(self.pubkey0, invalid_type)
 
     def test_ec_pubkey_combine_invalid_input_type_pubkeys(self):
         # empty list
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             ec_pubkey_combine([])
         # length 1
-        with self.assertRaises(ValueError):
+        with self.assertRaises(AssertionError):
             ec_pubkey_combine([self.pubkey0])
         # not list
         for invalid_type in [
             (self.pubkey0, self.pubkey1),
             {"pk1": self.pubkey0, "pk2": self.pubkey1},
         ]:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_combine(invalid_type)
         for invalid_type in not_c_char_array:
             pubkey_list = [self.pubkey0, self.pubkey1, invalid_type]
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ec_pubkey_combine(pubkey_list)
 
     def test_tagged_sha256_invalid_input_type_tag(self):
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 tagged_sha256(invalid_type, b"message")
 
     def test_tagged_sha256_invalid_input_type_msg(self):
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 tagged_sha256(b"tag", invalid_type)
 
 
