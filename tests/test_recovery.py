@@ -1,33 +1,17 @@
 import os
 import ctypes
 import unittest
-from tests.data import (
-    invalid_seckeys,
-    valid_seckeys,
-    invalid_seckey_length,
-    invalid_compact_sig_length,
-    not_bytes,
-    not_int,
-    invalid_rec_ids,
-    invalid_recoverable_signature_length,
-    not_c_char_array,
-)
+from tests.data import (invalid_seckeys, valid_seckeys, invalid_seckey_length, not_bytes, not_int,
+                        invalid_compact_sig_length, invalid_rec_ids, not_c_char_array,
+                        invalid_recoverable_signature_length)
 from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_recovery
-from pysecp256k1 import (
-    ec_pubkey_create,
-    ecdsa_sign,
-    tagged_sha256,
-    ecdsa_signature_serialize_compact,
-)
+from pysecp256k1 import (ec_pubkey_create, ecdsa_sign, ecdsa_signature_serialize_compact,
+                         tagged_sha256)
 
 if has_secp256k1_recovery:
-    from pysecp256k1.recovery import (
-        ecdsa_recoverable_signature_parse_compact,
-        ecdsa_recoverable_signature_serialize_compact,
-        ecdsa_recoverable_signature_convert,
-        ecdsa_sign_recoverable,
-        ecdsa_recover,
-    )
+    from pysecp256k1.recovery import (ecdsa_recoverable_signature_parse_compact, ecdsa_recover,
+                                      ecdsa_recoverable_signature_serialize_compact,
+                                      ecdsa_recoverable_signature_convert, ecdsa_sign_recoverable)
 
 
 skip_reason = "secp256k1 is not compiled with module 'recovery'"

@@ -1,40 +1,17 @@
 import ctypes
 import unittest
 import hashlib
-from tests.data import (
-    valid_seckeys,
-    invalid_seckeys,
-    invalid_seckey_length,
-    invalid_xonly_pubkey_length,
-    not_bytes,
-    invalid_pubkey_length,
-    not_c_char_array,
-    not_int,
-    invalid_keypair_length,
-    serialized_pubkeys_compressed,
-)
+from tests.data import (valid_seckeys, invalid_seckeys, invalid_seckey_length, not_bytes, not_int,
+                        invalid_xonly_pubkey_length, invalid_pubkey_length, not_c_char_array,
+                        invalid_keypair_length, serialized_pubkeys_compressed)
 from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_extrakeys
-from pysecp256k1 import (
-    ec_pubkey_create,
-    ec_seckey_verify,
-    ec_seckey_tweak_add,
-    ec_seckey_negate,
-)
+from pysecp256k1 import ec_pubkey_create, ec_seckey_verify, ec_seckey_tweak_add, ec_seckey_negate
 
 if has_secp256k1_extrakeys:
-    from pysecp256k1.extrakeys import (
-        keypair_create,
-        keypair_pub,
-        keypair_sec,
-        keypair_xonly_pub,
-        keypair_xonly_tweak_add,
-        xonly_pubkey_parse,
-        xonly_pubkey_serialize,
-        xonly_pubkey_from_pubkey,
-        xonly_pubkey_tweak_add,
-        xonly_pubkey_tweak_add_check,
-        xonly_pubkey_cmp,
-    )
+    from pysecp256k1.extrakeys import (keypair_create, keypair_pub, keypair_sec, keypair_xonly_pub,
+                                       keypair_xonly_tweak_add, xonly_pubkey_parse, xonly_pubkey_cmp,
+                                       xonly_pubkey_serialize, xonly_pubkey_from_pubkey,
+                                       xonly_pubkey_tweak_add, xonly_pubkey_tweak_add_check)
 
 
 skip_reason = "secp256k1 is not compiled with module 'extrakeys'"

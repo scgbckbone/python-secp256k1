@@ -2,31 +2,17 @@ import ctypes
 import os
 import unittest
 import hashlib
-from tests.data import (
-    valid_seckeys,
-    invalid_keypair_length,
-    not_c_char_array,
-    not_bytes,
-    invalid_seckey_length,
-    invalid_pubkey_length,
-    invalid_compact_sig_length,
-)
-from pysecp256k1.low_level import (
-    Libsecp256k1Exception,
-    has_secp256k1_schnorrsig,
-    has_secp256k1_extrakeys,
-)
+from tests.data import (valid_seckeys, invalid_keypair_length, not_c_char_array, not_bytes,
+                        invalid_seckey_length, invalid_pubkey_length, invalid_compact_sig_length)
+from pysecp256k1.low_level import (Libsecp256k1Exception, has_secp256k1_schnorrsig,
+                                   has_secp256k1_extrakeys)
 from pysecp256k1.low_level.constants import SCHNORRSIG_EXTRAPARAMS_MAGIC
 
 if has_secp256k1_extrakeys:
     from pysecp256k1.extrakeys import keypair_create, keypair_xonly_pub
 if has_secp256k1_schnorrsig:
-    from pysecp256k1.schnorrsig import (
-        schnorrsig_sign32,
-        schnorrsig_sign_custom,
-        schnorrsig_verify,
-        SchnorrsigExtraparams,
-    )
+    from pysecp256k1.schnorrsig import (schnorrsig_sign32, schnorrsig_sign_custom, schnorrsig_verify,
+                                        SchnorrsigExtraparams)
 
 
 skip_reason = "secp256k1 is not compiled with module 'schnorrsig'"
@@ -43,66 +29,66 @@ class TestPysecp256k1SchnorrsigValidation(unittest.TestCase):
 
     def test_schnorrsig_sign32_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign32(invalid_keypair, self.b32)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign32(invalid_type, self.b32)
 
     def test_schnorrsig_sign32_invalid_input_type_msg32(self):
         for invalid_msg in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign32(self.keypair, invalid_msg)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign32(self.keypair, invalid_type)
 
     def test_schnorrsig_sign32_invalid_input_type_aux_rand32(self):
         for invalid_msg in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign32(self.keypair, self.b32, aux_rand32=invalid_msg)
 
         for invalid_type in not_bytes[1:]:  # omit None as it is optional
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign32(self.keypair, self.b32, aux_rand32=invalid_type)
 
     def test_schnorrsig_sign_custom_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign_custom(invalid_keypair, self.b32)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign_custom(invalid_type, self.b32)
 
     def test_schnorrsig_sign_custom_invalid_input_type_msg(self):
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_sign_custom(self.keypair, invalid_type)
 
     def test_schnorrsig_verify_invalid_input_type_compact_sig(self):
         for invalid_sig in invalid_compact_sig_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_verify(invalid_sig, self.b32, self.xonly_pubkey)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_verify(invalid_type, self.b32, self.xonly_pubkey)
 
     def test_schnorrsig_verify_invalid_input_type_msg(self):
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_verify(self.compact_sig, invalid_type, self.xonly_pubkey)
 
     def test_schnorrsig_verify_invalid_input_type_xonly_pubkey(self):
         for invalid_xonly in invalid_pubkey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_verify(self.compact_sig, self.b32, invalid_xonly)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 schnorrsig_verify(self.compact_sig, self.b32, invalid_type)
 
 

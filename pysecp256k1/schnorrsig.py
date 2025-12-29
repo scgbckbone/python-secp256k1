@@ -1,10 +1,10 @@
 import ctypes
 from typing import Optional
-from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
+from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_context_verify,
                                    assert_zero_return_code, has_secp256k1_schnorrsig,
                                    Libsecp256k1Exception, ctypes_functype)
 from pysecp256k1.low_level.constants import (Secp256k1Keypair, Secp256k1XonlyPubkey,
-                                             COMPACT_SIGNATURE_LENGTH)
+                                             COMPACT_SIGNATURE_LENGTH, HASH32)
 
 
 if not has_secp256k1_schnorrsig:
@@ -36,7 +36,6 @@ class SchnorrsigExtraparams(ctypes.Structure):
     ]
 
 
-@enforce_type
 def schnorrsig_sign32(keypair: Secp256k1Keypair, msg32: bytes, aux_rand32: Optional[bytes] = None) -> bytes:
     """
     Create a Schnorr signature.
@@ -60,11 +59,16 @@ def schnorrsig_sign32(keypair: Secp256k1Keypair, msg32: bytes, aux_rand32: Optio
                        BIP-340 "Default Signing" for a full explanation of this
                        argument and for guidance if randomness is expensive.
     :return: 64-byte serialized Schnorr signature
-    :raises ValueError: if keypair is invalid type
-                        if msg32 is not of type bytes and length 32
-                        if aux_rand32 is not of type bytes and length 32
+    :raises AssertionError: if keypair is invalid type
+                            if msg32 is not of type bytes and length 32
+                            if aux_rand32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if schnorrsig_sign32 returned failure
     """
+    assert isinstance(keypair, Secp256k1Keypair)
+    assert isinstance(msg32, bytes) and len(msg32) == HASH32
+    if aux_rand32 is not None:
+        assert isinstance(aux_rand32, bytes) and len(aux_rand32) == HASH32
+
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
     result = lib.secp256k1_schnorrsig_sign32(
         secp256k1_context_sign, compact_sig, msg32, keypair, aux_rand32
@@ -75,7 +79,6 @@ def schnorrsig_sign32(keypair: Secp256k1Keypair, msg32: bytes, aux_rand32: Optio
     return compact_sig.raw[:COMPACT_SIGNATURE_LENGTH]
 
 
-@enforce_type
 def schnorrsig_sign_custom(keypair: Secp256k1Keypair, msg: bytes,
                            extraparams: Optional[SchnorrsigExtraparams] = None) -> bytes:
     """
@@ -91,11 +94,16 @@ def schnorrsig_sign_custom(keypair: Secp256k1Keypair, msg: bytes,
     :param msg: message being signed
     :param extraparams: pointer to an extraparams object (can be NULL).
     :return: 64-byte serialized Schnorr signature
-    :raises ValueError: if keypair is invalid type
-                        if msg is not of type bytes
-                        if extraparams argument is invalid
+    :raises AssertionError: if keypair is invalid type
+                            if msg is not of type bytes
+                            if extraparams argument is invalid
     :raises Libsecp256k1Exception: if schnorrsig_sign_custom returned failure
     """
+    assert isinstance(keypair, Secp256k1Keypair)
+    assert isinstance(msg, bytes)
+    if extraparams is not None:
+        assert isinstance(extraparams, SchnorrsigExtraparams)
+
     compact_sig = ctypes.create_string_buffer(COMPACT_SIGNATURE_LENGTH)
     if extraparams is not None:
         extraparams = ctypes.byref(extraparams)
@@ -108,7 +116,6 @@ def schnorrsig_sign_custom(keypair: Secp256k1Keypair, msg: bytes,
     return compact_sig.raw[:COMPACT_SIGNATURE_LENGTH]
 
 
-@enforce_type
 def schnorrsig_verify(compact_sig: bytes, msg: bytes, xonly_pubkey: Secp256k1XonlyPubkey) -> bool:
     """
     Verify a Schnorr signature.
@@ -117,10 +124,14 @@ def schnorrsig_verify(compact_sig: bytes, msg: bytes, xonly_pubkey: Secp256k1Xon
     :param msg: message being verified
     :param xonly_pubkey: initialized xonly pubkey
     :return: whether signature is correct
-    :raises ValueError: if compact_sig is not of type bytes and length 64
-                        if msg is not of type bytes
-                        if xonly_pubkey is invalid type
+    :raises AssertionError: if compact_sig is not of type bytes and length 64
+                            if msg is not of type bytes
+                            if xonly_pubkey is invalid type
     """
+    assert isinstance(compact_sig, bytes) and len(compact_sig) == COMPACT_SIGNATURE_LENGTH
+    assert isinstance(msg, bytes)
+    assert isinstance(xonly_pubkey, Secp256k1XonlyPubkey)
+
     result = lib.secp256k1_schnorrsig_verify(
         secp256k1_context_verify, compact_sig, msg, len(msg), xonly_pubkey
     )
