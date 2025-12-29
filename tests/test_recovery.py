@@ -44,44 +44,44 @@ class TestPysecp256k1RecoveryValidation(unittest.TestCase):
         self,
     ):
         for invalid_sig in invalid_compact_sig_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recoverable_signature_parse_compact(invalid_sig, 0)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recoverable_signature_parse_compact(invalid_type, 0)
 
     def test_ecdsa_recoverable_signature_parse_compact_invalid_input_type_rec_id(self):
         for rec_id_invalid in invalid_rec_ids:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recoverable_signature_parse_compact(
                     self.compact_sig, rec_id_invalid
                 )
 
         for invalid_type in not_int:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recoverable_signature_parse_compact(
                     self.compact_sig, invalid_type
                 )
 
     def test_ecdsa_recoverable_signature_convert_invalid_input_type_rec_sig(self):
         for invalid_sig in invalid_recoverable_signature_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recoverable_signature_convert(invalid_sig)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recoverable_signature_convert(invalid_type)
 
     def test_ecdsa_recoverable_signature_serialize_compact_invalid_input_type_rec_sig(
         self,
     ):
         for invalid_sig in invalid_recoverable_signature_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recoverable_signature_serialize_compact(invalid_sig)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recoverable_signature_serialize_compact(invalid_type)
 
     def test_ecdsa_sign_recoverable_invalid_input_type_seckey(self):
@@ -93,20 +93,20 @@ class TestPysecp256k1RecoveryValidation(unittest.TestCase):
                 ecdsa_sign_recoverable(invalid_seckey, msg_hash)
 
         for invalid_seckey in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_sign_recoverable(invalid_seckey, msg_hash)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_sign_recoverable(invalid_type, msg_hash)
 
     def test_ecdsa_sign_recoverable_invalid_input_type_msghash32(self):
         for invalid_msg in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_sign_recoverable(valid_seckeys[0], invalid_msg)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_sign_recoverable(valid_seckeys[1], invalid_type)
 
     def test_ecdsa_recover_invalid_input_type_rec_sig(self):
@@ -114,20 +114,20 @@ class TestPysecp256k1RecoveryValidation(unittest.TestCase):
         tag = b"TapLeaf"
         msg_hash = tagged_sha256(tag, msg)
         for invalid_sig in invalid_recoverable_signature_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recover(invalid_sig, msg_hash)
 
         for invalid_type in not_c_char_array:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recover(invalid_type, msg_hash)
 
     def test_ecdsa_recover_invalid_input_type_msghash32(self):
         for invalid_msg in invalid_seckey_length:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recover(self.compact_sig, invalid_msg)
 
         for invalid_type in not_bytes:
-            with self.assertRaises(ValueError):
+            with self.assertRaises(AssertionError):
                 ecdsa_recover(self.compact_sig, invalid_type)
 
 
