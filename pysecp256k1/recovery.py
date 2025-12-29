@@ -1,23 +1,12 @@
 import ctypes
 from typing import Tuple
-from pysecp256k1.low_level import (
-    lib,
-    secp256k1_context_sign,
-    secp256k1_context_verify,
-    enforce_type,
-    assert_zero_return_code,
-    has_secp256k1_recovery,
-    Libsecp256k1Exception,
-)
-from pysecp256k1.low_level.constants import (
-    COMPACT_SIGNATURE_LENGTH,
-    INTERNAL_RECOVERABLE_SIGNATURE_LENGTH,
-    INTERNAL_SIGNATURE_LENGTH,
-    INTERNAL_PUBKEY_LENGTH,
-    Secp256k1Pubkey,
-    Secp256k1ECDSARecoverableSignature,
-    Secp256k1ECDSASignature,
-)
+from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
+                                   assert_zero_return_code, has_secp256k1_recovery,
+                                   Libsecp256k1Exception)
+from pysecp256k1.low_level.constants import (COMPACT_SIGNATURE_LENGTH, INTERNAL_RECOVERABLE_SIGNATURE_LENGTH,
+                                             INTERNAL_SIGNATURE_LENGTH, INTERNAL_PUBKEY_LENGTH,
+                                             Secp256k1Pubkey, Secp256k1ECDSARecSig, Secp256k1ECDSASig)
+
 
 if not has_secp256k1_recovery:
     raise RuntimeError(
@@ -26,18 +15,8 @@ if not has_secp256k1_recovery:
     )
 
 
-# Parse a compact ECDSA signature (64 bytes + recovery id).
-#
-# Returns: 1 when the signature could be parsed, 0 otherwise
-# Args: ctx:     a secp256k1 context object
-# Out:  sig:     a pointer to a signature object
-# In:   input64: a pointer to a 64-byte compact signature
-#       recid:   the recovery id (0, 1, 2 or 3)
-#
 @enforce_type
-def ecdsa_recoverable_signature_parse_compact(
-    compact_sig: bytes, rec_id: int
-) -> Secp256k1ECDSARecoverableSignature:
+def ecdsa_recoverable_signature_parse_compact(compact_sig: bytes, rec_id: int) -> Secp256k1ECDSARecSig:
     """
     Parse a compact ECDSA signature (64 bytes + recovery id).
 
@@ -57,17 +36,8 @@ def ecdsa_recoverable_signature_parse_compact(
     return rec_sig
 
 
-# Convert a recoverable signature into a normal signature.
-#
-# Returns: 1
-# Args: ctx:    a secp256k1 context object.
-# Out:  sig:    a pointer to a normal signature.
-# In:   sigin:  a pointer to a recoverable signature.
-#
 @enforce_type
-def ecdsa_recoverable_signature_convert(
-    rec_sig: Secp256k1ECDSARecoverableSignature,
-) -> Secp256k1ECDSASignature:
+def ecdsa_recoverable_signature_convert(rec_sig: Secp256k1ECDSARecSig) -> Secp256k1ECDSASig:
     """
     Convert a recoverable signature into a normal signature.
 
@@ -82,18 +52,8 @@ def ecdsa_recoverable_signature_convert(
     return sig
 
 
-# Serialize an ECDSA signature in compact format (64 bytes + recovery id).
-#
-# Returns: 1
-# Args: ctx:      a secp256k1 context object.
-# Out:  output64: a pointer to a 64-byte array of the compact signature.
-#       recid:    a pointer to an integer to hold the recovery id.
-# In:   sig:      a pointer to an initialized signature object.
-#
 @enforce_type
-def ecdsa_recoverable_signature_serialize_compact(
-    rec_sig: Secp256k1ECDSARecoverableSignature,
-) -> Tuple[bytes, int]:
+def ecdsa_recoverable_signature_serialize_compact(rec_sig: Secp256k1ECDSARecSig) -> Tuple[bytes, int]:
     """
     Serialize an ECDSA signature in compact format (64 bytes + recovery id).
 
@@ -110,23 +70,8 @@ def ecdsa_recoverable_signature_serialize_compact(
     return output.raw[:COMPACT_SIGNATURE_LENGTH], rec_id.value
 
 
-# Create a recoverable ECDSA signature.
-#
-# Returns: 1: signature created
-#          0: the nonce generation function failed, or the secret key was invalid.
-# Args:    ctx:       pointer to a context object, initialized for signing.
-# Out:     sig:       pointer to an array where the signature will be placed.
-# In:      msghash32: the 32-byte message hash being signed.
-#          seckey:    pointer to a 32-byte secret key.
-#          noncefp:   pointer to a nonce generation function. If NULL,
-#                     secp256k1_nonce_function_default is used.
-#          ndata:     pointer to arbitrary data used by the nonce generation function
-#                     (can be NULL for secp256k1_nonce_function_default).
-#
 @enforce_type
-def ecdsa_sign_recoverable(
-    seckey: bytes, msghash32: bytes
-) -> Secp256k1ECDSARecoverableSignature:
+def ecdsa_sign_recoverable(seckey: bytes, msghash32: bytes) -> Secp256k1ECDSARecSig:
     """
     Create a recoverable ECDSA signature.
 
@@ -150,19 +95,8 @@ def ecdsa_sign_recoverable(
     return rec_sig
 
 
-# Recover an ECDSA public key from a signature.
-#
-# Returns: 1: public key successfully recovered (which guarantees a correct signature).
-#          0: otherwise.
-# Args:    ctx:       pointer to a context object, initialized for verification.
-# Out:     pubkey:    pointer to the recovered public key.
-# In:      sig:       pointer to initialized signature that supports pubkey recovery.
-#          msghash32: the 32-byte message hash assumed to be signed.
-#
 @enforce_type
-def ecdsa_recover(
-    rec_sig: Secp256k1ECDSARecoverableSignature, msghash32: bytes
-) -> Secp256k1Pubkey:
+def ecdsa_recover(rec_sig: Secp256k1ECDSARecSig, msghash32: bytes) -> Secp256k1Pubkey:
     """
     Recover an ECDSA public key from a signature.
 

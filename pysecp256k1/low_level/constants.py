@@ -42,10 +42,10 @@ MUSIG_PARTIAL_SIG_LENGTH = 32
 # Opaque secp256k1 data structures
 Secp256k1Context = ctypes.c_void_p
 Secp256k1Pubkey = ctypes.c_char * INTERNAL_PUBKEY_LENGTH
-Secp256k1ECDSASignature = ctypes.c_char * INTERNAL_SIGNATURE_LENGTH
+Secp256k1ECDSASig = ctypes.c_char * INTERNAL_SIGNATURE_LENGTH
 Secp256k1XonlyPubkey = ctypes.c_char * INTERNAL_PUBKEY_LENGTH
 Secp256k1Keypair = ctypes.c_char * INTERNAL_KEYPAIR_LENGTH
-Secp256k1ECDSARecoverableSignature = (
+Secp256k1ECDSARecSig = (
     ctypes.c_char * INTERNAL_RECOVERABLE_SIGNATURE_LENGTH
 )
 
