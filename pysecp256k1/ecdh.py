@@ -1,5 +1,5 @@
 import ctypes
-from pysecp256k1.low_level import (lib, secp256k1_context_sign, enforce_type, assert_zero_return_code,
+from pysecp256k1.low_level import (lib, secp256k1_context_sign, assert_zero_return_code,
                                    has_secp256k1_ecdh, Libsecp256k1Exception, ctypes_functype)
 from pysecp256k1.low_level.constants import Secp256k1Pubkey, SECKEY_LENGTH
 
@@ -20,7 +20,6 @@ ECDH_HASHFP_CLS = ctypes_functype(
 )
 
 
-@enforce_type
 def ecdh(seckey: bytes, pubkey: Secp256k1Pubkey, hashfp: ECDH_HASHFP_CLS = None) -> bytes:
     """
     Compute an EC Diffie-Hellman secret in constant time.
@@ -29,11 +28,14 @@ def ecdh(seckey: bytes, pubkey: Secp256k1Pubkey, hashfp: ECDH_HASHFP_CLS = None)
     :param pubkey: initialized public key
     :param hashfp: custom hash function, if None use secp256k1_ecdh_hash_function_sha256
     :return: EC Diffie-Hellman secret
-    :raises ValueError: if secret key is not of type bytes and length 32
-                        if pubkey is invalid type
+    :raises AssertionError: if secret key is not of type bytes and length 32
+                            if pubkey is invalid type
     :raises Libsecp256k1Exception: if scalar was invalid (zero or overflow)
                                    or hashfp returned 0
     """
+    assert isinstance(seckey, bytes) and len(seckey) == SECKEY_LENGTH
+    assert isinstance(pubkey, Secp256k1Pubkey)
+
     output = ctypes.create_string_buffer(SECKEY_LENGTH)
     result = lib.secp256k1_ecdh(
         secp256k1_context_sign, output, pubkey, seckey, hashfp, None
