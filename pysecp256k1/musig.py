@@ -1,31 +1,15 @@
 import ctypes, os
 from typing import List, Tuple, Optional
-from pysecp256k1.low_level import (
-    lib,
-    secp256k1_context_sign,
-    secp256k1_context_verify,
-    assert_zero_return_code,
-    has_secp256k1_musig,
-    Libsecp256k1Exception,
-)
-from pysecp256k1.low_level.constants import (
-    INTERNAL_MUSIG_NONCE_LENGTH,
-    INTERNAL_PUBKEY_LENGTH,
-    INTERNAL_SIGNATURE_LENGTH,
-    INTERNAL_MUSIG_SESSION_LENGTH,
-    INTERNAL_MUSIG_PARTIAL_SIG_LENGTH,
-    MUSIG_NONCE_LENGTH,
-    MUSIG_PARTIAL_SIG_LENGTH,
-    Secp256k1Pubkey,
-    Secp256k1Keypair,
-    Secp256k1XonlyPubkey,
-    MuSigPubNonce,
-    MuSigAggNonce,
-    MuSigSecNonce,
-    MuSigKeyAggCache,
-    MuSigSession,
-    MuSigPartialSig,
-)
+from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_context_verify,
+                                   assert_zero_return_code, has_secp256k1_musig,
+                                   Libsecp256k1Exception)
+from pysecp256k1.low_level.constants import (INTERNAL_MUSIG_NONCE_LENGTH, INTERNAL_PUBKEY_LENGTH,
+                                             INTERNAL_SIGNATURE_LENGTH, INTERNAL_MUSIG_SESSION_LENGTH,
+                                             INTERNAL_MUSIG_PARTIAL_SIG_LENGTH, MUSIG_NONCE_LENGTH,
+                                             MUSIG_PARTIAL_SIG_LENGTH, Secp256k1Pubkey, Secp256k1Keypair,
+                                             Secp256k1XonlyPubkey, MuSigPubNonce, MuSigAggNonce,
+                                             MuSigSecNonce, MuSigKeyAggCache, MuSigSession,
+                                             MuSigPartialSig)
 
 
 if not has_secp256k1_musig:
