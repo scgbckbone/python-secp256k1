@@ -29,13 +29,9 @@ import ctypes.util
 from types import FunctionType
 from typing import Any, Optional
 
-from pysecp256k1.low_level.constants import (
-    PYSECP_SO,
-    SECP256K1_CONTEXT_SIGN,
-    SECP256K1_CONTEXT_VERIFY,
-    Secp256k1Context,
-    Secp256k1Pubkey, MuSigPubNonce, MuSigPartialSig
-)
+from pysecp256k1.low_level.constants import (SECP256K1_CONTEXT_SIGN, SECP256K1_CONTEXT_VERIFY,
+                                             Secp256k1Context, Secp256k1Pubkey, MuSigPubNonce,
+                                             MuSigPartialSig)
 from pysecp256k1.low_level.util import assert_zero_return_code, find_pysecp_env_var
 
 

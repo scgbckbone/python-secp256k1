@@ -2,8 +2,8 @@ import os
 import ctypes
 from typing import List, Optional
 from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_context_verify, enforce_type,
-    assert_zero_return_code, Libsecp256k1Exception, callback_func_type, ctypes_functype,
-)
+                                   assert_zero_return_code, Libsecp256k1Exception, callback_func_type,
+                                   ctypes_functype)
 from pysecp256k1.low_level.constants import (Secp256k1Context, Secp256k1Pubkey, Secp256k1ECDSASig,
                                              PUBLIC_KEY_LENGTH, COMPRESSED_PUBLIC_KEY_LENGTH,
                                              COMPACT_SIGNATURE_LENGTH, DER_SIGNATURE_LENGTH,
