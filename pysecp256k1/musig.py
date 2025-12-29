@@ -6,10 +6,10 @@ from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_contex
 from pysecp256k1.low_level.constants import (INTERNAL_MUSIG_NONCE_LENGTH, INTERNAL_PUBKEY_LENGTH,
                                              INTERNAL_SIGNATURE_LENGTH, INTERNAL_MUSIG_SESSION_LENGTH,
                                              INTERNAL_MUSIG_PARTIAL_SIG_LENGTH, MUSIG_NONCE_LENGTH,
-                                             MUSIG_PARTIAL_SIG_LENGTH, Secp256k1Pubkey, Secp256k1Keypair,
-                                             Secp256k1XonlyPubkey, MuSigPubNonce, MuSigAggNonce,
-                                             MuSigSecNonce, MuSigKeyAggCache, MuSigSession,
-                                             MuSigPartialSig)
+                                             MUSIG_PARTIAL_SIG_LENGTH, COMPACT_SIGNATURE_LENGTH,
+                                             Secp256k1Pubkey, Secp256k1Keypair, MuSigPubNonce,
+                                             Secp256k1XonlyPubkey, MuSigAggNonce, MuSigSession,
+                                             MuSigSecNonce, MuSigKeyAggCache, MuSigPartialSig)
 
 
 if not has_secp256k1_musig:
@@ -79,6 +79,7 @@ def musig_partial_sig_serialize(sig: MuSigPartialSig) -> bytes:
 def musig_pubkey_agg(pubkeys: List[Secp256k1Pubkey],
                      keyagg_cache: Optional[MuSigKeyAggCache] = None) -> Secp256k1XonlyPubkey:
 
+    assert isinstance(pubkeys, list) and len(pubkeys) > 1
     assert isinstance(keyagg_cache, MuSigKeyAggCache)
 
     length = len(pubkeys)
@@ -172,6 +173,8 @@ def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: Optional[bytes] 
 
 
 def musig_nonce_agg(pubnonces: List[MuSigPubNonce]) -> MuSigAggNonce:
+    assert isinstance(pubnonces, list) and len(pubnonces) > 1
+
     length = len(pubnonces)
     arr = (ctypes.POINTER(MuSigPubNonce) * length)()
     for i, pn in enumerate(pubnonces):
@@ -239,6 +242,7 @@ def musig_partial_sig_verify(sig: MuSigPartialSig, pubnonce: MuSigPubNonce, pubk
 def musig_partial_sig_agg(session: MuSigSession, partial_sigs: List[MuSigPartialSig]) -> bytes:
 
     assert isinstance(session, MuSigSession)
+    assert isinstance(partial_sigs, list) and len(partial_sigs) > 1
 
     length = len(partial_sigs)
     arr = (ctypes.POINTER(MuSigPartialSig) * length)()
@@ -253,7 +257,7 @@ def musig_partial_sig_agg(session: MuSigSession, partial_sigs: List[MuSigPartial
         assert_zero_return_code(result)
         raise Libsecp256k1Exception("invalid arguemnts")
 
-    return sig64.raw
+    return sig64.raw[:COMPACT_SIGNATURE_LENGTH]
 
 
 __all__ = (
