@@ -614,6 +614,7 @@ __all__ = (
     "ec_pubkey_create",
     "ec_seckey_negate",
     "ec_pubkey_negate",
+    "ec_pubkey_sort",
     "ec_seckey_tweak_add",
     "ec_pubkey_tweak_add",
     "ec_seckey_tweak_mul",
