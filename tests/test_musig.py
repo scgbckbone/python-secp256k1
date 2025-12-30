@@ -1,16 +1,17 @@
-import unittest
+import unittest, os
 from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_musig
-from pysecp256k1.low_level.constants import MuSigSession, MuSigPartialSig
-from pysecp256k1 import ec_pubkey_create
-from pysecp256k1.extrakeys import keypair_create
+from pysecp256k1.low_level.constants import MuSigSession, MuSigPartialSig, MuSigKeyAggCache
+from pysecp256k1 import ec_pubkey_create, ec_seckey_verify, ec_pubkey_sort, ec_seckey_negate
+from pysecp256k1.extrakeys import keypair_create, xonly_pubkey_from_pubkey, keypair_pub, keypair_sec
+from pysecp256k1.schnorrsig import schnorrsig_verify
 from tests.data import (invalid_musig_nonce_ser_length, not_bytes, invalid_musig_nonce_length,
                         not_c_char_array, invalid_seckey_length, invalid_musig_part_sig_length,
                         invalid_musig_keyagg_cache_lenght, valid_seckeys, invalid_pubkey_length,
                         valid_pubnonce_serializations, invalid_keypair_length,
-                        invalid_musig_session_length)
+                        invalid_musig_session_length, invalid_seckeys)
 if has_secp256k1_musig:
     from pysecp256k1.musig import (musig_pubnonce_parse, musig_pubnonce_serialize, musig_aggnonce_parse,
-                                   musig_aggnonce_serialize, musig_partial_sig_parse, MuSigKeyAggCache,
+                                   musig_aggnonce_serialize, musig_partial_sig_parse,
                                    musig_partial_sig_serialize, musig_pubkey_agg, musig_pubkey_get,
                                    musig_pubkey_ec_tweak_add, musig_pubkey_xonly_tweak_add,
                                    musig_nonce_gen, musig_nonce_agg, musig_nonce_process,
@@ -138,6 +139,11 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 musig_pubkey_ec_tweak_add(invalid_type, self.keyagg_cache)
 
+        # below tweaks does not pass ec_seckey_verify
+        for invalid_seckey in invalid_seckeys:
+            with self.assertRaises(Libsecp256k1Exception):
+                musig_pubkey_ec_tweak_add(invalid_seckey, self.keyagg_cache)
+
     def test_musig_pubkey_ec_tweak_add_invalid_input_type_keyagg_cache(self):
         for invalid_keyagg_cache in invalid_musig_keyagg_cache_lenght:
             with self.assertRaises(AssertionError):
@@ -155,6 +161,11 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
         for invalid_type in not_bytes:
             with self.assertRaises(AssertionError):
                 musig_pubkey_xonly_tweak_add(invalid_type, self.keyagg_cache)
+
+        # below tweaks does not pass ec_seckey_verify
+        for invalid_seckey in invalid_seckeys:
+            with self.assertRaises(Libsecp256k1Exception):
+                musig_pubkey_xonly_tweak_add(invalid_seckey, self.keyagg_cache)
 
     def test_musig_pubkey_xonly_tweak_add_invalid_input_type_keyagg_cache(self):
         for invalid_keyagg_cache in invalid_musig_keyagg_cache_lenght:
@@ -388,6 +399,72 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
             pubkey_list = [self.part_sig0, self.part_sig1, invalid_type]
             with self.assertRaises(AssertionError):
                 musig_partial_sig_agg(self.session, pubkey_list)
+
+
+class TestPysecp256k1Musig(unittest.TestCase):
+
+    def test_integration(self):
+
+        keyagg_cache = MuSigKeyAggCache()
+        msg = 32 * b"b"
+        tweak_bip32 = 32 * b"a"
+        xonly_tweak = 32 * b"c"
+
+        signers = []
+        pubkeys = []
+        N_signers = 5
+
+        for i in range(N_signers):
+            sk = os.urandom(32)
+            ec_seckey_verify(sk)
+            pk = ec_pubkey_create(sk)
+            signers.append([sk, pk])
+            pubkeys.append(pk)
+
+        pubkeys = ec_pubkey_sort(pubkeys)
+        musig_pubkey_agg(pubkeys, keyagg_cache)
+
+        musig_pubkey_ec_tweak_add(tweak_bip32, keyagg_cache)
+        tweaked_pk = musig_pubkey_xonly_tweak_add(xonly_tweak, keyagg_cache)
+        tweaked_xpk, _ = xonly_pubkey_from_pubkey(tweaked_pk)
+
+        pubnonces = []
+        for i, slist in enumerate(signers):
+            session_sec = os.urandom(32)
+            sn, pn = musig_nonce_gen(slist[1], session_secrand32=session_sec, seckey=slist[0],
+                                     msg32=msg, keyagg_cache=keyagg_cache)
+
+            pn_ser = musig_pubnonce_serialize(pn)
+            assert pn_ser == musig_pubnonce_serialize(musig_pubnonce_parse(pn_ser))
+            pubnonces.append(pn)
+            slist.append(sn)
+
+        agg_nonce = musig_nonce_agg(pubnonces)
+        an_ser = musig_aggnonce_serialize(agg_nonce)
+        assert an_ser == musig_aggnonce_serialize(musig_aggnonce_parse(an_ser))
+
+        partial_sigs = []
+        sessions = []
+        for i, (sk, pk, secn) in enumerate(signers):
+            session = musig_nonce_process(agg_nonce, msg, keyagg_cache)
+            sig = musig_partial_sign(secn, keypair_create(sk), keyagg_cache, session)
+
+            # re-sign with the same secnonce causes error (secnonce overwritten with zeros after sign)
+            try:
+                musig_partial_sign(secn, keypair_create(sk), keyagg_cache, session)
+                raise ValueError  # must fail
+            except Libsecp256k1Exception: pass
+
+            sig_ser = musig_partial_sig_serialize(sig)
+            assert sig_ser == musig_partial_sig_serialize(musig_partial_sig_parse(sig_ser))
+            partial_sigs.append(sig)
+            sessions.append(session)
+
+        for i, sig in enumerate(partial_sigs):
+            assert musig_partial_sig_verify(sig, pubnonces[i], signers[i][1], keyagg_cache, sessions[i])
+
+        agg_sig = musig_partial_sig_agg(sessions[0], partial_sigs)
+        assert schnorrsig_verify(agg_sig, msg, tweaked_xpk)
 
 
 if __name__ == '__main__':
