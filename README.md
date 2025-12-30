@@ -29,7 +29,6 @@ use `pysecp256k1.context_randomize`.
 
 #### Validation and data types
 This library tries to supplement `libsecp256k1` with valid data ONLY, therefore heavy input type validation is in place. 
-Validation is implemented via `enforce_type`((can be found in `pysecp256k1.low_level.util`)) which check for correct type (based on type hints) and correct length if possible.
 
 Internal (opaque) secp256k1 data structures are represented as `ctypes.c_char_Array`
 to get bytes from `c_char_Array` use `.raw` (see examples).
@@ -254,14 +253,14 @@ import ctypes, os
 from pysecp256k1 import ec_pubkey_sort, ec_pubkey_serialize, ec_seckey_verify, ec_pubkey_create
 from pysecp256k1.extrakeys import xonly_pubkey_from_pubkey, keypair_create, xonly_pubkey_serialize
 from pysecp256k1.schnorrsig import schnorrsig_verify
+from pysecp256k1.low_level.constants import MuSigKeyAggCache
 from pysecp256k1.musig import (musig_nonce_gen, musig_pubnonce_serialize, musig_pubkey_agg,
                                musig_pubkey_ec_tweak_add, musig_pubkey_xonly_tweak_add,
                                musig_nonce_agg, musig_nonce_process, musig_partial_sign,
                                musig_partial_sig_serialize, musig_partial_sig_agg,
                                musig_partial_sig_verify, musig_aggnonce_serialize)
-from pysecp256k1.low_level.constants import INTERNAL_MUSIG_KEY_AGG_CACHE_LENGTH
 
-cache = ctypes.create_string_buffer(INTERNAL_MUSIG_KEY_AGG_CACHE_LENGTH)
+cache = MuSigKeyAggCache()
 msg = 32*b"b"
 tweak_bip32 = 32*b"a"
 xonly_tweak = 32*b"c"
@@ -312,19 +311,20 @@ print("aggregate nonce", musig_aggnonce_serialize(agg_nonce).hex())
 print()
 
 partial_sigs = []
+sessions = []
 for i, (sk, pk, secn) in enumerate(signers):
     session = musig_nonce_process(agg_nonce, msg, cache)
     sig = musig_partial_sign(secn, keypair_create(sk), cache, session)
     print("Signer %d part sig" % i, musig_partial_sig_serialize(sig).hex())
     partial_sigs.append(sig)
-
+    sessions.append(session)
 
 for i, sig in enumerate(partial_sigs):
-    assert musig_partial_sig_verify(sig, pubnonces[i], signers[i][1], cache, session)
+    assert musig_partial_sig_verify(sig, pubnonces[i], signers[i][1], cache, sessions[i])
     print("Signer %d part sig verifies OK" % i)
 print()
 
-agg_sig = musig_partial_sig_agg(session, partial_sigs)
+agg_sig = musig_partial_sig_agg(sessions[0], partial_sigs)
 print("aggregate signature", agg_sig.hex())
 assert schnorrsig_verify(agg_sig, msg, tweaked_xpk)
 print("verifies OK")
