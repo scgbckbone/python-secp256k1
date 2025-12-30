@@ -34,13 +34,8 @@ For changes that address core functionality or would require breaking changes (e
 6. Push changes to your fork
 7. Open a PR in this repository and follow the PR template so that we can efficiently review the changes.
 
-### Formatting and testing guidelines
-Testing is described in README.md. All tests have to pass. For formatting purposes use [black](https://github.com/psf/black):
-```shell
-pip install black
-cd python-secp256k1
-black .
-```
+### Testing guidelines
+Testing is described in README.md. New tests verifying new functionality has to be written. All tests have to pass.
 
 ## Getting Help
 email: scgbckbone@proton.me
