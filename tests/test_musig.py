@@ -402,6 +402,38 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
 
 
 class TestPysecp256k1Musig(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls) -> None:
+        cls.keypair = keypair_create(valid_seckeys[0])
+        cls.pubkey0 = ec_pubkey_create(valid_seckeys[0])
+        cls.pubkey1 = ec_pubkey_create(valid_seckeys[1])
+
+    def test_musig_nonce_gen_args(self):
+        # only required argument here is pubkey (first argument)
+        musig_nonce_gen(self.pubkey0)
+        # musig_nonce_gen uses RNG for secrand if secrand is not provided (safest way)
+        musig_nonce_gen(self.pubkey0, os.urandom(32))
+        # optionally one can also add secret key, MUST be the one sued for signing that corresponds to pk arg
+        musig_nonce_gen(self.pubkey0, os.urandom(32), keypair_sec(self.keypair))
+        # incorrect seckey - one that is not from pubkey - but it still works
+        # https://github.com/bitcoin-core/secp256k1/blob/f9a944ff2dbcd7ff1829880636f861caf0a91392/include/secp256k1_musig.h#L347-L352
+        musig_nonce_gen(self.pubkey1, os.urandom(32), keypair_sec(self.keypair))
+        # optionally msg to be signed can be added - if already known
+        musig_nonce_gen(self.pubkey0, os.urandom(32), keypair_sec(self.keypair), b"a"*32)
+        # un-initialized musig aggregation cache is not allowed
+        with self.assertRaises(Libsecp256k1Exception):
+            musig_nonce_gen(self.pubkey0, os.urandom(32), keypair_sec(self.keypair), b"a" * 32,
+                            keyagg_cache=MuSigKeyAggCache())
+        # initialize the cache - aggregate keys, and use for nonce gen - must work
+        cache = MuSigKeyAggCache()
+        pubkeys = ec_pubkey_sort([self.pubkey0, self.pubkey1])
+        musig_pubkey_agg(pubkeys, cache)
+        musig_nonce_gen(self.pubkey0, os.urandom(32), keypair_sec(self.keypair), b"a" * 32,
+                        keyagg_cache=cache)
+        # extra randomness for nonce derivation function
+        # None is for optional key aggregation cache, but uninitialized key agg cache is not allowed
+        musig_nonce_gen(self.pubkey0, os.urandom(32), keypair_sec(self.keypair), b"a"*32,
+                        None, os.urandom(32))
 
     def test_integration(self):
 
@@ -462,6 +494,9 @@ class TestPysecp256k1Musig(unittest.TestCase):
 
         for i, sig in enumerate(partial_sigs):
             assert musig_partial_sig_verify(sig, pubnonces[i], signers[i][1], keyagg_cache, sessions[i])
+
+        # this MUST not verify - its zero-th signature against incorrect pubkey & pubnonce
+        assert not musig_partial_sig_verify(partial_sigs[0], pubnonces[-1], signers[-1][1], keyagg_cache, sessions[0]), i
 
         agg_sig = musig_partial_sig_agg(sessions[0], partial_sigs)
         assert schnorrsig_verify(agg_sig, msg, tweaked_xpk)
