@@ -6,7 +6,8 @@ Alternative implementation that uses [cffi](https://cffi.readthedocs.io/en/lates
 CFFI is heavier, needs compiler for API mode (parses C headers) while ctypes does not need dependencies at all.
 
 #### Rationale and goal
-This library aims to provide a standard way to wrap `libsecp256k1` using `ctypes`.
+This library aims to provide a standard way to wrap `libsecp256k1` using `ctypes` for `cpython` implementation.
+If `micropython` implementation is needed use [libngu](https://github.com/switck/libngu) - currently opened as [PR](https://github.com/switck/libngu/pull/42)
 
 #### Implementation Details
 * Scratch spaces are not implemented.
