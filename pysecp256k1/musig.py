@@ -346,6 +346,80 @@ def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: Optional[bytes] 
     return secnonce, pubnonce
 
 
+def musig_nonce_gen_counter(counter: int, keypair: Secp256k1Keypair, msg32: Optional[bytes] = None,
+                            keyagg_cache: Optional[MuSigKeyAggCache] = None,
+                            extra_input32: Optional[bytes]=None) -> Tuple[MuSigSecNonce, MuSigPubNonce]:
+    """
+    Alternative way to generate a nonce and start a signing session
+
+    This function outputs a secret nonce that will be required for signing and a
+    corresponding public nonce that is intended to be sent to other signers.
+
+    This function differs from `musig_nonce_gen` by accepting a
+    non-repeating counter value instead of a secret random value. This requires
+    that a secret key is provided to `musig_nonce_gen_counter`
+    (through the keypair argument), as opposed to `musig_nonce_gen`
+    where the seckey argument is optional.
+
+    MuSig differs from regular Schnorr signing in that implementers _must_ take
+    special care to not reuse a nonce. This can be ensured by following these rules:
+
+    1. The counter argument must be value that never repeats,
+       i.e., you must never call `musig_nonce_gen_counter` twice with
+       the same keypair and counter value. For example, this implies
+       that if the same keypair is used with `musig_nonce_gen_counter`
+       on multiple devices, none of the devices should have the same counter
+       value as any other device.
+    2. If the seckey, message or aggregate public key cache is already available
+       at this stage, any of these can be optionally provided, in which case
+       they will be used in the derivation of the nonce and increase
+       misuse-resistance. The extra_input32 argument can be used to provide
+       additional data that does not repeat in normal scenarios, such as the
+       current time.
+    3. Avoid copying (or serializing) the secnonce. This reduces the possibility
+       that it is used more than once for signing.
+
+    Remember that nonce reuse will leak the secret key!
+    Note that using the same keypair for multiple MuSig sessions is fine.
+
+    :param counter: the value of a counter as explained above. Must be
+ *                  unique to this call to musig_nonce_gen_counter.
+    :param keypair: keypair of the signer creating the nonce. The secnonce
+ *                  output of this function cannot be used to sign for any
+ *                  other keypair
+    :param msg32: optional 32-byte message that will later be used for signing
+    :param keyagg_cache: optional initialized MuSigKeyAggCache object that was used
+                         to create the aggregate (and potentially tweaked) public key
+    :param extra_input32: optional 32 bytes that is input to the nonce derivation function
+    :return: tuple of length 2 with initialized MuSigSecNonce, MuSigPubNonce objects
+    :raises AssertionError: if counter is not of type int
+                            if keypair is not of type Secp256k1Keypair
+                            if [optional] msg32 is not of type bytes and length 32
+                            if [optional] keyagg_cache is not of type MuSigKeyAggCache
+                            if [optional] extra_input32 is not of type bytes and length 32
+    :raises Libsecp256k1Exception: if arguments are invalid
+    """
+    assert isinstance(counter, int)
+    assert isinstance(keypair, Secp256k1Keypair)
+    if msg32:
+        assert isinstance(msg32, bytes) and len(msg32) == 32
+    if keyagg_cache:
+        assert isinstance(keyagg_cache, MuSigKeyAggCache)
+    if extra_input32:
+        assert isinstance(extra_input32, bytes) and len(extra_input32) == 32
+
+    secnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
+    pubnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
+    result = lib.secp256k1_musig_nonce_gen_counter(secp256k1_context_sign, secnonce, pubnonce,
+                                                   counter, keypair, msg32, keyagg_cache,
+                                                   extra_input32)
+    if result != 1:
+        assert_zero_return_code(result)
+        raise Libsecp256k1Exception("invalid arguemnts")
+
+    return secnonce, pubnonce
+
+
 def musig_nonce_agg(pubnonces: List[MuSigPubNonce]) -> MuSigAggNonce:
     """
     Aggregates the nonces of all signers into a single nonce.
