@@ -614,6 +614,7 @@ __all__ = (
     "musig_pubkey_ec_tweak_add",
     "musig_pubkey_xonly_tweak_add",
     "musig_nonce_gen",
+    "musig_nonce_gen_counter",
     "musig_nonce_agg",
     "musig_nonce_process",
     "musig_partial_sign",

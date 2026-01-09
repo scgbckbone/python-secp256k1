@@ -540,7 +540,6 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
             ctypes.c_char_p,
             ctypes.c_char_p,
             ctypes.c_char_p,
-            ctypes.c_char_p,
         ]
 
         _secp256k1.secp256k1_musig_nonce_agg.restype = ctypes.c_int
