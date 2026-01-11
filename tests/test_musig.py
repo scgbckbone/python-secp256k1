@@ -1,13 +1,13 @@
 import unittest, os
 from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_musig
 from pysecp256k1.low_level.constants import MuSigSession, MuSigPartialSig, MuSigKeyAggCache
-from pysecp256k1 import ec_pubkey_create, ec_seckey_verify, ec_pubkey_sort, ec_seckey_negate
-from pysecp256k1.extrakeys import keypair_create, xonly_pubkey_from_pubkey, keypair_pub, keypair_sec
+from pysecp256k1 import ec_pubkey_create, ec_seckey_verify, ec_pubkey_sort
+from pysecp256k1.extrakeys import keypair_create, xonly_pubkey_from_pubkey, keypair_sec
 from pysecp256k1.schnorrsig import schnorrsig_verify
 from tests.data import (invalid_musig_nonce_ser_length, not_bytes, invalid_musig_nonce_length,
                         not_c_char_array, invalid_seckey_length, invalid_musig_part_sig_length,
                         invalid_musig_keyagg_cache_lenght, valid_seckeys, invalid_pubkey_length,
-                        valid_pubnonce_serializations, invalid_keypair_length,
+                        valid_pubnonce_serializations, invalid_keypair_length, not_int,
                         invalid_musig_session_length, invalid_seckeys)
 if has_secp256k1_musig:
     from pysecp256k1.musig import (musig_pubnonce_parse, musig_pubnonce_serialize, musig_aggnonce_parse,
@@ -15,7 +15,8 @@ if has_secp256k1_musig:
                                    musig_partial_sig_serialize, musig_pubkey_agg, musig_pubkey_get,
                                    musig_pubkey_ec_tweak_add, musig_pubkey_xonly_tweak_add,
                                    musig_nonce_gen, musig_nonce_agg, musig_nonce_process,
-                                   musig_partial_sign, musig_partial_sig_verify, musig_partial_sig_agg)
+                                   musig_partial_sign, musig_partial_sig_verify,
+                                   musig_partial_sig_agg, musig_nonce_gen_counter)
 
 
 skip_reason = "secp256k1 is not compiled with module 'musig'"
@@ -232,6 +233,53 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 musig_nonce_gen(self.pubkey0, self.b32, self.b32, self.b32, self.keyagg_cache,
                                 invalid_type)
+
+    def test_musig_nonce_gen_counter_invalid_input_type_counter(self):
+        for invalid_counter in [-1, 2**64]:
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(invalid_counter, self.keypair)
+
+        for invalid_type in not_int:
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(invalid_type, self.keypair)
+
+    def test_musig_nonce_gen_counter_invalid_input_type_keypair(self):
+        for invalid_keypair in invalid_keypair_length:
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(0, invalid_keypair)
+
+        for invalid_type in not_c_char_array:
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(0, invalid_type)
+
+    def test_musig_nonce_gen_counter_invalid_input_type_mg32(self):
+        for invalid_msg32 in invalid_seckey_length:
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(0, self.keypair, invalid_msg32)
+
+        for invalid_type in not_bytes[1:]:  # can be None
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(0, self.keypair, invalid_type)
+
+    def test_musig_nonce_gen_counter_invalid_input_type_keyagg_cache(self):
+        for invalid_keyagg_cache in invalid_musig_keyagg_cache_lenght:
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(0, self.keypair, self.b32, invalid_keyagg_cache)
+
+        for invalid_type in not_c_char_array[1:]:  # can be None
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(0, self.keypair, self.b32, invalid_type)
+
+    def test_musig_nonce_gen_counter_invalid_input_type_extra_input32(self):
+        for invalid_extra_input32 in invalid_seckey_length:
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(0, self.keypair, self.b32, self.keyagg_cache,
+                                        invalid_extra_input32)
+
+        for invalid_type in not_bytes[1:]:  # can be None
+            with self.assertRaises(AssertionError):
+                musig_nonce_gen_counter(0, self.keypair, self.b32, self.keyagg_cache,
+                                        invalid_type)
 
     def test_musig_nonce_agg_invalid_input_type_pubnonces(self):
         # empty list

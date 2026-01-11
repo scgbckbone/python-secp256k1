@@ -383,23 +383,23 @@ def musig_nonce_gen_counter(counter: int, keypair: Secp256k1Keypair, msg32: Opti
     Note that using the same keypair for multiple MuSig sessions is fine.
 
     :param counter: the value of a counter as explained above. Must be
- *                  unique to this call to musig_nonce_gen_counter.
+                    unique to this call to musig_nonce_gen_counter.
     :param keypair: keypair of the signer creating the nonce. The secnonce
- *                  output of this function cannot be used to sign for any
- *                  other keypair
+                    output of this function cannot be used to sign for any
+                    other keypair
     :param msg32: optional 32-byte message that will later be used for signing
     :param keyagg_cache: optional initialized MuSigKeyAggCache object that was used
                          to create the aggregate (and potentially tweaked) public key
     :param extra_input32: optional 32 bytes that is input to the nonce derivation function
     :return: tuple of length 2 with initialized MuSigSecNonce, MuSigPubNonce objects
-    :raises AssertionError: if counter is not of type int
+    :raises AssertionError: if counter is not of type int or outside range of unsigned 64bit int
                             if keypair is not of type Secp256k1Keypair
                             if [optional] msg32 is not of type bytes and length 32
                             if [optional] keyagg_cache is not of type MuSigKeyAggCache
                             if [optional] extra_input32 is not of type bytes and length 32
     :raises Libsecp256k1Exception: if arguments are invalid
     """
-    assert isinstance(counter, int)
+    assert isinstance(counter, int) and (0 <= counter < (2 ** 64))  # uint64_t
     assert isinstance(keypair, Secp256k1Keypair)
     if msg32:
         assert isinstance(msg32, bytes) and len(msg32) == 32
