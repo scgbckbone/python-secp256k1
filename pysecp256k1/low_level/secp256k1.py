@@ -303,6 +303,9 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
             ctypes.c_void_p,
             ctypes.c_char_p,
             ctypes.c_char_p,
+            ctypes.c_char_p,
+            ctypes.c_void_p,
+            ctypes.c_void_p,
         ]
 
         _secp256k1.secp256k1_ecdsa_recover.restype = ctypes.c_int
