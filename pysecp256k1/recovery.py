@@ -126,7 +126,7 @@ def ecdsa_recover(rec_sig: Secp256k1ECDSARecSig, msghash32: bytes) -> Secp256k1P
     return pubkey
 
 
-_all__ = (
+__all__ = (
     "ecdsa_recoverable_signature_parse_compact",
     "ecdsa_recoverable_signature_convert",
     "ecdsa_recoverable_signature_serialize_compact",
