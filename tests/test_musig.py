@@ -1,6 +1,6 @@
 import unittest, os
 from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_musig
-from pysecp256k1.low_level.constants import MuSigSession, MuSigPartialSig, MuSigKeyAggCache
+from pysecp256k1.low_level.constants import MuSigSession, MuSigPartialSig, MuSigKeyAggCache, Secp256k1Pubkey
 from pysecp256k1 import ec_pubkey_create, ec_seckey_verify, ec_pubkey_sort
 from pysecp256k1.extrakeys import keypair_create, xonly_pubkey_from_pubkey, keypair_sec
 from pysecp256k1.schnorrsig import schnorrsig_verify
@@ -482,6 +482,18 @@ class TestPysecp256k1Musig(unittest.TestCase):
         # None is for optional key aggregation cache, but uninitialized key agg cache is not allowed
         musig_nonce_gen(self.pubkey0, os.urandom(32), keypair_sec(self.keypair), b"a"*32,
                         None, os.urandom(32))
+
+    def test_musig_pubkey_agg_without_keyagg_cache(self):
+        # make sure this can be run without keyaggregation cache
+        pubkeys = []
+        for i in range(3):
+            sk = os.urandom(32)
+            ec_seckey_verify(sk)
+            pk = ec_pubkey_create(sk)
+            pubkeys.append(pk)
+
+        agg_pk = musig_pubkey_agg(pubkeys)
+        assert isinstance(agg_pk,Secp256k1Pubkey)
 
     def test_integration(self):
 

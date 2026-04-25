@@ -139,7 +139,8 @@ def musig_pubkey_agg(pubkeys: List[Secp256k1Pubkey],
     :raises Libsecp256k1Exception: if arguments are invalid
     """
     assert isinstance(pubkeys, list) and len(pubkeys) > 1
-    assert isinstance(keyagg_cache, MuSigKeyAggCache)
+    if keyagg_cache is not None:
+        assert isinstance(keyagg_cache, MuSigKeyAggCache)
 
     length = len(pubkeys)
     arr = (ctypes.POINTER(Secp256k1Pubkey) * length)()
