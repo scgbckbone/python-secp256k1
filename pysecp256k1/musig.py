@@ -337,6 +337,9 @@ def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: Optional[bytes] 
     # seckey -> pubkey should be verified
     secnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
     pubnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
+    # wrap session_secrand32 (bytes), otherwise C function is handed the address of the bytes
+    # internal buffer and lets it zero it in place. That's UB on an immutable object.
+    session_secrand32 = ctypes.create_string_buffer(session_secrand32, 32)
     result = lib.secp256k1_musig_nonce_gen(secp256k1_context_sign, secnonce, pubnonce,
                                            session_secrand32, seckey, pubkey, msg32, keyagg_cache,
                                            extra_input32)
