@@ -153,7 +153,7 @@ def musig_pubkey_agg(pubkeys: List[Secp256k1Pubkey],
                                             keyagg_cache, arr, length)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return agg_pubkey
 
@@ -176,7 +176,7 @@ def musig_pubkey_get(keyagg_cache: MuSigKeyAggCache) -> Secp256k1Pubkey:
     result = lib.secp256k1_musig_pubkey_get(secp256k1_context_verify, agg_pubkey, keyagg_cache)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return agg_pubkey
 
@@ -223,7 +223,7 @@ def musig_pubkey_ec_tweak_add(tweak32: bytes, keyagg_cache: MuSigKeyAggCache) ->
                                                      keyagg_cache, tweak32)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return tweaked_pubkey
 
@@ -268,7 +268,7 @@ def musig_pubkey_xonly_tweak_add(tweak32: bytes, keyagg_cache: MuSigKeyAggCache)
                                                         keyagg_cache, tweak32)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return tweaked_pubkey
 
@@ -345,7 +345,7 @@ def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: Optional[bytes] 
                                            extra_input32)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return secnonce, pubnonce
 
@@ -419,7 +419,7 @@ def musig_nonce_gen_counter(counter: int, keypair: Secp256k1Keypair, msg32: Opti
                                                    extra_input32)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return secnonce, pubnonce
 
@@ -448,7 +448,7 @@ def musig_nonce_agg(pubnonces: List[MuSigPubNonce]) -> MuSigAggNonce:
     result = lib.secp256k1_musig_nonce_agg(secp256k1_context_sign, agg_nonce, arr, length)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return agg_nonce
 
@@ -477,7 +477,7 @@ def musig_nonce_process(agg_nonce: MuSigAggNonce, msg32: bytes,
                                                msg32, keyagg_cache)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return session
 
@@ -601,7 +601,7 @@ def musig_partial_sig_agg(session: MuSigSession, partial_sigs: List[MuSigPartial
                                                  arr, length)
     if result != 1:
         assert_zero_return_code(result)
-        raise Libsecp256k1Exception("invalid arguemnts")
+        raise Libsecp256k1Exception("invalid arguments")
 
     return sig64.raw[:COMPACT_SIGNATURE_LENGTH]
 

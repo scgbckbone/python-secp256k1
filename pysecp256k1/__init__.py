@@ -233,7 +233,7 @@ def ecdsa_signature_parse_der(der_sig: bytes) -> Secp256k1ECDSASig:
 
     :param der_sig: DER ECDSA signature serialization
     :return: initialized ECDSA signature
-    :raises AssertionError: if der_sig is not of type bytes and length 64
+    :raises AssertionError: if der_sig is not of type bytes
     :raises Libsecp256k1Exception: if der_sig could not be parsed
     """
     assert isinstance(der_sig, bytes)
