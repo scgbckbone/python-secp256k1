@@ -204,6 +204,10 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 musig_nonce_gen(self.pubkey0, self.b32, invalid_type)
 
+        # empty
+        with self.assertRaises(AssertionError):
+            musig_nonce_gen(self.pubkey0, self.b32, b"")
+
     def test_musig_nonce_gen_invalid_input_type_mg32(self):
         for invalid_msg32 in invalid_seckey_length:
             with self.assertRaises(AssertionError):
@@ -212,6 +216,10 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
         for invalid_type in not_bytes[1:]:  # can be None
             with self.assertRaises(AssertionError):
                 musig_nonce_gen(self.pubkey0, self.b32, self.b32, invalid_type)
+
+        # empty
+        with self.assertRaises(AssertionError):
+            musig_nonce_gen(self.pubkey0, self.b32, self.b32, b"")
 
     def test_musig_nonce_gen_invalid_input_type_keyagg_cache(self):
         for invalid_keyagg_cache in invalid_musig_keyagg_cache_lenght:
@@ -223,6 +231,10 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 musig_nonce_gen(self.pubkey0, self.b32, self.b32, self.b32, invalid_type, self.b32)
 
+        # empty
+        with self.assertRaises(AssertionError):
+            musig_nonce_gen(self.pubkey0, self.b32, self.b32, self.b32, b"", self.b32)
+
     def test_musig_nonce_gen_invalid_input_type_extra_input32(self):
         for invalid_extra_input32 in invalid_seckey_length:
             with self.assertRaises(AssertionError):
@@ -233,6 +245,10 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 musig_nonce_gen(self.pubkey0, self.b32, self.b32, self.b32, self.keyagg_cache,
                                 invalid_type)
+
+        # empty
+        with self.assertRaises(AssertionError):
+            musig_nonce_gen(self.pubkey0, self.b32, self.b32, self.b32, self.keyagg_cache, b"")
 
     def test_musig_nonce_gen_counter_invalid_input_type_counter(self):
         for invalid_counter in [-1, 2**64]:
@@ -261,6 +277,10 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 musig_nonce_gen_counter(0, self.keypair, invalid_type)
 
+        # empty
+        with self.assertRaises(AssertionError):
+            musig_nonce_gen_counter(0, self.keypair, b"")
+
     def test_musig_nonce_gen_counter_invalid_input_type_keyagg_cache(self):
         for invalid_keyagg_cache in invalid_musig_keyagg_cache_lenght:
             with self.assertRaises(AssertionError):
@@ -269,6 +289,10 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
         for invalid_type in not_c_char_array[1:]:  # can be None
             with self.assertRaises(AssertionError):
                 musig_nonce_gen_counter(0, self.keypair, self.b32, invalid_type)
+
+        # empty
+        with self.assertRaises(AssertionError):
+            musig_nonce_gen_counter(0, self.keypair, self.b32, b"")
 
     def test_musig_nonce_gen_counter_invalid_input_type_extra_input32(self):
         for invalid_extra_input32 in invalid_seckey_length:
@@ -280,6 +304,10 @@ class TestPysecp256k1MusigValidation(unittest.TestCase):
             with self.assertRaises(AssertionError):
                 musig_nonce_gen_counter(0, self.keypair, self.b32, self.keyagg_cache,
                                         invalid_type)
+
+        # empty
+        with self.assertRaises(AssertionError):
+            musig_nonce_gen_counter(0, self.keypair, self.b32, self.keyagg_cache, b"")
 
     def test_musig_nonce_agg_invalid_input_type_pubnonces(self):
         # empty list

@@ -325,13 +325,13 @@ def musig_nonce_gen(pubkey: Secp256k1Pubkey, session_secrand32: Optional[bytes] 
     if session_secrand32 is None:
         session_secrand32 = os.urandom(32)
     assert isinstance(session_secrand32, bytes) and len(session_secrand32) == 32
-    if seckey:
+    if seckey is not None:
         assert isinstance(seckey, bytes) and len(seckey) == 32
-    if msg32:
+    if msg32 is not None:
         assert isinstance(msg32, bytes) and len(msg32) == 32
-    if keyagg_cache:
+    if keyagg_cache is not None:
         assert isinstance(keyagg_cache, MuSigKeyAggCache)
-    if extra_input32:
+    if extra_input32 is not None:
         assert isinstance(extra_input32, bytes) and len(extra_input32) == 32
 
     # seckey -> pubkey should be verified
@@ -405,11 +405,11 @@ def musig_nonce_gen_counter(counter: int, keypair: Secp256k1Keypair, msg32: Opti
     """
     assert isinstance(counter, int) and (0 <= counter < (2 ** 64))  # uint64_t
     assert isinstance(keypair, Secp256k1Keypair)
-    if msg32:
+    if msg32 is not None:
         assert isinstance(msg32, bytes) and len(msg32) == 32
-    if keyagg_cache:
+    if keyagg_cache is not None:
         assert isinstance(keyagg_cache, MuSigKeyAggCache)
-    if extra_input32:
+    if extra_input32 is not None:
         assert isinstance(extra_input32, bytes) and len(extra_input32) == 32
 
     secnonce = ctypes.create_string_buffer(INTERNAL_MUSIG_NONCE_LENGTH)
