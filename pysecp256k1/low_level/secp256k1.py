@@ -256,7 +256,7 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
         ctypes.c_void_p,
         ctypes.c_char_p,
         ctypes.POINTER(ctypes.c_char_p),
-        ctypes.c_int,
+        ctypes.c_size_t,
     ]
 
     _secp256k1.secp256k1_tagged_sha256.restype = ctypes.c_int
