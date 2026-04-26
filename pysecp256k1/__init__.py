@@ -333,8 +333,9 @@ def ecdsa_signature_normalize(sig: Secp256k1ECDSASig) -> Secp256k1ECDSASig:
     """
     assert isinstance(sig, Secp256k1ECDSASig)
 
-    lib.secp256k1_ecdsa_signature_normalize(secp256k1_context_verify, sig, sig)
-    return sig
+    rv = ctypes.create_string_buffer(sig.raw, INTERNAL_SIGNATURE_LENGTH)
+    lib.secp256k1_ecdsa_signature_normalize(secp256k1_context_verify, rv, sig)
+    return rv
 
 
 def ecdsa_sign(seckey: bytes, msghash32: bytes, noncefp: ctypes.c_void_p = None,
@@ -427,7 +428,7 @@ def ec_seckey_negate(seckey: bytes) -> bytes:
 
 def ec_pubkey_negate(pubkey: Secp256k1Pubkey) -> Secp256k1Pubkey:
     """
-    Negates a public key in place.
+    Negates a public key.
 
     :param pubkey: initialized public key
     :return: negated public key
@@ -435,8 +436,9 @@ def ec_pubkey_negate(pubkey: Secp256k1Pubkey) -> Secp256k1Pubkey:
     """
     assert isinstance(pubkey, Secp256k1Pubkey)
 
-    lib.secp256k1_ec_pubkey_negate(secp256k1_context_verify, pubkey)
-    return pubkey
+    rv = ctypes.create_string_buffer(pubkey.raw, INTERNAL_PUBKEY_LENGTH)
+    lib.secp256k1_ec_pubkey_negate(secp256k1_context_verify, rv)
+    return rv
 
 
 def ec_seckey_tweak_add(seckey: bytes, tweak32: bytes) -> bytes:
@@ -485,16 +487,15 @@ def ec_pubkey_tweak_add(pubkey: Secp256k1Pubkey, tweak32: bytes) -> Secp256k1Pub
     assert isinstance(pubkey, Secp256k1Pubkey)
     assert isinstance(tweak32, bytes) and len(tweak32) == HASH32
 
-    result = lib.secp256k1_ec_pubkey_tweak_add(
-        secp256k1_context_verify, pubkey, tweak32
-    )
+    rv = ctypes.create_string_buffer(pubkey.raw, INTERNAL_PUBKEY_LENGTH)
+    result = lib.secp256k1_ec_pubkey_tweak_add(secp256k1_context_verify, rv, tweak32)
     if result != 1:
         assert_zero_return_code(result)
         raise Libsecp256k1Exception(
             "arguments are invalid or the resulting public key would be invalid"
             " (only when the tweak is the negation of the corresponding secret key)"
         )
-    return pubkey
+    return rv
 
 
 def ec_seckey_tweak_mul(seckey: bytes, tweak32: bytes) -> bytes:
@@ -535,13 +536,12 @@ def ec_pubkey_tweak_mul(pubkey: Secp256k1Pubkey, tweak32: bytes) -> Secp256k1Pub
     assert isinstance(pubkey, Secp256k1Pubkey)
     assert isinstance(tweak32, bytes) and len(tweak32) == HASH32
 
-    result = lib.secp256k1_ec_pubkey_tweak_mul(
-        secp256k1_context_verify, pubkey, tweak32
-    )
+    rv = ctypes.create_string_buffer(pubkey.raw, INTERNAL_PUBKEY_LENGTH)
+    result = lib.secp256k1_ec_pubkey_tweak_mul(secp256k1_context_verify, rv, tweak32)
     if result != 1:
         assert_zero_return_code(result)
         raise Libsecp256k1Exception("invalid arguments")
-    return pubkey
+    return rv
 
 
 def ec_pubkey_combine(pubkeys: List[Secp256k1Pubkey]) -> Secp256k1Pubkey:

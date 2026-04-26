@@ -278,13 +278,12 @@ def keypair_xonly_tweak_add(keypair: Secp256k1Keypair, tweak32: bytes) -> Secp25
     assert isinstance(keypair, Secp256k1Keypair)
     assert isinstance(tweak32, bytes) and len(tweak32) == HASH32
 
-    result = lib.secp256k1_keypair_xonly_tweak_add(
-        secp256k1_context_verify, keypair, tweak32
-    )
+    rv = ctypes.create_string_buffer(keypair.raw, INTERNAL_KEYPAIR_LENGTH)
+    result = lib.secp256k1_keypair_xonly_tweak_add(secp256k1_context_verify, rv, tweak32)
     if result != 1:
         assert_zero_return_code(result)
         raise Libsecp256k1Exception("invalid arguments")
-    return keypair
+    return rv
 
 
 __all__ = (
