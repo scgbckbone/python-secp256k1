@@ -17,14 +17,14 @@ if not has_secp256k1_schnorrsig:
 
 SCHNORRSIG_NONCEFP_CLS = ctypes_functype(
     ctypes.c_int,
-    ctypes.POINTER(ctypes.c_char * 32),  # nonce32
-    ctypes.POINTER(ctypes.c_char * 32),  # msg
-    ctypes.c_size_t,
-    ctypes.POINTER(ctypes.c_char * 32),  # secret key
-    ctypes.POINTER(ctypes.c_char * 32),  # xonly pubkey
-    ctypes.POINTER(ctypes.c_char * 32),  # algo
-    ctypes.c_size_t,  # algolen
-    ctypes.c_void_p,  # void *data
+    ctypes.POINTER(ctypes.c_char * 32),   # nonce32
+    ctypes.c_char_p,                      # msg (variable length, sized by msglen)
+    ctypes.c_size_t,                      # msglen
+    ctypes.POINTER(ctypes.c_char * 32),   # key32
+    ctypes.POINTER(ctypes.c_char * 32),   # xonly_pk32
+    ctypes.c_char_p,                      # algo (variable length, sized by algolen)
+    ctypes.c_size_t,                      # algolen
+    ctypes.c_void_p,                      # void *data
 )
 
 
