@@ -255,7 +255,7 @@ def _add_function_definitions(_secp256k1: ctypes.CDLL) -> None:
     _secp256k1.secp256k1_ec_pubkey_combine.argtypes = [
         ctypes.c_void_p,
         ctypes.c_char_p,
-        ctypes.POINTER(ctypes.c_char_p),
+        ctypes.POINTER(ctypes.POINTER(Secp256k1Pubkey)),
         ctypes.c_size_t,
     ]
 

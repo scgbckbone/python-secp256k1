@@ -554,16 +554,18 @@ def ec_pubkey_combine(pubkeys: List[Secp256k1Pubkey]) -> Secp256k1Pubkey:
                         if length of list is less than 2
     :raises Libsecp256k1Exception: if the sum of the public keys is not valid
     """
-    assert isinstance(pubkeys, list) and len(pubkeys) > 1
+    length = len(pubkeys)
+    assert isinstance(pubkeys, list) and (length > 1)
 
-    pubkey_arr = (ctypes.c_char_p * len(pubkeys))()
+
+    pubkey_arr = (ctypes.POINTER(Secp256k1Pubkey) * length)()
     for i, p in enumerate(pubkeys):
         assert isinstance(p, Secp256k1Pubkey)
-        pubkey_arr[i] = p.raw
+        pubkey_arr[i] = ctypes.pointer(p)
 
     combined_pubkey = ctypes.create_string_buffer(INTERNAL_PUBKEY_LENGTH)
     result = lib.secp256k1_ec_pubkey_combine(
-        secp256k1_context_verify, combined_pubkey, pubkey_arr, len(pubkeys)
+        secp256k1_context_verify, combined_pubkey, pubkey_arr, length
     )
     if result != 1:
         assert_zero_return_code(result)
