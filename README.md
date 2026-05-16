@@ -369,6 +369,10 @@ CLI conventions:
   compressed or uncompressed hex.
 * ECDSA signatures are supplied and returned as compact 64-byte signature hex by
   default. Use `--der` where available to accept or emit DER signatures.
+* X-only public keys are supplied and returned as 32-byte hex.
+* Keypair commands accept `--seckey` and create the keypair internally because
+  keypairs are opaque and have no CLI serialization.
+* Commands returning an x-only pubkey with parity print `<xonly-pubkey-hex> <parity>`.
 * Internal opaque secp256k1 objects are never exposed by the CLI.
 
 Exit codes:
@@ -399,6 +403,17 @@ ecdsa-signature-parse-der
 ecdsa-signature-normalize
 context-randomize
 tagged-sha256
+xonly-pubkey-parse
+xonly-pubkey-serialize
+xonly-pubkey-cmp
+xonly-pubkey-from-pubkey
+xonly-pubkey-tweak-add
+xonly-pubkey-tweak-add-check
+keypair-create
+keypair-sec
+keypair-pub
+keypair-xonly-pub
+keypair-xonly-tweak-add
 ```
 
 Examples:
@@ -433,4 +448,22 @@ python3 -m pysecp256k1 ecdsa-signature-parse-der \
 python3 -m pysecp256k1 tagged-sha256 \
   --tag 746167 \
   --msg 6d657373616765
+
+# Convert a serialized public key to x-only form. Output is "<xonly-hex> <parity>".
+python3 -m pysecp256k1 xonly-pubkey-from-pubkey \
+  --pubkey 021b59c0eaa5365a0dbf1f38ffc11cb19c31be9a2292bdcb7e8fb42da32a5b1e93
+
+# Get the x-only public key for a secret key. Output is "<xonly-hex> <parity>".
+python3 -m pysecp256k1 keypair-xonly-pub \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade
+
+# Tweak an x-only public key and emit the resulting compressed public key.
+python3 -m pysecp256k1 xonly-pubkey-tweak-add \
+  --xonly-pubkey 1b59c0eaa5365a0dbf1f38ffc11cb19c31be9a2292bdcb7e8fb42da32a5b1e93 \
+  --tweak d48c88512f15c628c611ae55d0b5609bcfc35a3127ec835308829c3ace32dc81
+
+# Tweak a keypair created from a secret key and emit the tweaked secret key.
+python3 -m pysecp256k1 keypair-xonly-tweak-add \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
+  --tweak d48c88512f15c628c611ae55d0b5609bcfc35a3127ec835308829c3ace32dc81
 ```

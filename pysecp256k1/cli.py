@@ -2,7 +2,10 @@ import argparse
 import sys
 
 import pysecp256k1 as secp
-from pysecp256k1.low_level import Libsecp256k1Exception
+from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_extrakeys
+
+if has_secp256k1_extrakeys:
+    import pysecp256k1.extrakeys as extrakeys
 
 
 def _bytes_from_hex(value):
@@ -148,6 +151,82 @@ def _handle_tagged_sha256(args):
     return 0
 
 
+def _handle_xonly_pubkey_parse(args):
+    xonly_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey))
+    print(extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex())
+    return 0
+
+
+def _handle_xonly_pubkey_serialize(args):
+    xonly_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey))
+    print(extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex())
+    return 0
+
+
+def _handle_xonly_pubkey_cmp(args):
+    xonly_pubkey0 = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey0))
+    xonly_pubkey1 = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey1))
+    print(extrakeys.xonly_pubkey_cmp(xonly_pubkey0, xonly_pubkey1))
+    return 0
+
+
+def _handle_xonly_pubkey_from_pubkey(args):
+    pubkey = secp.ec_pubkey_parse(_bytes_from_hex(args.pubkey))
+    xonly_pubkey, parity = extrakeys.xonly_pubkey_from_pubkey(pubkey)
+    print("{} {}".format(extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex(), parity))
+    return 0
+
+
+def _handle_xonly_pubkey_tweak_add(args):
+    xonly_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey))
+    tweak = _bytes_from_hex(args.tweak)
+    print(secp.ec_pubkey_serialize(extrakeys.xonly_pubkey_tweak_add(xonly_pubkey, tweak)).hex())
+    return 0
+
+
+def _handle_xonly_pubkey_tweak_add_check(args):
+    internal_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.internal_pubkey))
+    ok = extrakeys.xonly_pubkey_tweak_add_check(
+        _bytes_from_hex(args.tweaked_pubkey),
+        args.parity,
+        internal_pubkey,
+        _bytes_from_hex(args.tweak),
+    )
+    print(ok)
+    return 0 if ok else 1
+
+
+def _handle_keypair_create(args):
+    extrakeys.keypair_create(_bytes_from_hex(args.seckey))
+    return 0
+
+
+def _handle_keypair_sec(args):
+    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
+    print(extrakeys.keypair_sec(keypair).hex())
+    return 0
+
+
+def _handle_keypair_pub(args):
+    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
+    print(secp.ec_pubkey_serialize(extrakeys.keypair_pub(keypair), compressed=args.compressed).hex())
+    return 0
+
+
+def _handle_keypair_xonly_pub(args):
+    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
+    xonly_pubkey, parity = extrakeys.keypair_xonly_pub(keypair)
+    print("{} {}".format(extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex(), parity))
+    return 0
+
+
+def _handle_keypair_xonly_tweak_add(args):
+    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
+    tweaked_keypair = extrakeys.keypair_xonly_tweak_add(keypair, _bytes_from_hex(args.tweak))
+    print(extrakeys.keypair_sec(tweaked_keypair).hex())
+    return 0
+
+
 def build_parser():
     parser = argparse.ArgumentParser(prog="pysecp256k1")
     subparsers = parser.add_subparsers(dest="command", required=True)
@@ -243,6 +322,62 @@ def build_parser():
     p.set_defaults(handler=_handle_tagged_sha256)
     p.add_argument("--tag", required=True, help="tag hex")
     p.add_argument("--msg", required=True, help="message hex")
+
+    if has_secp256k1_extrakeys:
+        p = subparsers.add_parser("xonly-pubkey-parse")
+        p.set_defaults(handler=_handle_xonly_pubkey_parse)
+        p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
+
+        p = subparsers.add_parser("xonly-pubkey-serialize")
+        p.set_defaults(handler=_handle_xonly_pubkey_serialize)
+        p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
+
+        p = subparsers.add_parser("xonly-pubkey-cmp")
+        p.set_defaults(handler=_handle_xonly_pubkey_cmp)
+        p.add_argument("--xonly-pubkey0", required=True, help="first 32-byte x-only public key hex")
+        p.add_argument("--xonly-pubkey1", required=True, help="second 32-byte x-only public key hex")
+
+        p = subparsers.add_parser("xonly-pubkey-from-pubkey")
+        p.set_defaults(handler=_handle_xonly_pubkey_from_pubkey)
+        p.add_argument("--pubkey", required=True, help="serialized public key hex")
+
+        p = subparsers.add_parser("xonly-pubkey-tweak-add")
+        p.set_defaults(handler=_handle_xonly_pubkey_tweak_add)
+        p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
+        p.add_argument("--tweak", required=True, help="32-byte tweak hex")
+
+        p = subparsers.add_parser("xonly-pubkey-tweak-add-check")
+        p.set_defaults(handler=_handle_xonly_pubkey_tweak_add_check)
+        p.add_argument("--tweaked-pubkey", required=True, help="32-byte tweaked x-only public key hex")
+        p.add_argument("--parity", required=True, type=int, help="tweaked public key parity, 0 or 1")
+        p.add_argument("--internal-pubkey", required=True, help="32-byte internal x-only public key hex")
+        p.add_argument("--tweak", required=True, help="32-byte tweak hex")
+
+        p = subparsers.add_parser("keypair-create")
+        p.set_defaults(handler=_handle_keypair_create)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+
+        p = subparsers.add_parser("keypair-sec")
+        p.set_defaults(handler=_handle_keypair_sec)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+
+        p = subparsers.add_parser("keypair-pub")
+        p.set_defaults(handler=_handle_keypair_pub)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+        group = p.add_mutually_exclusive_group()
+        group.add_argument("--compressed", dest="compressed", action="store_true",
+                           default=True, help="emit compressed public key hex")
+        group.add_argument("--uncompressed", dest="compressed", action="store_false",
+                           help="emit uncompressed public key hex")
+
+        p = subparsers.add_parser("keypair-xonly-pub")
+        p.set_defaults(handler=_handle_keypair_xonly_pub)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+
+        p = subparsers.add_parser("keypair-xonly-tweak-add")
+        p.set_defaults(handler=_handle_keypair_xonly_tweak_add)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+        p.add_argument("--tweak", required=True, help="32-byte tweak hex")
 
     return parser
 
