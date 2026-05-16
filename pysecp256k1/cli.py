@@ -75,13 +75,6 @@ def _handle_ec_pubkey_parse(args):
     return 0
 
 
-def _handle_ec_pubkey_cmp(args):
-    pubkey0 = secp.ec_pubkey_parse(_bytes_from_hex(args.pubkey0))
-    pubkey1 = secp.ec_pubkey_parse(_bytes_from_hex(args.pubkey1))
-    print(secp.ec_pubkey_cmp(pubkey0, pubkey1))
-    return 0
-
-
 def _handle_ec_pubkey_sort(args):
     pubkeys = [secp.ec_pubkey_parse(_bytes_from_hex(pubkey)) for pubkey in args.pubkey]
     for pubkey in secp.ec_pubkey_sort(pubkeys):
@@ -194,12 +187,6 @@ def _handle_ecdsa_signature_normalize(args):
     return 0
 
 
-def _handle_context_randomize(args):
-    seed = _bytes_from_hex(args.seed) if args.seed is not None else None
-    secp.context_randomize(seed32=seed)
-    return 0
-
-
 def _handle_tagged_sha256(args):
     print(secp.tagged_sha256(_bytes_from_hex(args.tag), _bytes_from_hex(args.msg)).hex())
     return 0
@@ -294,13 +281,6 @@ def _handle_musig_pubkey_agg(args):
     pubkeys = _musig_pubkeys(args.pubkey, args.sort)
     agg_pubkey = musig.musig_pubkey_agg(pubkeys)
     print(extrakeys.xonly_pubkey_serialize(agg_pubkey).hex())
-    return 0
-
-
-def _handle_musig_pubkey_get(args):
-    pubkeys = _musig_pubkeys(args.pubkey, args.sort)
-    cache = _musig_keyagg_cache(pubkeys)
-    print(secp.ec_pubkey_serialize(musig.musig_pubkey_get(cache), compressed=args.compressed).hex())
     return 0
 
 
@@ -437,11 +417,6 @@ def _handle_xonly_pubkey_tweak_add_check(args):
     return 0 if ok else 1
 
 
-def _handle_keypair_create(args):
-    extrakeys.keypair_create(_bytes_from_hex(args.seckey))
-    return 0
-
-
 def _handle_keypair_xonly_pub(args):
     keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
     xonly_pubkey, parity = extrakeys.keypair_xonly_pub(keypair)
@@ -468,11 +443,6 @@ def build_parser():
                        default=True, help="emit compressed public key hex")
     group.add_argument("--uncompressed", dest="compressed", action="store_false",
                        help="emit uncompressed public key hex")
-
-    p = subparsers.add_parser("ec-pubkey-cmp")
-    p.set_defaults(handler=_handle_ec_pubkey_cmp)
-    p.add_argument("--pubkey0", required=True, help="first serialized public key hex")
-    p.add_argument("--pubkey1", required=True, help="second serialized public key hex")
 
     for name, handler in (
         ("ec-pubkey-sort", _handle_ec_pubkey_sort),
@@ -542,10 +512,6 @@ def build_parser():
         p.set_defaults(handler=handler)
         p.add_argument("--sig", required=True, help="signature hex")
         p.add_argument("--der", action="store_true", help="accept DER signature hex")
-
-    p = subparsers.add_parser("context-randomize")
-    p.set_defaults(handler=_handle_context_randomize)
-    p.add_argument("--seed", help="optional 32-byte random seed hex")
 
     p = subparsers.add_parser("tagged-sha256")
     p.set_defaults(handler=_handle_tagged_sha256)
@@ -619,7 +585,6 @@ def build_parser():
 
         for name, handler in (
             ("musig-pubkey-agg", _handle_musig_pubkey_agg),
-            ("musig-pubkey-get", _handle_musig_pubkey_get),
             ("musig-pubkey-ec-tweak-add", _handle_musig_pubkey_ec_tweak_add),
             ("musig-pubkey-xonly-tweak-add", _handle_musig_pubkey_xonly_tweak_add),
         ):
@@ -630,7 +595,7 @@ def build_parser():
             p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
             if "tweak" in name:
                 p.add_argument("--tweak", required=True, help="32-byte tweak hex")
-            if name != "musig-pubkey-agg":
+            if "tweak" in name:
                 group = p.add_mutually_exclusive_group()
                 group.add_argument("--compressed", dest="compressed", action="store_true",
                                    default=True, help="emit compressed public key hex")
@@ -721,10 +686,6 @@ def build_parser():
         p.add_argument("--parity", required=True, type=int, help="tweaked public key parity, 0 or 1")
         p.add_argument("--internal-pubkey", required=True, help="32-byte internal x-only public key hex")
         p.add_argument("--tweak", required=True, help="32-byte tweak hex")
-
-        p = subparsers.add_parser("keypair-create")
-        p.set_defaults(handler=_handle_keypair_create)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
 
         p = subparsers.add_parser("keypair-xonly-pub")
         p.set_defaults(handler=_handle_keypair_xonly_pub)

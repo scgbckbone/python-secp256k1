@@ -363,7 +363,7 @@ CLI conventions:
   (`ecdsa_sign` -> `ecdsa-sign`).
 * All byte inputs are hex strings.
 * Byte outputs are printed as a single hex string on stdout.
-* `ecdsa-verify` and `ec-pubkey-cmp` print text values.
+* `ecdsa-verify` prints text values.
 * Public keys are supplied and returned as serialized public key hex. Use
   `ec-pubkey-parse` to validate a serialized public key and emit canonical
   compressed or uncompressed hex.
@@ -399,7 +399,6 @@ Available subcommands:
 
 ```text
 ec-pubkey-parse
-ec-pubkey-cmp
 ec-pubkey-sort
 ec-pubkey-combine
 ec-pubkey-create
@@ -415,7 +414,6 @@ ecdsa-verify
 ecdsa-signature-parse-compact
 ecdsa-signature-parse-der
 ecdsa-signature-normalize
-context-randomize
 tagged-sha256
 ecdh
 ecdsa-recoverable-signature-parse-compact
@@ -429,7 +427,6 @@ musig-pubnonce-parse
 musig-aggnonce-parse
 musig-partial-sig-parse
 musig-pubkey-agg
-musig-pubkey-get
 musig-pubkey-ec-tweak-add
 musig-pubkey-xonly-tweak-add
 musig-nonce-gen
@@ -444,7 +441,6 @@ xonly-pubkey-cmp
 xonly-pubkey-from-pubkey
 xonly-pubkey-tweak-add
 xonly-pubkey-tweak-add-check
-keypair-create
 keypair-xonly-pub
 keypair-xonly-tweak-add
 ```
