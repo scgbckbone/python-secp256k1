@@ -54,7 +54,7 @@ Apart from `ctypes.c_char_Array` and `ctypes.c_void_p` this library uses a limit
 |                    python type                    |                                                                usage                                                                |
 |:-------------------------------------------------:|:-----------------------------------------------------------------------------------------------------------------------------------:|
 |                       bool                        |           result of signature verification functions `ecdsa_verify`, `schnorrsig_verify`, and `musig_partial_sig_verify`            |
-|                        int                        |                            recovery id, pubkey parity, result of `ec_pubkey_cmp` and `xonly_pubkey_cmp`                             |
+|                        int                        |                                                 recovery id and pubkey parity                                                 |
 |                       bytes                       |         tags, tweaks, messages, message hashes, serialized pubkeys, serialized signatures, seckeys, serialized musig nonces         |
 |               List[Secp256k1Pubkey]               |                    list of initialized pubkeys for `ec_pubkey_combine`, `ec_pubkey_sort`, and `musig_pubkey_agg`                    |
 |                List[MuSigPubNonce]                |                                         list of initialized pubnonces for `musig_nonce_agg`                                         |
@@ -347,8 +347,9 @@ tox
 
 ## Command line interface
 
-`pysecp256k1` also includes a small `argparse` CLI for the most useful public
-functions exported from the package root.
+`pysecp256k1` also includes a small `argparse` CLI for the useful package-root
+commands plus the enabled optional modules: `ecdh`, `extrakeys`, `recovery`,
+`schnorrsig`, and `musig`.
 
 Run it with:
 
@@ -361,14 +362,19 @@ CLI conventions:
 
 * Subcommand names are function names with underscores replaced by dashes
   (`ecdsa_sign` -> `ecdsa-sign`).
-* All byte inputs are hex strings.
+* Byte inputs are hex strings, except message-like fields that also accept
+  plain ASCII after hex parsing fails: `tagged-sha256 --tag`, `tagged-sha256
+  --msg`, and Schnorr `--msg`.
+* `--seckey` can be written as `-s`; `--pubkey` can be written as `-p`.
 * Byte outputs are printed as a single hex string on stdout.
 * `ecdsa-verify` prints text values.
 * Public keys are supplied and returned as serialized public key hex. Use
   `ec-pubkey-parse` to validate a serialized public key and emit canonical
   compressed or uncompressed hex.
 * ECDSA signatures are supplied and returned as compact 64-byte signature hex by
-  default. Use `--der` where available to accept or emit DER signatures.
+  default. Use `--der` where available to emit DER signatures. For
+  `ecdsa-signature-normalize`, use `--input-der` and `--output-der` to choose
+  input and output encodings independently.
 * X-only public keys are supplied and returned as 32-byte hex.
 * Keypair commands accept `--seckey` and create the keypair internally because
   keypairs are opaque and have no CLI serialization.
@@ -420,8 +426,7 @@ ecdsa-recoverable-signature-parse-compact
 ecdsa-recoverable-signature-convert
 ecdsa-sign-recoverable
 ecdsa-recover
-schnorrsig-sign32
-schnorrsig-sign-custom
+schnorrsig-sign
 schnorrsig-verify
 musig-pubnonce-parse
 musig-aggnonce-parse
@@ -437,7 +442,6 @@ musig-partial-sign
 musig-partial-sig-verify
 musig-partial-sig-agg
 xonly-pubkey-parse
-xonly-pubkey-cmp
 xonly-pubkey-from-pubkey
 xonly-pubkey-tweak-add
 xonly-pubkey-tweak-add-check
@@ -473,6 +477,11 @@ python3 -m pysecp256k1 ecdsa-signature-parse-der \
   --sig <der-sig-hex> \
   --der
 
+# Normalize an ECDSA signature from DER input and emit compact hex.
+python3 -m pysecp256k1 ecdsa-signature-normalize \
+  --sig <der-sig-hex> \
+  --input-der
+
 # Compute a BIP-340 tagged hash.
 python3 -m pysecp256k1 tagged-sha256 \
   --tag 746167 \
@@ -500,13 +509,8 @@ python3 -m pysecp256k1 ecdsa-recoverable-signature-convert \
   --rec-id <0..3> \
   --der
 
-# Create a Schnorr signature over a 32-byte message.
-python3 -m pysecp256k1 schnorrsig-sign32 \
-  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
-  --msg 1111111111111111111111111111111111111111111111111111111111111111
-
-# Create a Schnorr signature over an arbitrary-length message.
-python3 -m pysecp256k1 schnorrsig-sign-custom \
+# Create a Schnorr signature over a message.
+python3 -m pysecp256k1 schnorrsig-sign \
   --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
   --msg 6d657373616765
 

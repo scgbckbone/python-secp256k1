@@ -15,6 +15,7 @@ from pysecp256k1.low_level.constants import (
     INTERNAL_MUSIG_NONCE_LENGTH,
     INTERNAL_MUSIG_SESSION_LENGTH,
     MuSigKeyAggCache,
+    SCHNORRSIG_EXTRAPARAMS_MAGIC,
 )
 
 if has_secp256k1_ecdh:
@@ -40,8 +41,20 @@ def _bytes_from_hex(value):
         raise argparse.ArgumentTypeError(str(exc))
 
 
+def _hex_or_ascii(value):
+    try:
+        return bytes.fromhex(value)
+    except ValueError:
+        return value.encode()
+
+
 def _optional_hex(value):
     return _bytes_from_hex(value) if value is not None else None
+
+
+class _CLIArgumentParser(argparse.ArgumentParser):
+    def error(self, message):
+        self.exit(2, "error: {}\n".format(message))
 
 
 def _musig_pubkeys(values, sort_pubkeys=False):
@@ -178,17 +191,20 @@ def _handle_ecdsa_signature_parse_der(args):
 
 
 def _handle_ecdsa_signature_normalize(args):
-    if args.der:
+    if args.input_der:
         sig = secp.ecdsa_signature_parse_der(_bytes_from_hex(args.sig))
-        print(secp.ecdsa_signature_serialize_der(secp.ecdsa_signature_normalize(sig)).hex())
     else:
         sig = secp.ecdsa_signature_parse_compact(_bytes_from_hex(args.sig))
-        print(secp.ecdsa_signature_serialize_compact(secp.ecdsa_signature_normalize(sig)).hex())
+    normalized = secp.ecdsa_signature_normalize(sig)
+    if args.output_der:
+        print(secp.ecdsa_signature_serialize_der(normalized).hex())
+    else:
+        print(secp.ecdsa_signature_serialize_compact(normalized).hex())
     return 0
 
 
 def _handle_tagged_sha256(args):
-    print(secp.tagged_sha256(_bytes_from_hex(args.tag), _bytes_from_hex(args.msg)).hex())
+    print(secp.tagged_sha256(_hex_or_ascii(args.tag), _hex_or_ascii(args.msg)).hex())
     return 0
 
 
@@ -237,23 +253,25 @@ def _handle_ecdsa_recover(args):
     return 0
 
 
-def _handle_schnorrsig_sign32(args):
+def _handle_schnorrsig_sign(args):
     keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
-    aux_rand = _bytes_from_hex(args.aux_rand) if args.aux_rand is not None else None
-    print(schnorrsig.schnorrsig_sign32(keypair, _bytes_from_hex(args.msg), aux_rand).hex())
-    return 0
-
-
-def _handle_schnorrsig_sign_custom(args):
-    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
-    print(schnorrsig.schnorrsig_sign_custom(keypair, _bytes_from_hex(args.msg)).hex())
+    extraparams = None
+    if args.aux_rand is not None:
+        aux_rand = _bytes_from_hex(args.aux_rand)
+        assert len(aux_rand) == 32
+        extraparams = schnorrsig.SchnorrsigExtraparams(
+            SCHNORRSIG_EXTRAPARAMS_MAGIC,
+            None,
+            ctypes.cast(ctypes.create_string_buffer(aux_rand), ctypes.c_void_p),
+        )
+    print(schnorrsig.schnorrsig_sign_custom(keypair, _hex_or_ascii(args.msg), extraparams).hex())
     return 0
 
 
 def _handle_schnorrsig_verify(args):
     xonly_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey))
     ok = schnorrsig.schnorrsig_verify(
-        _bytes_from_hex(args.sig), _bytes_from_hex(args.msg), xonly_pubkey
+        _bytes_from_hex(args.sig), _hex_or_ascii(args.msg), xonly_pubkey
     )
     print(ok)
     return 0 if ok else 1
@@ -384,13 +402,6 @@ def _handle_xonly_pubkey_parse(args):
     return 0
 
 
-def _handle_xonly_pubkey_cmp(args):
-    xonly_pubkey0 = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey0))
-    xonly_pubkey1 = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey1))
-    print(extrakeys.xonly_pubkey_cmp(xonly_pubkey0, xonly_pubkey1))
-    return 0
-
-
 def _handle_xonly_pubkey_from_pubkey(args):
     pubkey = secp.ec_pubkey_parse(_bytes_from_hex(args.pubkey))
     xonly_pubkey, parity = extrakeys.xonly_pubkey_from_pubkey(pubkey)
@@ -432,97 +443,118 @@ def _handle_keypair_xonly_tweak_add(args):
 
 
 def build_parser():
-    parser = argparse.ArgumentParser(prog="pysecp256k1")
-    subparsers = parser.add_subparsers(dest="command", required=True)
+    parser = _CLIArgumentParser(prog="pysecp256k1")
+    subparsers = parser.add_subparsers(
+        dest="command", parser_class=_CLIArgumentParser, required=True
+    )
+    seckey_help = "32-byte secret key hex"
+    signer_seckey_help = "32-byte signer secret key hex"
+    pubkey_help = "serialized public key hex"
+    signer_pubkey_help = "serialized signer public key hex"
+    tweak_help = "32-byte tweak hex"
+    msghash_help = "32-byte message hash hex"
+    msg_help = "message hex"
+    sig_help = "signature hex"
+    emit_der_help = "emit DER signature hex"
+    compressed_help = "emit compressed public key hex"
+    uncompressed_help = "emit uncompressed public key hex"
+    sort_help = "sort pubkeys before aggregation"
+    session_help = "133-byte session hex from musig-nonce-process"
 
     p = subparsers.add_parser("ec-pubkey-parse")
     p.set_defaults(handler=_handle_ec_pubkey_parse)
-    p.add_argument("--pubkey", required=True, help="serialized public key hex")
+    p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
     group = p.add_mutually_exclusive_group()
     group.add_argument("--compressed", dest="compressed", action="store_true",
-                       default=True, help="emit compressed public key hex")
+                       default=True, help=compressed_help)
     group.add_argument("--uncompressed", dest="compressed", action="store_false",
-                       help="emit uncompressed public key hex")
+                       help=uncompressed_help)
 
-    for name, handler in (
-        ("ec-pubkey-sort", _handle_ec_pubkey_sort),
-        ("ec-pubkey-combine", _handle_ec_pubkey_combine),
-    ):
-        p = subparsers.add_parser(name)
-        p.set_defaults(handler=handler)
-        p.add_argument("--pubkey", action="append", required=True,
-                       help="serialized public key hex; repeat for multiple keys")
+    p = subparsers.add_parser("ec-pubkey-sort")
+    p.set_defaults(handler=_handle_ec_pubkey_sort)
+    p.add_argument("-p", "--pubkey", action="append", required=True,
+                   help="{}; repeat for multiple keys".format(pubkey_help))
+
+    p = subparsers.add_parser("ec-pubkey-combine")
+    p.set_defaults(handler=_handle_ec_pubkey_combine)
+    p.add_argument("-p", "--pubkey", action="append", required=True,
+                   help="{}; repeat for multiple keys".format(pubkey_help))
 
     p = subparsers.add_parser("ec-pubkey-create")
     p.set_defaults(handler=_handle_ec_pubkey_create)
-    p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+    p.add_argument("-s", "--seckey", required=True, help=seckey_help)
 
-    for name, handler in (
-        ("ec-pubkey-negate", _handle_ec_pubkey_negate),
-        ("ec-pubkey-tweak-add", _handle_ec_pubkey_tweak_add),
-        ("ec-pubkey-tweak-mul", _handle_ec_pubkey_tweak_mul),
-    ):
-        p = subparsers.add_parser(name)
-        p.set_defaults(handler=handler)
-        p.add_argument("--pubkey", required=True, help="serialized public key hex")
-        if "tweak" in name:
-            p.add_argument("--tweak", required=True, help="32-byte tweak hex")
+    p = subparsers.add_parser("ec-pubkey-negate")
+    p.set_defaults(handler=_handle_ec_pubkey_negate)
+    p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
+
+    p = subparsers.add_parser("ec-pubkey-tweak-add")
+    p.set_defaults(handler=_handle_ec_pubkey_tweak_add)
+    p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
+    p.add_argument("--tweak", required=True, help=tweak_help)
+
+    p = subparsers.add_parser("ec-pubkey-tweak-mul")
+    p.set_defaults(handler=_handle_ec_pubkey_tweak_mul)
+    p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
+    p.add_argument("--tweak", required=True, help=tweak_help)
 
     p = subparsers.add_parser("ec-seckey-verify")
     p.set_defaults(handler=_handle_ec_seckey_verify)
-    p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+    p.add_argument("-s", "--seckey", required=True, help=seckey_help)
 
-    for name, handler in (
-        ("ec-seckey-negate", _handle_ec_seckey_negate),
-        ("ec-seckey-tweak-add", _handle_ec_seckey_tweak_add),
-        ("ec-seckey-tweak-mul", _handle_ec_seckey_tweak_mul),
-    ):
-        p = subparsers.add_parser(name)
-        p.set_defaults(handler=handler)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-        if "tweak" in name:
-            p.add_argument("--tweak", required=True, help="32-byte tweak hex")
+    p = subparsers.add_parser("ec-seckey-negate")
+    p.set_defaults(handler=_handle_ec_seckey_negate)
+    p.add_argument("-s", "--seckey", required=True, help=seckey_help)
+
+    p = subparsers.add_parser("ec-seckey-tweak-add")
+    p.set_defaults(handler=_handle_ec_seckey_tweak_add)
+    p.add_argument("-s", "--seckey", required=True, help=seckey_help)
+    p.add_argument("--tweak", required=True, help=tweak_help)
+
+    p = subparsers.add_parser("ec-seckey-tweak-mul")
+    p.set_defaults(handler=_handle_ec_seckey_tweak_mul)
+    p.add_argument("-s", "--seckey", required=True, help=seckey_help)
+    p.add_argument("--tweak", required=True, help=tweak_help)
 
     p = subparsers.add_parser("ecdsa-sign")
     p.set_defaults(handler=_handle_ecdsa_sign)
-    p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-    p.add_argument("--msghash", required=True, help="32-byte message hash hex")
-    p.add_argument("--der", action="store_true", help="emit DER signature hex")
+    p.add_argument("-s", "--seckey", required=True, help=seckey_help)
+    p.add_argument("--msghash", required=True, help=msghash_help)
+    p.add_argument("--der", action="store_true", help=emit_der_help)
 
     p = subparsers.add_parser("ecdsa-verify")
     p.set_defaults(handler=_handle_ecdsa_verify)
-    p.add_argument("--sig", required=True, help="signature hex")
-    p.add_argument("--pubkey", required=True, help="serialized public key hex")
-    p.add_argument("--msghash", required=True, help="32-byte message hash hex")
+    p.add_argument("--sig", required=True, help=sig_help)
+    p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
+    p.add_argument("--msghash", required=True, help=msghash_help)
     p.add_argument("--der", action="store_true", help="accept DER signature hex")
 
-    for name, handler in (
-        ("ecdsa-signature-parse-compact", _handle_ecdsa_signature_parse_compact),
-        ("ecdsa-signature-parse-der", _handle_ecdsa_signature_parse_der),
-    ):
-        p = subparsers.add_parser(name)
-        p.set_defaults(handler=handler)
-        p.add_argument("--sig", required=True, help="signature hex")
-        p.add_argument("--der", action="store_true", help="emit DER signature hex")
+    p = subparsers.add_parser("ecdsa-signature-parse-compact")
+    p.set_defaults(handler=_handle_ecdsa_signature_parse_compact)
+    p.add_argument("--sig", required=True, help=sig_help)
+    p.add_argument("--der", action="store_true", help=emit_der_help)
 
-    for name, handler in (
-        ("ecdsa-signature-normalize", _handle_ecdsa_signature_normalize),
-    ):
-        p = subparsers.add_parser(name)
-        p.set_defaults(handler=handler)
-        p.add_argument("--sig", required=True, help="signature hex")
-        p.add_argument("--der", action="store_true", help="accept DER signature hex")
+    p = subparsers.add_parser("ecdsa-signature-parse-der")
+    p.set_defaults(handler=_handle_ecdsa_signature_parse_der)
+    p.add_argument("--sig", required=True, help=sig_help)
+    p.add_argument("--der", action="store_true", help=emit_der_help)
+
+    p = subparsers.add_parser("ecdsa-signature-normalize")
+    p.set_defaults(handler=_handle_ecdsa_signature_normalize)
+    p.add_argument("--sig", required=True, help=sig_help)
+    p.add_argument("--input-der", action="store_true", help="accept DER signature hex")
+    p.add_argument("--output-der", action="store_true", help=emit_der_help)
 
     p = subparsers.add_parser("tagged-sha256")
     p.set_defaults(handler=_handle_tagged_sha256)
     p.add_argument("--tag", required=True, help="tag hex")
-    p.add_argument("--msg", required=True, help="message hex")
+    p.add_argument("--msg", required=True, help=msg_help)
 
     if has_secp256k1_ecdh:
         p = subparsers.add_parser("ecdh")
         p.set_defaults(handler=_handle_ecdh)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-        p.add_argument("--pubkey", required=True, help="serialized public key hex")
+        p.add_argument("-s", "--seckey", required=True, help=seckey_help)
+        p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
 
     if has_secp256k1_recovery:
         p = subparsers.add_parser("ecdsa-recoverable-signature-parse-compact")
@@ -534,40 +566,35 @@ def build_parser():
         p.set_defaults(handler=_handle_ecdsa_recoverable_signature_convert)
         p.add_argument("--sig", required=True, help="64-byte compact recoverable signature hex")
         p.add_argument("--rec-id", required=True, type=int, help="recovery id, 0 through 3")
-        p.add_argument("--der", action="store_true", help="emit DER signature hex")
+        p.add_argument("--der", action="store_true", help=emit_der_help)
 
         p = subparsers.add_parser("ecdsa-sign-recoverable")
         p.set_defaults(handler=_handle_ecdsa_sign_recoverable)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-        p.add_argument("--msghash", required=True, help="32-byte message hash hex")
+        p.add_argument("-s", "--seckey", required=True, help=seckey_help)
+        p.add_argument("--msghash", required=True, help=msghash_help)
 
         p = subparsers.add_parser("ecdsa-recover")
         p.set_defaults(handler=_handle_ecdsa_recover)
         p.add_argument("--sig", required=True, help="64-byte compact recoverable signature hex")
         p.add_argument("--rec-id", required=True, type=int, help="recovery id, 0 through 3")
-        p.add_argument("--msghash", required=True, help="32-byte message hash hex")
+        p.add_argument("--msghash", required=True, help=msghash_help)
         group = p.add_mutually_exclusive_group()
         group.add_argument("--compressed", dest="compressed", action="store_true",
-                           default=True, help="emit compressed public key hex")
+                           default=True, help=compressed_help)
         group.add_argument("--uncompressed", dest="compressed", action="store_false",
-                           help="emit uncompressed public key hex")
+                           help=uncompressed_help)
 
     if has_secp256k1_schnorrsig and has_secp256k1_extrakeys:
-        p = subparsers.add_parser("schnorrsig-sign32")
-        p.set_defaults(handler=_handle_schnorrsig_sign32)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-        p.add_argument("--msg", required=True, help="32-byte message hex")
+        p = subparsers.add_parser("schnorrsig-sign")
+        p.set_defaults(handler=_handle_schnorrsig_sign)
+        p.add_argument("-s", "--seckey", required=True, help=seckey_help)
+        p.add_argument("--msg", required=True, help="message hex or ASCII")
         p.add_argument("--aux-rand", help="optional 32-byte auxiliary randomness hex")
-
-        p = subparsers.add_parser("schnorrsig-sign-custom")
-        p.set_defaults(handler=_handle_schnorrsig_sign_custom)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-        p.add_argument("--msg", required=True, help="message hex")
 
         p = subparsers.add_parser("schnorrsig-verify")
         p.set_defaults(handler=_handle_schnorrsig_verify)
         p.add_argument("--sig", required=True, help="64-byte Schnorr signature hex")
-        p.add_argument("--msg", required=True, help="message hex")
+        p.add_argument("--msg", required=True, help=msg_help)
         p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
 
     if has_secp256k1_musig and has_secp256k1_extrakeys:
@@ -583,31 +610,42 @@ def build_parser():
         p.set_defaults(handler=_handle_musig_partial_sig_parse)
         p.add_argument("--sig", required=True, help="32-byte partial signature hex")
 
-        for name, handler in (
-            ("musig-pubkey-agg", _handle_musig_pubkey_agg),
-            ("musig-pubkey-ec-tweak-add", _handle_musig_pubkey_ec_tweak_add),
-            ("musig-pubkey-xonly-tweak-add", _handle_musig_pubkey_xonly_tweak_add),
-        ):
-            p = subparsers.add_parser(name)
-            p.set_defaults(handler=handler)
-            p.add_argument("--pubkey", action="append", required=True,
-                           help="serialized signer public key hex; repeat for multiple keys")
-            p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
-            if "tweak" in name:
-                p.add_argument("--tweak", required=True, help="32-byte tweak hex")
-            if "tweak" in name:
-                group = p.add_mutually_exclusive_group()
-                group.add_argument("--compressed", dest="compressed", action="store_true",
-                                   default=True, help="emit compressed public key hex")
-                group.add_argument("--uncompressed", dest="compressed", action="store_false",
-                                   help="emit uncompressed public key hex")
+        p = subparsers.add_parser("musig-pubkey-agg")
+        p.set_defaults(handler=_handle_musig_pubkey_agg)
+        p.add_argument("-p", "--pubkey", action="append", required=True,
+                       help="{}; repeat for multiple keys".format(signer_pubkey_help))
+        p.add_argument("--sort", action="store_true", help=sort_help)
+
+        p = subparsers.add_parser("musig-pubkey-ec-tweak-add")
+        p.set_defaults(handler=_handle_musig_pubkey_ec_tweak_add)
+        p.add_argument("-p", "--pubkey", action="append", required=True,
+                       help="{}; repeat for multiple keys".format(signer_pubkey_help))
+        p.add_argument("--sort", action="store_true", help=sort_help)
+        p.add_argument("--tweak", required=True, help=tweak_help)
+        group = p.add_mutually_exclusive_group()
+        group.add_argument("--compressed", dest="compressed", action="store_true",
+                           default=True, help=compressed_help)
+        group.add_argument("--uncompressed", dest="compressed", action="store_false",
+                           help=uncompressed_help)
+
+        p = subparsers.add_parser("musig-pubkey-xonly-tweak-add")
+        p.set_defaults(handler=_handle_musig_pubkey_xonly_tweak_add)
+        p.add_argument("-p", "--pubkey", action="append", required=True,
+                       help="{}; repeat for multiple keys".format(signer_pubkey_help))
+        p.add_argument("--sort", action="store_true", help=sort_help)
+        p.add_argument("--tweak", required=True, help=tweak_help)
+        group = p.add_mutually_exclusive_group()
+        group.add_argument("--compressed", dest="compressed", action="store_true",
+                           default=True, help=compressed_help)
+        group.add_argument("--uncompressed", dest="compressed", action="store_false",
+                           help=uncompressed_help)
 
         p = subparsers.add_parser("musig-nonce-gen")
         p.set_defaults(handler=_handle_musig_nonce_gen)
-        p.add_argument("--pubkey", required=True, help="signer serialized public key hex")
+        p.add_argument("-p", "--pubkey", required=True, help=signer_pubkey_help)
         p.add_argument("--session-secrand", help="optional 32-byte secret nonce randomness hex")
-        p.add_argument("--seckey", help="optional 32-byte signer secret key hex")
-        p.add_argument("--msg", help="optional 32-byte message hash hex")
+        p.add_argument("-s", "--seckey", help="optional {}".format(signer_seckey_help))
+        p.add_argument("--msg", help="optional {}".format(msghash_help))
         p.add_argument("--agg-pubkey", action="append",
                        help="optional aggregate-set pubkey hex; repeat for multiple keys")
         p.add_argument("--extra-input", help="optional 32-byte extra input hex")
@@ -616,8 +654,8 @@ def build_parser():
         p = subparsers.add_parser("musig-nonce-gen-counter")
         p.set_defaults(handler=_handle_musig_nonce_gen_counter)
         p.add_argument("--counter", required=True, type=int, help="unique unsigned 64-bit counter")
-        p.add_argument("--seckey", required=True, help="32-byte signer secret key hex")
-        p.add_argument("--msg", help="optional 32-byte message hash hex")
+        p.add_argument("-s", "--seckey", required=True, help=signer_seckey_help)
+        p.add_argument("--msg", help="optional {}".format(msghash_help))
         p.add_argument("--agg-pubkey", action="append",
                        help="optional aggregate-set pubkey hex; repeat for multiple keys")
         p.add_argument("--extra-input", help="optional 32-byte extra input hex")
@@ -631,33 +669,33 @@ def build_parser():
         p = subparsers.add_parser("musig-nonce-process")
         p.set_defaults(handler=_handle_musig_nonce_process)
         p.add_argument("--aggnonce", required=True, help="66-byte aggregate nonce hex")
-        p.add_argument("--msg", required=True, help="32-byte message hash hex")
-        p.add_argument("--pubkey", action="append", required=True,
-                       help="serialized signer public key hex; repeat for aggregate key set")
-        p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
+        p.add_argument("--msg", required=True, help=msghash_help)
+        p.add_argument("-p", "--pubkey", action="append", required=True,
+                       help="{}; repeat for aggregate key set".format(signer_pubkey_help))
+        p.add_argument("--sort", action="store_true", help=sort_help)
 
         p = subparsers.add_parser("musig-partial-sign")
         p.set_defaults(handler=_handle_musig_partial_sign)
         p.add_argument("--secnonce", required=True, help="132-byte secret nonce hex from musig-nonce-gen")
-        p.add_argument("--seckey", required=True, help="32-byte signer secret key hex")
-        p.add_argument("--session", required=True, help="133-byte session hex from musig-nonce-process")
-        p.add_argument("--pubkey", action="append", required=True,
-                       help="serialized signer public key hex; repeat for aggregate key set")
-        p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
+        p.add_argument("-s", "--seckey", required=True, help=signer_seckey_help)
+        p.add_argument("--session", required=True, help=session_help)
+        p.add_argument("-p", "--pubkey", action="append", required=True,
+                       help="{}; repeat for aggregate key set".format(signer_pubkey_help))
+        p.add_argument("--sort", action="store_true", help=sort_help)
 
         p = subparsers.add_parser("musig-partial-sig-verify")
         p.set_defaults(handler=_handle_musig_partial_sig_verify)
         p.add_argument("--sig", required=True, help="32-byte partial signature hex")
         p.add_argument("--pubnonce", required=True, help="66-byte signer public nonce hex")
-        p.add_argument("--signer-pubkey", required=True, help="serialized signer public key hex")
-        p.add_argument("--session", required=True, help="133-byte session hex from musig-nonce-process")
-        p.add_argument("--pubkey", action="append", required=True,
-                       help="serialized signer public key hex; repeat for aggregate key set")
-        p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
+        p.add_argument("--signer-pubkey", required=True, help=signer_pubkey_help)
+        p.add_argument("--session", required=True, help=session_help)
+        p.add_argument("-p", "--pubkey", action="append", required=True,
+                       help="{}; repeat for aggregate key set".format(signer_pubkey_help))
+        p.add_argument("--sort", action="store_true", help=sort_help)
 
         p = subparsers.add_parser("musig-partial-sig-agg")
         p.set_defaults(handler=_handle_musig_partial_sig_agg)
-        p.add_argument("--session", required=True, help="133-byte session hex from musig-nonce-process")
+        p.add_argument("--session", required=True, help=session_help)
         p.add_argument("--partial-sig", action="append", required=True,
                        help="32-byte partial signature hex; repeat for multiple signers")
 
@@ -666,35 +704,30 @@ def build_parser():
         p.set_defaults(handler=_handle_xonly_pubkey_parse)
         p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
 
-        p = subparsers.add_parser("xonly-pubkey-cmp")
-        p.set_defaults(handler=_handle_xonly_pubkey_cmp)
-        p.add_argument("--xonly-pubkey0", required=True, help="first 32-byte x-only public key hex")
-        p.add_argument("--xonly-pubkey1", required=True, help="second 32-byte x-only public key hex")
-
         p = subparsers.add_parser("xonly-pubkey-from-pubkey")
         p.set_defaults(handler=_handle_xonly_pubkey_from_pubkey)
-        p.add_argument("--pubkey", required=True, help="serialized public key hex")
+        p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
 
         p = subparsers.add_parser("xonly-pubkey-tweak-add")
         p.set_defaults(handler=_handle_xonly_pubkey_tweak_add)
         p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
-        p.add_argument("--tweak", required=True, help="32-byte tweak hex")
+        p.add_argument("--tweak", required=True, help=tweak_help)
 
         p = subparsers.add_parser("xonly-pubkey-tweak-add-check")
         p.set_defaults(handler=_handle_xonly_pubkey_tweak_add_check)
         p.add_argument("--tweaked-pubkey", required=True, help="32-byte tweaked x-only public key hex")
         p.add_argument("--parity", required=True, type=int, help="tweaked public key parity, 0 or 1")
         p.add_argument("--internal-pubkey", required=True, help="32-byte internal x-only public key hex")
-        p.add_argument("--tweak", required=True, help="32-byte tweak hex")
+        p.add_argument("--tweak", required=True, help=tweak_help)
 
         p = subparsers.add_parser("keypair-xonly-pub")
         p.set_defaults(handler=_handle_keypair_xonly_pub)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+        p.add_argument("-s", "--seckey", required=True, help=seckey_help)
 
         p = subparsers.add_parser("keypair-xonly-tweak-add")
         p.set_defaults(handler=_handle_keypair_xonly_tweak_add)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-        p.add_argument("--tweak", required=True, help="32-byte tweak hex")
+        p.add_argument("-s", "--seckey", required=True, help=seckey_help)
+        p.add_argument("--tweak", required=True, help=tweak_help)
 
     return parser
 
@@ -704,8 +737,8 @@ def main(argv=None):
     args = parser.parse_args(argv)
     try:
         return args.handler(args)
-    except (AssertionError, Libsecp256k1Exception, argparse.ArgumentTypeError, ValueError) as exc:
-        print("error: {}".format(exc), file=sys.stderr)
+    except (AssertionError, Libsecp256k1Exception, argparse.ArgumentTypeError) as exc:
+        print("error: {}".format(str(exc) or "invalid input"), file=sys.stderr)
         return 2
 
 

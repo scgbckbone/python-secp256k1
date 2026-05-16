@@ -51,7 +51,6 @@ CLI_COMMANDS = [
 
 EXTRAKEYS_CLI_COMMANDS = [
     "xonly-pubkey-parse",
-    "xonly-pubkey-cmp",
     "xonly-pubkey-from-pubkey",
     "xonly-pubkey-tweak-add",
     "xonly-pubkey-tweak-add-check",
@@ -71,8 +70,7 @@ RECOVERY_CLI_COMMANDS = [
 ]
 
 SCHNORRSIG_CLI_COMMANDS = [
-    "schnorrsig-sign32",
-    "schnorrsig-sign-custom",
+    "schnorrsig-sign",
     "schnorrsig-verify",
 ]
 
@@ -140,7 +138,10 @@ class TestCLI(unittest.TestCase):
             "keypair-create",
             "context-randomize",
             "ec-pubkey-cmp",
+            "xonly-pubkey-cmp",
             "musig-pubkey-get",
+            "schnorrsig-sign32",
+            "schnorrsig-sign-custom",
         ):
             self.assertNotIn(dropped, out)
 
@@ -180,6 +181,25 @@ class TestCLI(unittest.TestCase):
                 self.assertEqual(err, "")
                 self.assertIn("usage:", out)
 
+    def test_seckey_and_pubkey_short_aliases(self):
+        seckey = data.valid_seckeys[0]
+        pubkey = secp.ec_pubkey_serialize(secp.ec_pubkey_create(seckey)).hex()
+
+        code, out, err = run_cli(["ec-pubkey-create", "-s", seckey.hex()])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), pubkey)
+
+        code, out, err = run_cli(["ec-pubkey-parse", "-p", pubkey])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), pubkey)
+
+        code, out, err = run_cli(["ec-pubkey-sort", "-p", pubkey, "-p", pubkey])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip().splitlines(), [pubkey, pubkey])
+
     def test_ec_pubkey_create_matches_library(self):
         for seckey in data.valid_seckeys:
             code, out, err = run_cli(["ec-pubkey-create", "--seckey", seckey.hex()])
@@ -187,6 +207,66 @@ class TestCLI(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
             self.assertEqual(out.strip(), expected)
+
+    def test_ec_seckey_verify_success(self):
+        code, out, err = run_cli([
+            "ec-seckey-verify", "--seckey", data.valid_seckeys[0].hex()
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(out, "")
+        self.assertEqual(err, "")
+
+    def test_ec_pubkey_sort_matches_library(self):
+        pubkeys = [
+            secp.ec_pubkey_serialize(secp.ec_pubkey_create(seckey)).hex()
+            for seckey in reversed(data.valid_seckeys[:3])
+        ]
+        raw_pubkeys = [secp.ec_pubkey_parse(bytes.fromhex(pubkey)) for pubkey in pubkeys]
+        expected = [
+            secp.ec_pubkey_serialize(pubkey).hex()
+            for pubkey in secp.ec_pubkey_sort(raw_pubkeys)
+        ]
+
+        argv = ["ec-pubkey-sort"]
+        for pubkey in pubkeys:
+            argv.extend(["--pubkey", pubkey])
+        code, out, err = run_cli(argv)
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip().splitlines(), expected)
+
+    def test_tweak_commands_match_library(self):
+        seckey = data.valid_seckeys[0]
+        tweak = data.valid_seckeys[1]
+        pubkey = secp.ec_pubkey_serialize(secp.ec_pubkey_create(seckey)).hex()
+        raw_pubkey = secp.ec_pubkey_parse(bytes.fromhex(pubkey))
+
+        code, out, err = run_cli([
+            "ec-seckey-tweak-mul", "--seckey", seckey.hex(), "--tweak", tweak.hex()
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), secp.ec_seckey_tweak_mul(seckey, tweak).hex())
+
+        code, out, err = run_cli([
+            "ec-pubkey-tweak-add", "--pubkey", pubkey, "--tweak", tweak.hex()
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(
+            out.strip(),
+            secp.ec_pubkey_serialize(secp.ec_pubkey_tweak_add(raw_pubkey, tweak)).hex(),
+        )
+
+        code, out, err = run_cli([
+            "ec-pubkey-tweak-mul", "--pubkey", pubkey, "--tweak", tweak.hex()
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(
+            out.strip(),
+            secp.ec_pubkey_serialize(secp.ec_pubkey_tweak_mul(raw_pubkey, tweak)).hex(),
+        )
 
     def test_ecdsa_sign_verify_round_trip(self):
         seckey = data.valid_seckeys[0]
@@ -224,6 +304,27 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         self.assertEqual(bytes.fromhex(out.strip()), der)
+
+    def test_signature_normalize_input_and_output_der_flags(self):
+        compact = data.valid_compact_sig_serializations[0]
+        sig = secp.ecdsa_signature_parse_compact(compact)
+        normalized = secp.ecdsa_signature_normalize(sig)
+        expected_compact = secp.ecdsa_signature_serialize_compact(normalized)
+        expected_der = secp.ecdsa_signature_serialize_der(normalized)
+
+        code, out, err = run_cli([
+            "ecdsa-signature-normalize", "--sig", compact.hex(), "--output-der"
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(bytes.fromhex(out.strip()), expected_der)
+
+        code, out, err = run_cli([
+            "ecdsa-signature-normalize", "--sig", expected_der.hex(), "--input-der"
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(bytes.fromhex(out.strip()), expected_compact)
 
     def test_compressed_and_uncompressed_pubkey_serialization(self):
         pubkey = data.serialized_pubkeys_compressed[0].hex()
@@ -302,6 +403,7 @@ class TestCLI(unittest.TestCase):
 
     def test_error_contract(self):
         cases = [
+            ["ec-pubkey-create"],
             ["ec-pubkey-create", "--seckey", "abc"],
             ["ec-pubkey-create", "--seckey", (b"\x01" * 31).hex()],
             ["ec-pubkey-create", "--seckey", data.invalid_seckeys[1].hex()],
@@ -314,6 +416,13 @@ class TestCLI(unittest.TestCase):
                 self.assertEqual(code, 2)
                 self.assertEqual(out, "")
                 self.assertTrue(err.startswith("error:"))
+                self.assertNotEqual(err.strip(), "error:")
+
+    def test_bare_assertion_errors_are_not_blank(self):
+        code, out, err = run_cli(["ec-pubkey-create", "--seckey", "deadbeef"])
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+        self.assertEqual(err.strip(), "error: invalid input")
 
     def test_ecdsa_verify_exit_codes(self):
         seckey = data.valid_seckeys[0]
@@ -355,6 +464,11 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(err1, "")
         self.assertEqual(out0, out1)
         self.assertEqual(len(bytes.fromhex(out0.strip())), 32)
+
+        code, out, err = run_cli(["tagged-sha256", "--tag", "tag", "--msg", "message"])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out, out0)
 
     @unittest.skipUnless(has_secp256k1_ecdh, "secp256k1 is not compiled with module 'ecdh'")
     def test_ecdh_shared_secret_round_trip(self):
@@ -513,6 +627,11 @@ class TestCLI(unittest.TestCase):
             [
                 "ecdsa-recoverable-signature-parse-compact",
                 "--sig", (b"\x01" * 64).hex(),
+                "--rec-id", "abc",
+            ],
+            [
+                "ecdsa-recoverable-signature-parse-compact",
+                "--sig", (b"\x01" * 64).hex(),
                 "--rec-id", "4",
             ],
             [
@@ -533,7 +652,7 @@ class TestCLI(unittest.TestCase):
         has_secp256k1_schnorrsig and has_secp256k1_extrakeys,
         "secp256k1 is not compiled with modules 'schnorrsig' and 'extrakeys'",
     )
-    def test_schnorrsig_sign32_verify_round_trip(self):
+    def test_schnorrsig_sign_32_byte_message_round_trip(self):
         seckey = data.valid_seckeys[0]
         msg = b"\x66" * 32
         aux_rand = b"\x77" * 32
@@ -542,7 +661,7 @@ class TestCLI(unittest.TestCase):
         xonly_hex = extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex()
 
         code, out, err = run_cli([
-            "schnorrsig-sign32",
+            "schnorrsig-sign",
             "--seckey", seckey.hex(),
             "--msg", msg.hex(),
             "--aux-rand", aux_rand.hex(),
@@ -581,7 +700,7 @@ class TestCLI(unittest.TestCase):
         has_secp256k1_schnorrsig and has_secp256k1_extrakeys,
         "secp256k1 is not compiled with modules 'schnorrsig' and 'extrakeys'",
     )
-    def test_schnorrsig_sign_custom_variable_length_message(self):
+    def test_schnorrsig_sign_variable_length_message(self):
         seckey = data.valid_seckeys[0]
         msg = b"variable length schnorr message"
         keypair = extrakeys.keypair_create(seckey)
@@ -589,9 +708,9 @@ class TestCLI(unittest.TestCase):
         xonly_hex = extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex()
 
         code, out, err = run_cli([
-            "schnorrsig-sign-custom",
+            "schnorrsig-sign",
             "--seckey", seckey.hex(),
-            "--msg", msg.hex(),
+            "--msg", msg.decode(),
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -601,7 +720,7 @@ class TestCLI(unittest.TestCase):
         code, out, err = run_cli([
             "schnorrsig-verify",
             "--sig", sig,
-            "--msg", msg.hex(),
+            "--msg", msg.decode(),
             "--xonly-pubkey", xonly_hex,
         ])
         self.assertEqual(code, 0)
@@ -616,22 +735,17 @@ class TestCLI(unittest.TestCase):
         xonly = data.serialized_pubkeys_compressed[0][1:].hex()
         cases = [
             [
-                "schnorrsig-sign32",
+                "schnorrsig-sign",
                 "--seckey", "abc",
                 "--msg", (b"\x01" * 32).hex(),
             ],
             [
-                "schnorrsig-sign32",
-                "--seckey", data.valid_seckeys[0].hex(),
-                "--msg", (b"\x01" * 31).hex(),
-            ],
-            [
-                "schnorrsig-sign32",
+                "schnorrsig-sign",
                 "--seckey", data.invalid_seckeys[1].hex(),
                 "--msg", (b"\x01" * 32).hex(),
             ],
             [
-                "schnorrsig-sign32",
+                "schnorrsig-sign",
                 "--seckey", data.valid_seckeys[0].hex(),
                 "--msg", (b"\x01" * 32).hex(),
                 "--aux-rand", (b"\x01" * 31).hex(),
@@ -888,17 +1002,7 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(out.strip(), xonly.hex())
 
     @unittest.skipUnless(has_secp256k1_extrakeys, "secp256k1 is not compiled with module 'extrakeys'")
-    def test_xonly_pubkey_cmp_and_from_pubkey(self):
-        xonly0 = data.serialized_pubkeys_compressed[0][1:].hex()
-        xonly1 = data.serialized_pubkeys_compressed[1][1:].hex()
-
-        code, out, err = run_cli([
-            "xonly-pubkey-cmp", "--xonly-pubkey0", xonly0, "--xonly-pubkey1", xonly1
-        ])
-        self.assertEqual(code, 0)
-        self.assertEqual(err, "")
-        self.assertTrue(int(out.strip()) < 0)
-
+    def test_xonly_pubkey_from_pubkey(self):
         pubkey = data.serialized_pubkeys_compressed[0]
         raw_pubkey = secp.ec_pubkey_parse(pubkey)
         expected_xonly, expected_parity = extrakeys.xonly_pubkey_from_pubkey(raw_pubkey)
