@@ -442,18 +442,6 @@ def _handle_keypair_create(args):
     return 0
 
 
-def _handle_keypair_sec(args):
-    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
-    print(extrakeys.keypair_sec(keypair).hex())
-    return 0
-
-
-def _handle_keypair_pub(args):
-    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
-    print(secp.ec_pubkey_serialize(extrakeys.keypair_pub(keypair), compressed=args.compressed).hex())
-    return 0
-
-
 def _handle_keypair_xonly_pub(args):
     keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
     xonly_pubkey, parity = extrakeys.keypair_xonly_pub(keypair)
@@ -737,19 +725,6 @@ def build_parser():
         p = subparsers.add_parser("keypair-create")
         p.set_defaults(handler=_handle_keypair_create)
         p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-
-        p = subparsers.add_parser("keypair-sec")
-        p.set_defaults(handler=_handle_keypair_sec)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-
-        p = subparsers.add_parser("keypair-pub")
-        p.set_defaults(handler=_handle_keypair_pub)
-        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
-        group = p.add_mutually_exclusive_group()
-        group.add_argument("--compressed", dest="compressed", action="store_true",
-                           default=True, help="emit compressed public key hex")
-        group.add_argument("--uncompressed", dest="compressed", action="store_false",
-                           help="emit uncompressed public key hex")
 
         p = subparsers.add_parser("keypair-xonly-pub")
         p.set_defaults(handler=_handle_keypair_xonly_pub)

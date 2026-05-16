@@ -58,8 +58,6 @@ EXTRAKEYS_CLI_COMMANDS = [
     "xonly-pubkey-tweak-add",
     "xonly-pubkey-tweak-add-check",
     "keypair-create",
-    "keypair-sec",
-    "keypair-pub",
     "keypair-xonly-pub",
     "keypair-xonly-tweak-add",
 ]
@@ -141,6 +139,8 @@ class TestCLI(unittest.TestCase):
             "musig-pubnonce-serialize",
             "musig-aggnonce-serialize",
             "musig-partial-sig-serialize",
+            "keypair-sec",
+            "keypair-pub",
         ):
             self.assertNotIn(dropped, out)
 
@@ -968,24 +968,6 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(code, 0)
         self.assertEqual(out, "")
         self.assertEqual(err, "")
-
-        code, out, err = run_cli(["keypair-sec", "--seckey", seckey.hex()])
-        self.assertEqual(code, 0)
-        self.assertEqual(err, "")
-        self.assertEqual(out.strip(), seckey.hex())
-
-        code, out, err = run_cli(["keypair-pub", "--seckey", seckey.hex()])
-        expected_pubkey = secp.ec_pubkey_serialize(secp.ec_pubkey_create(seckey)).hex()
-        self.assertEqual(code, 0)
-        self.assertEqual(err, "")
-        self.assertEqual(out.strip(), expected_pubkey)
-
-        code, out, err = run_cli([
-            "keypair-pub", "--seckey", seckey.hex(), "--uncompressed"
-        ])
-        self.assertEqual(code, 0)
-        self.assertEqual(err, "")
-        self.assertEqual(len(bytes.fromhex(out.strip())), 65)
 
         keypair = extrakeys.keypair_create(seckey)
         expected_xonly, expected_parity = extrakeys.keypair_xonly_pub(keypair)

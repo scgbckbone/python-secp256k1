@@ -445,8 +445,6 @@ xonly-pubkey-from-pubkey
 xonly-pubkey-tweak-add
 xonly-pubkey-tweak-add-check
 keypair-create
-keypair-sec
-keypair-pub
 keypair-xonly-pub
 keypair-xonly-tweak-add
 ```
