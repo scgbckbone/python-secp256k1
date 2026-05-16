@@ -420,18 +420,14 @@ tagged-sha256
 ecdh
 ecdsa-recoverable-signature-parse-compact
 ecdsa-recoverable-signature-convert
-ecdsa-recoverable-signature-serialize-compact
 ecdsa-sign-recoverable
 ecdsa-recover
 schnorrsig-sign32
 schnorrsig-sign-custom
 schnorrsig-verify
 musig-pubnonce-parse
-musig-pubnonce-serialize
 musig-aggnonce-parse
-musig-aggnonce-serialize
 musig-partial-sig-parse
-musig-partial-sig-serialize
 musig-pubkey-agg
 musig-pubkey-get
 musig-pubkey-ec-tweak-add
@@ -444,7 +440,6 @@ musig-partial-sign
 musig-partial-sig-verify
 musig-partial-sig-agg
 xonly-pubkey-parse
-xonly-pubkey-serialize
 xonly-pubkey-cmp
 xonly-pubkey-from-pubkey
 xonly-pubkey-tweak-add

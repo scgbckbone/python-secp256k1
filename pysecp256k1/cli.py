@@ -232,15 +232,6 @@ def _handle_ecdsa_recoverable_signature_convert(args):
     return 0
 
 
-def _handle_ecdsa_recoverable_signature_serialize_compact(args):
-    rec_sig = recovery.ecdsa_recoverable_signature_parse_compact(
-        _bytes_from_hex(args.sig), args.rec_id
-    )
-    compact_sig, rec_id = recovery.ecdsa_recoverable_signature_serialize_compact(rec_sig)
-    print("{} {}".format(compact_sig.hex(), rec_id))
-    return 0
-
-
 def _handle_ecdsa_sign_recoverable(args):
     rec_sig = recovery.ecdsa_sign_recoverable(
         _bytes_from_hex(args.seckey), _bytes_from_hex(args.msghash)
@@ -287,31 +278,13 @@ def _handle_musig_pubnonce_parse(args):
     return 0
 
 
-def _handle_musig_pubnonce_serialize(args):
-    pubnonce = musig.musig_pubnonce_parse(_bytes_from_hex(args.pubnonce))
-    print(musig.musig_pubnonce_serialize(pubnonce).hex())
-    return 0
-
-
 def _handle_musig_aggnonce_parse(args):
     aggnonce = musig.musig_aggnonce_parse(_bytes_from_hex(args.aggnonce))
     print(musig.musig_aggnonce_serialize(aggnonce).hex())
     return 0
 
 
-def _handle_musig_aggnonce_serialize(args):
-    aggnonce = musig.musig_aggnonce_parse(_bytes_from_hex(args.aggnonce))
-    print(musig.musig_aggnonce_serialize(aggnonce).hex())
-    return 0
-
-
 def _handle_musig_partial_sig_parse(args):
-    sig = musig.musig_partial_sig_parse(_bytes_from_hex(args.sig))
-    print(musig.musig_partial_sig_serialize(sig).hex())
-    return 0
-
-
-def _handle_musig_partial_sig_serialize(args):
     sig = musig.musig_partial_sig_parse(_bytes_from_hex(args.sig))
     print(musig.musig_partial_sig_serialize(sig).hex())
     return 0
@@ -426,12 +399,6 @@ def _handle_musig_partial_sig_agg(args):
 
 
 def _handle_xonly_pubkey_parse(args):
-    xonly_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey))
-    print(extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex())
-    return 0
-
-
-def _handle_xonly_pubkey_serialize(args):
     xonly_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey))
     print(extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex())
     return 0
@@ -615,11 +582,6 @@ def build_parser():
         p.add_argument("--rec-id", required=True, type=int, help="recovery id, 0 through 3")
         p.add_argument("--der", action="store_true", help="emit DER signature hex")
 
-        p = subparsers.add_parser("ecdsa-recoverable-signature-serialize-compact")
-        p.set_defaults(handler=_handle_ecdsa_recoverable_signature_serialize_compact)
-        p.add_argument("--sig", required=True, help="64-byte compact recoverable signature hex")
-        p.add_argument("--rec-id", required=True, type=int, help="recovery id, 0 through 3")
-
         p = subparsers.add_parser("ecdsa-sign-recoverable")
         p.set_defaults(handler=_handle_ecdsa_sign_recoverable)
         p.add_argument("--seckey", required=True, help="32-byte secret key hex")
@@ -659,24 +621,12 @@ def build_parser():
         p.set_defaults(handler=_handle_musig_pubnonce_parse)
         p.add_argument("--pubnonce", required=True, help="66-byte public nonce hex")
 
-        p = subparsers.add_parser("musig-pubnonce-serialize")
-        p.set_defaults(handler=_handle_musig_pubnonce_serialize)
-        p.add_argument("--pubnonce", required=True, help="66-byte public nonce hex")
-
         p = subparsers.add_parser("musig-aggnonce-parse")
         p.set_defaults(handler=_handle_musig_aggnonce_parse)
         p.add_argument("--aggnonce", required=True, help="66-byte aggregate nonce hex")
 
-        p = subparsers.add_parser("musig-aggnonce-serialize")
-        p.set_defaults(handler=_handle_musig_aggnonce_serialize)
-        p.add_argument("--aggnonce", required=True, help="66-byte aggregate nonce hex")
-
         p = subparsers.add_parser("musig-partial-sig-parse")
         p.set_defaults(handler=_handle_musig_partial_sig_parse)
-        p.add_argument("--sig", required=True, help="32-byte partial signature hex")
-
-        p = subparsers.add_parser("musig-partial-sig-serialize")
-        p.set_defaults(handler=_handle_musig_partial_sig_serialize)
         p.add_argument("--sig", required=True, help="32-byte partial signature hex")
 
         for name, handler in (
@@ -761,10 +711,6 @@ def build_parser():
     if has_secp256k1_extrakeys:
         p = subparsers.add_parser("xonly-pubkey-parse")
         p.set_defaults(handler=_handle_xonly_pubkey_parse)
-        p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
-
-        p = subparsers.add_parser("xonly-pubkey-serialize")
-        p.set_defaults(handler=_handle_xonly_pubkey_serialize)
         p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
 
         p = subparsers.add_parser("xonly-pubkey-cmp")

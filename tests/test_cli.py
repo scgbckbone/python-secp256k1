@@ -53,7 +53,6 @@ CLI_COMMANDS = [
 
 EXTRAKEYS_CLI_COMMANDS = [
     "xonly-pubkey-parse",
-    "xonly-pubkey-serialize",
     "xonly-pubkey-cmp",
     "xonly-pubkey-from-pubkey",
     "xonly-pubkey-tweak-add",
@@ -72,7 +71,6 @@ ECDH_CLI_COMMANDS = [
 RECOVERY_CLI_COMMANDS = [
     "ecdsa-recoverable-signature-parse-compact",
     "ecdsa-recoverable-signature-convert",
-    "ecdsa-recoverable-signature-serialize-compact",
     "ecdsa-sign-recoverable",
     "ecdsa-recover",
 ]
@@ -85,11 +83,8 @@ SCHNORRSIG_CLI_COMMANDS = [
 
 MUSIG_CLI_COMMANDS = [
     "musig-pubnonce-parse",
-    "musig-pubnonce-serialize",
     "musig-aggnonce-parse",
-    "musig-aggnonce-serialize",
     "musig-partial-sig-parse",
-    "musig-partial-sig-serialize",
     "musig-pubkey-agg",
     "musig-pubkey-get",
     "musig-pubkey-ec-tweak-add",
@@ -141,6 +136,11 @@ class TestCLI(unittest.TestCase):
             "ec-pubkey-serialize",
             "ecdsa-signature-serialize-compact",
             "ecdsa-signature-serialize-der",
+            "ecdsa-recoverable-signature-serialize-compact",
+            "xonly-pubkey-serialize",
+            "musig-pubnonce-serialize",
+            "musig-aggnonce-serialize",
+            "musig-partial-sig-serialize",
         ):
             self.assertNotIn(dropped, out)
 
@@ -434,15 +434,6 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(out.strip(), "{} {}".format(sig, rec_id))
 
         code, out, err = run_cli([
-            "ecdsa-recoverable-signature-serialize-compact",
-            "--sig", sig,
-            "--rec-id", rec_id,
-        ])
-        self.assertEqual(code, 0)
-        self.assertEqual(err, "")
-        self.assertEqual(out.strip(), "{} {}".format(sig, rec_id))
-
-        code, out, err = run_cli([
             "ecdsa-recoverable-signature-convert",
             "--sig", sig,
             "--rec-id", rec_id,
@@ -714,11 +705,10 @@ class TestCLI(unittest.TestCase):
             secnonces.append(secnonce)
             pubnonces.append(pubnonce)
 
-        for command in ("musig-pubnonce-parse", "musig-pubnonce-serialize"):
-            code, out, err = run_cli([command, "--pubnonce", pubnonces[0]])
-            self.assertEqual(code, 0)
-            self.assertEqual(err, "")
-            self.assertEqual(out.strip(), pubnonces[0])
+        code, out, err = run_cli(["musig-pubnonce-parse", "--pubnonce", pubnonces[0]])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), pubnonces[0])
 
         code, out, err = run_cli([
             "musig-nonce-agg",
@@ -730,11 +720,10 @@ class TestCLI(unittest.TestCase):
         aggnonce = out.strip()
         self.assertEqual(len(bytes.fromhex(aggnonce)), 66)
 
-        for command in ("musig-aggnonce-parse", "musig-aggnonce-serialize"):
-            code, out, err = run_cli([command, "--aggnonce", aggnonce])
-            self.assertEqual(code, 0)
-            self.assertEqual(err, "")
-            self.assertEqual(out.strip(), aggnonce)
+        code, out, err = run_cli(["musig-aggnonce-parse", "--aggnonce", aggnonce])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), aggnonce)
 
         code, out, err = run_cli([
             "musig-nonce-process",
@@ -766,11 +755,10 @@ class TestCLI(unittest.TestCase):
             self.assertEqual(len(bytes.fromhex(partial_sig)), 32)
             partial_sigs.append(partial_sig)
 
-        for command in ("musig-partial-sig-parse", "musig-partial-sig-serialize"):
-            code, out, err = run_cli([command, "--sig", partial_sigs[0]])
-            self.assertEqual(code, 0)
-            self.assertEqual(err, "")
-            self.assertEqual(out.strip(), partial_sigs[0])
+        code, out, err = run_cli(["musig-partial-sig-parse", "--sig", partial_sigs[0]])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), partial_sigs[0])
 
         for partial_sig, pubnonce, pubkey in zip(partial_sigs, pubnonces, pubkeys):
             code, out, err = run_cli([
@@ -899,14 +887,13 @@ class TestCLI(unittest.TestCase):
                 self.assertTrue(err.startswith("error:"))
 
     @unittest.skipUnless(has_secp256k1_extrakeys, "secp256k1 is not compiled with module 'extrakeys'")
-    def test_xonly_pubkey_parse_and_serialize(self):
+    def test_xonly_pubkey_parse(self):
         xonly = data.serialized_pubkeys_compressed[0][1:]
 
-        for command in ("xonly-pubkey-parse", "xonly-pubkey-serialize"):
-            code, out, err = run_cli([command, "--xonly-pubkey", xonly.hex()])
-            self.assertEqual(code, 0)
-            self.assertEqual(err, "")
-            self.assertEqual(out.strip(), xonly.hex())
+        code, out, err = run_cli(["xonly-pubkey-parse", "--xonly-pubkey", xonly.hex()])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), xonly.hex())
 
     @unittest.skipUnless(has_secp256k1_extrakeys, "secp256k1 is not compiled with module 'extrakeys'")
     def test_xonly_pubkey_cmp_and_from_pubkey(self):
