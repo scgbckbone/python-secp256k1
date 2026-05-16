@@ -1,4 +1,5 @@
 import argparse
+import ctypes
 import sys
 
 import pysecp256k1 as secp
@@ -6,8 +7,14 @@ from pysecp256k1.low_level import (
     Libsecp256k1Exception,
     has_secp256k1_ecdh,
     has_secp256k1_extrakeys,
+    has_secp256k1_musig,
     has_secp256k1_recovery,
     has_secp256k1_schnorrsig,
+)
+from pysecp256k1.low_level.constants import (
+    INTERNAL_MUSIG_NONCE_LENGTH,
+    INTERNAL_MUSIG_SESSION_LENGTH,
+    MuSigKeyAggCache,
 )
 
 if has_secp256k1_ecdh:
@@ -22,12 +29,44 @@ if has_secp256k1_recovery:
 if has_secp256k1_schnorrsig:
     import pysecp256k1.schnorrsig as schnorrsig
 
+if has_secp256k1_musig:
+    import pysecp256k1.musig as musig
+
 
 def _bytes_from_hex(value):
     try:
         return bytes.fromhex(value)
     except ValueError as exc:
         raise argparse.ArgumentTypeError(str(exc))
+
+
+def _optional_hex(value):
+    return _bytes_from_hex(value) if value is not None else None
+
+
+def _musig_pubkeys(values, sort_pubkeys=False):
+    pubkeys = [secp.ec_pubkey_parse(_bytes_from_hex(value)) for value in values]
+    if sort_pubkeys:
+        pubkeys = secp.ec_pubkey_sort(pubkeys)
+    return pubkeys
+
+
+def _musig_keyagg_cache(pubkeys):
+    cache = MuSigKeyAggCache()
+    musig.musig_pubkey_agg(pubkeys, cache)
+    return cache
+
+
+def _musig_secnonce(value):
+    raw = _bytes_from_hex(value)
+    assert len(raw) == INTERNAL_MUSIG_NONCE_LENGTH
+    return ctypes.create_string_buffer(raw, INTERNAL_MUSIG_NONCE_LENGTH)
+
+
+def _musig_session(value):
+    raw = _bytes_from_hex(value)
+    assert len(raw) == INTERNAL_MUSIG_SESSION_LENGTH
+    return ctypes.create_string_buffer(raw, INTERNAL_MUSIG_SESSION_LENGTH)
 
 
 def _handle_ec_pubkey_parse(args):
@@ -240,6 +279,150 @@ def _handle_schnorrsig_verify(args):
     )
     print(ok)
     return 0 if ok else 1
+
+
+def _handle_musig_pubnonce_parse(args):
+    pubnonce = musig.musig_pubnonce_parse(_bytes_from_hex(args.pubnonce))
+    print(musig.musig_pubnonce_serialize(pubnonce).hex())
+    return 0
+
+
+def _handle_musig_pubnonce_serialize(args):
+    pubnonce = musig.musig_pubnonce_parse(_bytes_from_hex(args.pubnonce))
+    print(musig.musig_pubnonce_serialize(pubnonce).hex())
+    return 0
+
+
+def _handle_musig_aggnonce_parse(args):
+    aggnonce = musig.musig_aggnonce_parse(_bytes_from_hex(args.aggnonce))
+    print(musig.musig_aggnonce_serialize(aggnonce).hex())
+    return 0
+
+
+def _handle_musig_aggnonce_serialize(args):
+    aggnonce = musig.musig_aggnonce_parse(_bytes_from_hex(args.aggnonce))
+    print(musig.musig_aggnonce_serialize(aggnonce).hex())
+    return 0
+
+
+def _handle_musig_partial_sig_parse(args):
+    sig = musig.musig_partial_sig_parse(_bytes_from_hex(args.sig))
+    print(musig.musig_partial_sig_serialize(sig).hex())
+    return 0
+
+
+def _handle_musig_partial_sig_serialize(args):
+    sig = musig.musig_partial_sig_parse(_bytes_from_hex(args.sig))
+    print(musig.musig_partial_sig_serialize(sig).hex())
+    return 0
+
+
+def _handle_musig_pubkey_agg(args):
+    pubkeys = _musig_pubkeys(args.pubkey, args.sort)
+    agg_pubkey = musig.musig_pubkey_agg(pubkeys)
+    print(extrakeys.xonly_pubkey_serialize(agg_pubkey).hex())
+    return 0
+
+
+def _handle_musig_pubkey_get(args):
+    pubkeys = _musig_pubkeys(args.pubkey, args.sort)
+    cache = _musig_keyagg_cache(pubkeys)
+    print(secp.ec_pubkey_serialize(musig.musig_pubkey_get(cache), compressed=args.compressed).hex())
+    return 0
+
+
+def _handle_musig_pubkey_ec_tweak_add(args):
+    pubkeys = _musig_pubkeys(args.pubkey, args.sort)
+    cache = _musig_keyagg_cache(pubkeys)
+    tweaked = musig.musig_pubkey_ec_tweak_add(_bytes_from_hex(args.tweak), cache)
+    print(secp.ec_pubkey_serialize(tweaked, compressed=args.compressed).hex())
+    return 0
+
+
+def _handle_musig_pubkey_xonly_tweak_add(args):
+    pubkeys = _musig_pubkeys(args.pubkey, args.sort)
+    cache = _musig_keyagg_cache(pubkeys)
+    tweaked = musig.musig_pubkey_xonly_tweak_add(_bytes_from_hex(args.tweak), cache)
+    print(secp.ec_pubkey_serialize(tweaked, compressed=args.compressed).hex())
+    return 0
+
+
+def _handle_musig_nonce_gen(args):
+    pubkey = secp.ec_pubkey_parse(_bytes_from_hex(args.pubkey))
+    keyagg_cache = None
+    if args.agg_pubkey:
+        keyagg_cache = _musig_keyagg_cache(_musig_pubkeys(args.agg_pubkey, args.sort))
+    secnonce, pubnonce = musig.musig_nonce_gen(
+        pubkey,
+        _optional_hex(args.session_secrand),
+        _optional_hex(args.seckey),
+        _optional_hex(args.msg),
+        keyagg_cache,
+        _optional_hex(args.extra_input),
+    )
+    print("{} {}".format(secnonce.raw.hex(), musig.musig_pubnonce_serialize(pubnonce).hex()))
+    return 0
+
+
+def _handle_musig_nonce_gen_counter(args):
+    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
+    keyagg_cache = None
+    if args.agg_pubkey:
+        keyagg_cache = _musig_keyagg_cache(_musig_pubkeys(args.agg_pubkey, args.sort))
+    secnonce, pubnonce = musig.musig_nonce_gen_counter(
+        args.counter,
+        keypair,
+        _optional_hex(args.msg),
+        keyagg_cache,
+        _optional_hex(args.extra_input),
+    )
+    print("{} {}".format(secnonce.raw.hex(), musig.musig_pubnonce_serialize(pubnonce).hex()))
+    return 0
+
+
+def _handle_musig_nonce_agg(args):
+    pubnonces = [musig.musig_pubnonce_parse(_bytes_from_hex(value)) for value in args.pubnonce]
+    print(musig.musig_aggnonce_serialize(musig.musig_nonce_agg(pubnonces)).hex())
+    return 0
+
+
+def _handle_musig_nonce_process(args):
+    pubkeys = _musig_pubkeys(args.pubkey, args.sort)
+    cache = _musig_keyagg_cache(pubkeys)
+    aggnonce = musig.musig_aggnonce_parse(_bytes_from_hex(args.aggnonce))
+    session = musig.musig_nonce_process(aggnonce, _bytes_from_hex(args.msg), cache)
+    print(session.raw.hex())
+    return 0
+
+
+def _handle_musig_partial_sign(args):
+    pubkeys = _musig_pubkeys(args.pubkey, args.sort)
+    cache = _musig_keyagg_cache(pubkeys)
+    sig = musig.musig_partial_sign(
+        _musig_secnonce(args.secnonce),
+        extrakeys.keypair_create(_bytes_from_hex(args.seckey)),
+        cache,
+        _musig_session(args.session),
+    )
+    print(musig.musig_partial_sig_serialize(sig).hex())
+    return 0
+
+
+def _handle_musig_partial_sig_verify(args):
+    pubkeys = _musig_pubkeys(args.pubkey, args.sort)
+    cache = _musig_keyagg_cache(pubkeys)
+    sig = musig.musig_partial_sig_parse(_bytes_from_hex(args.sig))
+    pubnonce = musig.musig_pubnonce_parse(_bytes_from_hex(args.pubnonce))
+    pubkey = secp.ec_pubkey_parse(_bytes_from_hex(args.signer_pubkey))
+    ok = musig.musig_partial_sig_verify(sig, pubnonce, pubkey, cache, _musig_session(args.session))
+    print(ok)
+    return 0 if ok else 1
+
+
+def _handle_musig_partial_sig_agg(args):
+    partial_sigs = [musig.musig_partial_sig_parse(_bytes_from_hex(value)) for value in args.partial_sig]
+    print(musig.musig_partial_sig_agg(_musig_session(args.session), partial_sigs).hex())
+    return 0
 
 
 def _handle_xonly_pubkey_parse(args):
@@ -470,6 +653,110 @@ def build_parser():
         p.add_argument("--sig", required=True, help="64-byte Schnorr signature hex")
         p.add_argument("--msg", required=True, help="message hex")
         p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
+
+    if has_secp256k1_musig and has_secp256k1_extrakeys:
+        p = subparsers.add_parser("musig-pubnonce-parse")
+        p.set_defaults(handler=_handle_musig_pubnonce_parse)
+        p.add_argument("--pubnonce", required=True, help="66-byte public nonce hex")
+
+        p = subparsers.add_parser("musig-pubnonce-serialize")
+        p.set_defaults(handler=_handle_musig_pubnonce_serialize)
+        p.add_argument("--pubnonce", required=True, help="66-byte public nonce hex")
+
+        p = subparsers.add_parser("musig-aggnonce-parse")
+        p.set_defaults(handler=_handle_musig_aggnonce_parse)
+        p.add_argument("--aggnonce", required=True, help="66-byte aggregate nonce hex")
+
+        p = subparsers.add_parser("musig-aggnonce-serialize")
+        p.set_defaults(handler=_handle_musig_aggnonce_serialize)
+        p.add_argument("--aggnonce", required=True, help="66-byte aggregate nonce hex")
+
+        p = subparsers.add_parser("musig-partial-sig-parse")
+        p.set_defaults(handler=_handle_musig_partial_sig_parse)
+        p.add_argument("--sig", required=True, help="32-byte partial signature hex")
+
+        p = subparsers.add_parser("musig-partial-sig-serialize")
+        p.set_defaults(handler=_handle_musig_partial_sig_serialize)
+        p.add_argument("--sig", required=True, help="32-byte partial signature hex")
+
+        for name, handler in (
+            ("musig-pubkey-agg", _handle_musig_pubkey_agg),
+            ("musig-pubkey-get", _handle_musig_pubkey_get),
+            ("musig-pubkey-ec-tweak-add", _handle_musig_pubkey_ec_tweak_add),
+            ("musig-pubkey-xonly-tweak-add", _handle_musig_pubkey_xonly_tweak_add),
+        ):
+            p = subparsers.add_parser(name)
+            p.set_defaults(handler=handler)
+            p.add_argument("--pubkey", action="append", required=True,
+                           help="serialized signer public key hex; repeat for multiple keys")
+            p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
+            if "tweak" in name:
+                p.add_argument("--tweak", required=True, help="32-byte tweak hex")
+            if name != "musig-pubkey-agg":
+                group = p.add_mutually_exclusive_group()
+                group.add_argument("--compressed", dest="compressed", action="store_true",
+                                   default=True, help="emit compressed public key hex")
+                group.add_argument("--uncompressed", dest="compressed", action="store_false",
+                                   help="emit uncompressed public key hex")
+
+        p = subparsers.add_parser("musig-nonce-gen")
+        p.set_defaults(handler=_handle_musig_nonce_gen)
+        p.add_argument("--pubkey", required=True, help="signer serialized public key hex")
+        p.add_argument("--session-secrand", help="optional 32-byte secret nonce randomness hex")
+        p.add_argument("--seckey", help="optional 32-byte signer secret key hex")
+        p.add_argument("--msg", help="optional 32-byte message hash hex")
+        p.add_argument("--agg-pubkey", action="append",
+                       help="optional aggregate-set pubkey hex; repeat for multiple keys")
+        p.add_argument("--extra-input", help="optional 32-byte extra input hex")
+        p.add_argument("--sort", action="store_true", help="sort aggregate-set pubkeys")
+
+        p = subparsers.add_parser("musig-nonce-gen-counter")
+        p.set_defaults(handler=_handle_musig_nonce_gen_counter)
+        p.add_argument("--counter", required=True, type=int, help="unique unsigned 64-bit counter")
+        p.add_argument("--seckey", required=True, help="32-byte signer secret key hex")
+        p.add_argument("--msg", help="optional 32-byte message hash hex")
+        p.add_argument("--agg-pubkey", action="append",
+                       help="optional aggregate-set pubkey hex; repeat for multiple keys")
+        p.add_argument("--extra-input", help="optional 32-byte extra input hex")
+        p.add_argument("--sort", action="store_true", help="sort aggregate-set pubkeys")
+
+        p = subparsers.add_parser("musig-nonce-agg")
+        p.set_defaults(handler=_handle_musig_nonce_agg)
+        p.add_argument("--pubnonce", action="append", required=True,
+                       help="66-byte public nonce hex; repeat for multiple signers")
+
+        p = subparsers.add_parser("musig-nonce-process")
+        p.set_defaults(handler=_handle_musig_nonce_process)
+        p.add_argument("--aggnonce", required=True, help="66-byte aggregate nonce hex")
+        p.add_argument("--msg", required=True, help="32-byte message hash hex")
+        p.add_argument("--pubkey", action="append", required=True,
+                       help="serialized signer public key hex; repeat for aggregate key set")
+        p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
+
+        p = subparsers.add_parser("musig-partial-sign")
+        p.set_defaults(handler=_handle_musig_partial_sign)
+        p.add_argument("--secnonce", required=True, help="132-byte secret nonce hex from musig-nonce-gen")
+        p.add_argument("--seckey", required=True, help="32-byte signer secret key hex")
+        p.add_argument("--session", required=True, help="133-byte session hex from musig-nonce-process")
+        p.add_argument("--pubkey", action="append", required=True,
+                       help="serialized signer public key hex; repeat for aggregate key set")
+        p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
+
+        p = subparsers.add_parser("musig-partial-sig-verify")
+        p.set_defaults(handler=_handle_musig_partial_sig_verify)
+        p.add_argument("--sig", required=True, help="32-byte partial signature hex")
+        p.add_argument("--pubnonce", required=True, help="66-byte signer public nonce hex")
+        p.add_argument("--signer-pubkey", required=True, help="serialized signer public key hex")
+        p.add_argument("--session", required=True, help="133-byte session hex from musig-nonce-process")
+        p.add_argument("--pubkey", action="append", required=True,
+                       help="serialized signer public key hex; repeat for aggregate key set")
+        p.add_argument("--sort", action="store_true", help="sort pubkeys before aggregation")
+
+        p = subparsers.add_parser("musig-partial-sig-agg")
+        p.set_defaults(handler=_handle_musig_partial_sig_agg)
+        p.add_argument("--session", required=True, help="133-byte session hex from musig-nonce-process")
+        p.add_argument("--partial-sig", action="append", required=True,
+                       help="32-byte partial signature hex; repeat for multiple signers")
 
     if has_secp256k1_extrakeys:
         p = subparsers.add_parser("xonly-pubkey-parse")

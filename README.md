@@ -381,6 +381,12 @@ CLI conventions:
 * Schnorr signatures are supplied and returned as 64-byte compact signature hex.
   Schnorr signing commands accept `--seckey` and create a keypair internally;
   verification accepts `--xonly-pubkey`.
+* MuSig nonce generation prints `<secnonce-hex> <pubnonce-hex>`. The secret
+  nonce is exposed only so the CLI can be used to learn the two-round protocol;
+  reusing it across sessions can leak the secret key.
+* MuSig sessions are printed as raw session hex by `musig-nonce-process` and are
+  passed back to `musig-partial-sign`, `musig-partial-sig-verify`, and
+  `musig-partial-sig-agg`.
 * Internal opaque secp256k1 objects are never exposed by the CLI.
 
 Exit codes:
@@ -420,6 +426,23 @@ ecdsa-recover
 schnorrsig-sign32
 schnorrsig-sign-custom
 schnorrsig-verify
+musig-pubnonce-parse
+musig-pubnonce-serialize
+musig-aggnonce-parse
+musig-aggnonce-serialize
+musig-partial-sig-parse
+musig-partial-sig-serialize
+musig-pubkey-agg
+musig-pubkey-get
+musig-pubkey-ec-tweak-add
+musig-pubkey-xonly-tweak-add
+musig-nonce-gen
+musig-nonce-gen-counter
+musig-nonce-agg
+musig-nonce-process
+musig-partial-sign
+musig-partial-sig-verify
+musig-partial-sig-agg
 xonly-pubkey-parse
 xonly-pubkey-serialize
 xonly-pubkey-cmp
@@ -503,6 +526,51 @@ python3 -m pysecp256k1 schnorrsig-verify \
   --sig <compact-schnorr-sig-hex> \
   --msg <message-hex> \
   --xonly-pubkey <32-byte-xonly-pubkey-hex>
+
+# Aggregate MuSig signer public keys into an x-only aggregate public key.
+python3 -m pysecp256k1 musig-pubkey-agg \
+  --pubkey <signer-0-pubkey-hex> \
+  --pubkey <signer-1-pubkey-hex> \
+  --sort
+
+# Round 1: each signer generates and saves a secret nonce, and shares the public nonce.
+# Output is "<secnonce-hex> <pubnonce-hex>".
+python3 -m pysecp256k1 musig-nonce-gen \
+  --pubkey <this-signer-pubkey-hex> \
+  --session-secrand <unique-32-byte-random-hex> \
+  --seckey <this-signer-seckey-hex> \
+  --msg <32-byte-message-hash-hex> \
+  --agg-pubkey <signer-0-pubkey-hex> \
+  --agg-pubkey <signer-1-pubkey-hex> \
+  --sort
+
+# Aggregate public nonces from all signers.
+python3 -m pysecp256k1 musig-nonce-agg \
+  --pubnonce <signer-0-pubnonce-hex> \
+  --pubnonce <signer-1-pubnonce-hex>
+
+# Round 2 setup: create the session hex from the aggregate nonce.
+python3 -m pysecp256k1 musig-nonce-process \
+  --aggnonce <aggregate-nonce-hex> \
+  --msg <32-byte-message-hash-hex> \
+  --pubkey <signer-0-pubkey-hex> \
+  --pubkey <signer-1-pubkey-hex> \
+  --sort
+
+# Round 2: each signer creates a partial signature using the saved secret nonce.
+python3 -m pysecp256k1 musig-partial-sign \
+  --secnonce <this-signer-secnonce-hex> \
+  --seckey <this-signer-seckey-hex> \
+  --session <session-hex> \
+  --pubkey <signer-0-pubkey-hex> \
+  --pubkey <signer-1-pubkey-hex> \
+  --sort
+
+# Aggregate partial signatures into the final Schnorr signature.
+python3 -m pysecp256k1 musig-partial-sig-agg \
+  --session <session-hex> \
+  --partial-sig <signer-0-partial-sig-hex> \
+  --partial-sig <signer-1-partial-sig-hex>
 
 # Convert a serialized public key to x-only form. Output is "<xonly-hex> <parity>".
 python3 -m pysecp256k1 xonly-pubkey-from-pubkey \

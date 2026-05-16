@@ -7,6 +7,7 @@ from pysecp256k1 import cli
 from pysecp256k1.low_level import (
     has_secp256k1_ecdh,
     has_secp256k1_extrakeys,
+    has_secp256k1_musig,
     has_secp256k1_recovery,
     has_secp256k1_schnorrsig,
 )
@@ -23,6 +24,9 @@ if has_secp256k1_recovery:
 
 if has_secp256k1_schnorrsig:
     import pysecp256k1.schnorrsig as schnorrsig
+
+if has_secp256k1_musig:
+    import pysecp256k1.musig as musig
 
 
 CLI_COMMANDS = [
@@ -79,6 +83,26 @@ SCHNORRSIG_CLI_COMMANDS = [
     "schnorrsig-verify",
 ]
 
+MUSIG_CLI_COMMANDS = [
+    "musig-pubnonce-parse",
+    "musig-pubnonce-serialize",
+    "musig-aggnonce-parse",
+    "musig-aggnonce-serialize",
+    "musig-partial-sig-parse",
+    "musig-partial-sig-serialize",
+    "musig-pubkey-agg",
+    "musig-pubkey-get",
+    "musig-pubkey-ec-tweak-add",
+    "musig-pubkey-xonly-tweak-add",
+    "musig-nonce-gen",
+    "musig-nonce-gen-counter",
+    "musig-nonce-agg",
+    "musig-nonce-process",
+    "musig-partial-sign",
+    "musig-partial-sig-verify",
+    "musig-partial-sig-agg",
+]
+
 
 def run_cli(argv):
     stdout = io.StringIO()
@@ -109,6 +133,9 @@ class TestCLI(unittest.TestCase):
                 self.assertIn(command, out)
         if has_secp256k1_schnorrsig and has_secp256k1_extrakeys:
             for command in SCHNORRSIG_CLI_COMMANDS:
+                self.assertIn(command, out)
+        if has_secp256k1_musig and has_secp256k1_extrakeys:
+            for command in MUSIG_CLI_COMMANDS:
                 self.assertIn(command, out)
         for dropped in (
             "ec-pubkey-serialize",
@@ -142,6 +169,12 @@ class TestCLI(unittest.TestCase):
                 self.assertIn("usage:", out)
         if has_secp256k1_schnorrsig and has_secp256k1_extrakeys:
             for command in SCHNORRSIG_CLI_COMMANDS:
+                code, out, err = run_cli([command, "--help"])
+                self.assertEqual(code, 0)
+                self.assertEqual(err, "")
+                self.assertIn("usage:", out)
+        if has_secp256k1_musig and has_secp256k1_extrakeys:
+            for command in MUSIG_CLI_COMMANDS:
                 code, out, err = run_cli([command, "--help"])
                 self.assertEqual(code, 0)
                 self.assertEqual(err, "")
@@ -623,6 +656,239 @@ class TestCLI(unittest.TestCase):
                 "--sig", (b"\x01" * 64).hex(),
                 "--msg", (b"\x01" * 32).hex(),
                 "--xonly-pubkey", (b"\x01" * 31).hex(),
+            ],
+        ]
+        for argv in cases:
+            with self.subTest(argv=argv):
+                code, out, err = run_cli(argv)
+                self.assertEqual(code, 2)
+                self.assertEqual(out, "")
+                self.assertTrue(err.startswith("error:"))
+
+    @unittest.skipUnless(
+        has_secp256k1_musig and has_secp256k1_extrakeys and has_secp256k1_schnorrsig,
+        "secp256k1 is not compiled with modules 'musig', 'extrakeys', and 'schnorrsig'",
+    )
+    def test_musig_two_round_flow(self):
+        seckeys = data.valid_seckeys[:2]
+        pubkeys = [secp.ec_pubkey_serialize(secp.ec_pubkey_create(seckey)).hex()
+                   for seckey in seckeys]
+        msg = b"\x88" * 32
+        session_secrands = [b"\x90" * 32, b"\x91" * 32]
+
+        code, out, err = run_cli([
+            "musig-pubkey-agg", "--sort",
+            "--pubkey", pubkeys[0], "--pubkey", pubkeys[1],
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        agg_xonly = out.strip()
+        self.assertEqual(len(bytes.fromhex(agg_xonly)), 32)
+
+        code, out, err = run_cli([
+            "musig-pubkey-get", "--sort",
+            "--pubkey", pubkeys[0], "--pubkey", pubkeys[1],
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(len(bytes.fromhex(out.strip())), 33)
+
+        secnonces = []
+        pubnonces = []
+        for seckey, pubkey, session_secrand in zip(seckeys, pubkeys, session_secrands):
+            code, out, err = run_cli([
+                "musig-nonce-gen",
+                "--pubkey", pubkey,
+                "--session-secrand", session_secrand.hex(),
+                "--seckey", seckey.hex(),
+                "--msg", msg.hex(),
+                "--agg-pubkey", pubkeys[0],
+                "--agg-pubkey", pubkeys[1],
+                "--sort",
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(err, "")
+            secnonce, pubnonce = out.strip().split()
+            self.assertEqual(len(bytes.fromhex(secnonce)), 132)
+            self.assertEqual(len(bytes.fromhex(pubnonce)), 66)
+            secnonces.append(secnonce)
+            pubnonces.append(pubnonce)
+
+        for command in ("musig-pubnonce-parse", "musig-pubnonce-serialize"):
+            code, out, err = run_cli([command, "--pubnonce", pubnonces[0]])
+            self.assertEqual(code, 0)
+            self.assertEqual(err, "")
+            self.assertEqual(out.strip(), pubnonces[0])
+
+        code, out, err = run_cli([
+            "musig-nonce-agg",
+            "--pubnonce", pubnonces[0],
+            "--pubnonce", pubnonces[1],
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        aggnonce = out.strip()
+        self.assertEqual(len(bytes.fromhex(aggnonce)), 66)
+
+        for command in ("musig-aggnonce-parse", "musig-aggnonce-serialize"):
+            code, out, err = run_cli([command, "--aggnonce", aggnonce])
+            self.assertEqual(code, 0)
+            self.assertEqual(err, "")
+            self.assertEqual(out.strip(), aggnonce)
+
+        code, out, err = run_cli([
+            "musig-nonce-process",
+            "--aggnonce", aggnonce,
+            "--msg", msg.hex(),
+            "--pubkey", pubkeys[0],
+            "--pubkey", pubkeys[1],
+            "--sort",
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        session = out.strip()
+        self.assertEqual(len(bytes.fromhex(session)), 133)
+
+        partial_sigs = []
+        for seckey, secnonce in zip(seckeys, secnonces):
+            code, out, err = run_cli([
+                "musig-partial-sign",
+                "--secnonce", secnonce,
+                "--seckey", seckey.hex(),
+                "--session", session,
+                "--pubkey", pubkeys[0],
+                "--pubkey", pubkeys[1],
+                "--sort",
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(err, "")
+            partial_sig = out.strip()
+            self.assertEqual(len(bytes.fromhex(partial_sig)), 32)
+            partial_sigs.append(partial_sig)
+
+        for command in ("musig-partial-sig-parse", "musig-partial-sig-serialize"):
+            code, out, err = run_cli([command, "--sig", partial_sigs[0]])
+            self.assertEqual(code, 0)
+            self.assertEqual(err, "")
+            self.assertEqual(out.strip(), partial_sigs[0])
+
+        for partial_sig, pubnonce, pubkey in zip(partial_sigs, pubnonces, pubkeys):
+            code, out, err = run_cli([
+                "musig-partial-sig-verify",
+                "--sig", partial_sig,
+                "--pubnonce", pubnonce,
+                "--signer-pubkey", pubkey,
+                "--session", session,
+                "--pubkey", pubkeys[0],
+                "--pubkey", pubkeys[1],
+                "--sort",
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(err, "")
+            self.assertEqual(out.strip(), "True")
+
+        code, out, err = run_cli([
+            "musig-partial-sig-verify",
+            "--sig", partial_sigs[0],
+            "--pubnonce", pubnonces[1],
+            "--signer-pubkey", pubkeys[1],
+            "--session", session,
+            "--pubkey", pubkeys[0],
+            "--pubkey", pubkeys[1],
+            "--sort",
+        ])
+        self.assertEqual(code, 1)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), "False")
+
+        code, out, err = run_cli([
+            "musig-partial-sig-agg",
+            "--session", session,
+            "--partial-sig", partial_sigs[0],
+            "--partial-sig", partial_sigs[1],
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        final_sig = out.strip()
+        self.assertEqual(len(bytes.fromhex(final_sig)), 64)
+
+        code, out, err = run_cli([
+            "schnorrsig-verify",
+            "--sig", final_sig,
+            "--msg", msg.hex(),
+            "--xonly-pubkey", agg_xonly,
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), "True")
+
+    @unittest.skipUnless(
+        has_secp256k1_musig and has_secp256k1_extrakeys,
+        "secp256k1 is not compiled with modules 'musig' and 'extrakeys'",
+    )
+    def test_musig_tweak_and_nonce_counter_commands(self):
+        pubkeys = [
+            secp.ec_pubkey_serialize(secp.ec_pubkey_create(data.valid_seckeys[0])).hex(),
+            secp.ec_pubkey_serialize(secp.ec_pubkey_create(data.valid_seckeys[1])).hex(),
+        ]
+        tweak = data.valid_seckeys[2]
+        msg = b"\x92" * 32
+
+        for command in ("musig-pubkey-ec-tweak-add", "musig-pubkey-xonly-tweak-add"):
+            code, out, err = run_cli([
+                command,
+                "--pubkey", pubkeys[0],
+                "--pubkey", pubkeys[1],
+                "--sort",
+                "--tweak", tweak.hex(),
+            ])
+            self.assertEqual(code, 0)
+            self.assertEqual(err, "")
+            self.assertEqual(len(bytes.fromhex(out.strip())), 33)
+
+        code, out, err = run_cli([
+            "musig-nonce-gen-counter",
+            "--counter", "7",
+            "--seckey", data.valid_seckeys[0].hex(),
+            "--msg", msg.hex(),
+            "--agg-pubkey", pubkeys[0],
+            "--agg-pubkey", pubkeys[1],
+            "--sort",
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        secnonce, pubnonce = out.strip().split()
+        self.assertEqual(len(bytes.fromhex(secnonce)), 132)
+        self.assertEqual(len(bytes.fromhex(pubnonce)), 66)
+
+    @unittest.skipUnless(
+        has_secp256k1_musig and has_secp256k1_extrakeys,
+        "secp256k1 is not compiled with modules 'musig' and 'extrakeys'",
+    )
+    def test_musig_error_contract(self):
+        pubkey = secp.ec_pubkey_serialize(secp.ec_pubkey_create(data.valid_seckeys[0])).hex()
+        cases = [
+            ["musig-pubnonce-parse", "--pubnonce", (b"\x01" * 65).hex()],
+            ["musig-aggnonce-parse", "--aggnonce", (b"\x01" * 65).hex()],
+            ["musig-partial-sig-parse", "--sig", (b"\x01" * 31).hex()],
+            ["musig-pubkey-agg", "--pubkey", pubkey],
+            [
+                "musig-nonce-gen",
+                "--pubkey", pubkey,
+                "--session-secrand", (b"\x01" * 31).hex(),
+            ],
+            [
+                "musig-nonce-gen-counter",
+                "--counter", "-1",
+                "--seckey", data.valid_seckeys[0].hex(),
+            ],
+            [
+                "musig-partial-sign",
+                "--secnonce", (b"\x01" * 131).hex(),
+                "--seckey", data.valid_seckeys[0].hex(),
+                "--session", (b"\x01" * 133).hex(),
+                "--pubkey", pubkey,
+                "--pubkey", secp.ec_pubkey_serialize(secp.ec_pubkey_create(data.valid_seckeys[1])).hex(),
             ],
         ]
         for argv in cases:
