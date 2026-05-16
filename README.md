@@ -344,3 +344,93 @@ or with tox against multiple python interpreters
 cd python-secp256k1
 tox
 ```
+
+## Command line interface
+
+`pysecp256k1` also includes a small `argparse` CLI for the most useful public
+functions exported from the package root.
+
+Run it with:
+
+```shell
+python3 -m pysecp256k1 --help
+python3 -m pysecp256k1 <subcommand> --help
+```
+
+CLI conventions:
+
+* Subcommand names are function names with underscores replaced by dashes
+  (`ecdsa_sign` -> `ecdsa-sign`).
+* All byte inputs are hex strings.
+* Byte outputs are printed as a single hex string on stdout.
+* `ecdsa-verify` and `ec-pubkey-cmp` print text values.
+* Public keys are supplied and returned as serialized public key hex. Use
+  `ec-pubkey-parse` to validate a serialized public key and emit canonical
+  compressed or uncompressed hex.
+* ECDSA signatures are supplied and returned as compact 64-byte signature hex by
+  default. Use `--der` where available to accept or emit DER signatures.
+* Internal opaque secp256k1 objects are never exposed by the CLI.
+
+Exit codes:
+
+* `0` - success, including a true verification result
+* `1` - verification completed and returned false
+* `2` - invalid input or libsecp256k1 error; stderr starts with `error:`
+
+Available subcommands:
+
+```text
+ec-pubkey-parse
+ec-pubkey-cmp
+ec-pubkey-sort
+ec-pubkey-combine
+ec-pubkey-create
+ec-pubkey-negate
+ec-pubkey-tweak-add
+ec-pubkey-tweak-mul
+ec-seckey-verify
+ec-seckey-negate
+ec-seckey-tweak-add
+ec-seckey-tweak-mul
+ecdsa-sign
+ecdsa-verify
+ecdsa-signature-parse-compact
+ecdsa-signature-parse-der
+ecdsa-signature-normalize
+context-randomize
+tagged-sha256
+```
+
+Examples:
+
+```shell
+# Create a compressed public key from a 32-byte secret key.
+python3 -m pysecp256k1 ec-pubkey-create \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade
+
+# Validate a serialized public key and emit uncompressed canonical hex.
+python3 -m pysecp256k1 ec-pubkey-parse \
+  --pubkey 021b59c0eaa5365a0dbf1f38ffc11cb19c31be9a2292bdcb7e8fb42da32a5b1e93 \
+  --uncompressed
+
+# Sign a 32-byte message hash. Output is compact signature hex by default.
+python3 -m pysecp256k1 ecdsa-sign \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
+  --msghash 1111111111111111111111111111111111111111111111111111111111111111
+
+# Verify a compact ECDSA signature.
+python3 -m pysecp256k1 ecdsa-verify \
+  --sig <compact-sig-hex> \
+  --pubkey <serialized-pubkey-hex> \
+  --msghash <32-byte-message-hash-hex>
+
+# Parse a DER signature and emit DER again.
+python3 -m pysecp256k1 ecdsa-signature-parse-der \
+  --sig <der-sig-hex> \
+  --der
+
+# Compute a BIP-340 tagged hash.
+python3 -m pysecp256k1 tagged-sha256 \
+  --tag 746167 \
+  --msg 6d657373616765
+```
