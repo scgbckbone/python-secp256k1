@@ -2,7 +2,14 @@ import argparse
 import sys
 
 import pysecp256k1 as secp
-from pysecp256k1.low_level import Libsecp256k1Exception, has_secp256k1_extrakeys
+from pysecp256k1.low_level import (
+    Libsecp256k1Exception,
+    has_secp256k1_ecdh,
+    has_secp256k1_extrakeys,
+)
+
+if has_secp256k1_ecdh:
+    import pysecp256k1.ecdh as ecdh_module
 
 if has_secp256k1_extrakeys:
     import pysecp256k1.extrakeys as extrakeys
@@ -148,6 +155,12 @@ def _handle_context_randomize(args):
 
 def _handle_tagged_sha256(args):
     print(secp.tagged_sha256(_bytes_from_hex(args.tag), _bytes_from_hex(args.msg)).hex())
+    return 0
+
+
+def _handle_ecdh(args):
+    pubkey = secp.ec_pubkey_parse(_bytes_from_hex(args.pubkey))
+    print(ecdh_module.ecdh(_bytes_from_hex(args.seckey), pubkey).hex())
     return 0
 
 
@@ -322,6 +335,12 @@ def build_parser():
     p.set_defaults(handler=_handle_tagged_sha256)
     p.add_argument("--tag", required=True, help="tag hex")
     p.add_argument("--msg", required=True, help="message hex")
+
+    if has_secp256k1_ecdh:
+        p = subparsers.add_parser("ecdh")
+        p.set_defaults(handler=_handle_ecdh)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+        p.add_argument("--pubkey", required=True, help="serialized public key hex")
 
     if has_secp256k1_extrakeys:
         p = subparsers.add_parser("xonly-pubkey-parse")

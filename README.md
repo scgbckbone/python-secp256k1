@@ -373,6 +373,8 @@ CLI conventions:
 * Keypair commands accept `--seckey` and create the keypair internally because
   keypairs are opaque and have no CLI serialization.
 * Commands returning an x-only pubkey with parity print `<xonly-pubkey-hex> <parity>`.
+* `ecdh` prints the 32-byte shared secret hex derived from `--seckey` and
+  `--pubkey`.
 * Internal opaque secp256k1 objects are never exposed by the CLI.
 
 Exit codes:
@@ -403,6 +405,7 @@ ecdsa-signature-parse-der
 ecdsa-signature-normalize
 context-randomize
 tagged-sha256
+ecdh
 xonly-pubkey-parse
 xonly-pubkey-serialize
 xonly-pubkey-cmp
@@ -448,6 +451,11 @@ python3 -m pysecp256k1 ecdsa-signature-parse-der \
 python3 -m pysecp256k1 tagged-sha256 \
   --tag 746167 \
   --msg 6d657373616765
+
+# Compute an ECDH shared secret from a secret key and the peer public key.
+python3 -m pysecp256k1 ecdh \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
+  --pubkey 02f008b4e5ade1236e97dc5d3d81eab7be8553ce88c5081cba7ce81143d3058029
 
 # Convert a serialized public key to x-only form. Output is "<xonly-hex> <parity>".
 python3 -m pysecp256k1 xonly-pubkey-from-pubkey \

@@ -4,8 +4,11 @@ import unittest
 
 import pysecp256k1 as secp
 from pysecp256k1 import cli
-from pysecp256k1.low_level import has_secp256k1_extrakeys
+from pysecp256k1.low_level import has_secp256k1_ecdh, has_secp256k1_extrakeys
 from tests import data
+
+if has_secp256k1_ecdh:
+    import pysecp256k1.ecdh as ecdh_module
 
 if has_secp256k1_extrakeys:
     import pysecp256k1.extrakeys as extrakeys
@@ -47,6 +50,10 @@ EXTRAKEYS_CLI_COMMANDS = [
     "keypair-xonly-tweak-add",
 ]
 
+ECDH_CLI_COMMANDS = [
+    "ecdh",
+]
+
 
 def run_cli(argv):
     stdout = io.StringIO()
@@ -66,6 +73,9 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(err, "")
         for command in CLI_COMMANDS:
             self.assertIn(command, out)
+        if has_secp256k1_ecdh:
+            for command in ECDH_CLI_COMMANDS:
+                self.assertIn(command, out)
         if has_secp256k1_extrakeys:
             for command in EXTRAKEYS_CLI_COMMANDS:
                 self.assertIn(command, out)
@@ -81,6 +91,12 @@ class TestCLI(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
             self.assertIn("usage:", out)
+        if has_secp256k1_ecdh:
+            for command in ECDH_CLI_COMMANDS:
+                code, out, err = run_cli([command, "--help"])
+                self.assertEqual(code, 0)
+                self.assertEqual(err, "")
+                self.assertIn("usage:", out)
         if has_secp256k1_extrakeys:
             for command in EXTRAKEYS_CLI_COMMANDS:
                 code, out, err = run_cli([command, "--help"])
@@ -263,6 +279,59 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(err1, "")
         self.assertEqual(out0, out1)
         self.assertEqual(len(bytes.fromhex(out0.strip())), 32)
+
+    @unittest.skipUnless(has_secp256k1_ecdh, "secp256k1 is not compiled with module 'ecdh'")
+    def test_ecdh_shared_secret_round_trip(self):
+        seckey0 = data.valid_seckeys[0]
+        seckey1 = data.valid_seckeys[1]
+        pubkey0 = secp.ec_pubkey_serialize(secp.ec_pubkey_create(seckey0)).hex()
+        pubkey1 = secp.ec_pubkey_serialize(secp.ec_pubkey_create(seckey1)).hex()
+
+        code, out, err = run_cli([
+            "ecdh", "--seckey", seckey0.hex(), "--pubkey", pubkey1
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        shared0 = out.strip()
+        self.assertEqual(
+            shared0,
+            ecdh_module.ecdh(seckey0, secp.ec_pubkey_parse(bytes.fromhex(pubkey1))).hex(),
+        )
+
+        code, out, err = run_cli([
+            "ecdh", "--seckey", seckey1.hex(), "--pubkey", pubkey0
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), shared0)
+        self.assertEqual(len(bytes.fromhex(shared0)), 32)
+
+    @unittest.skipUnless(has_secp256k1_ecdh, "secp256k1 is not compiled with module 'ecdh'")
+    def test_ecdh_error_contract(self):
+        cases = [
+            [
+                "ecdh", "--seckey", "abc",
+                "--pubkey", data.serialized_pubkeys_compressed[0].hex(),
+            ],
+            [
+                "ecdh", "--seckey", (b"\x01" * 31).hex(),
+                "--pubkey", data.serialized_pubkeys_compressed[0].hex(),
+            ],
+            [
+                "ecdh", "--seckey", data.invalid_seckeys[1].hex(),
+                "--pubkey", data.serialized_pubkeys_compressed[0].hex(),
+            ],
+            [
+                "ecdh", "--seckey", data.valid_seckeys[0].hex(),
+                "--pubkey", (b"\x01" * 33).hex(),
+            ],
+        ]
+        for argv in cases:
+            with self.subTest(argv=argv):
+                code, out, err = run_cli(argv)
+                self.assertEqual(code, 2)
+                self.assertEqual(out, "")
+                self.assertTrue(err.startswith("error:"))
 
     @unittest.skipUnless(has_secp256k1_extrakeys, "secp256k1 is not compiled with module 'extrakeys'")
     def test_xonly_pubkey_parse_and_serialize(self):
