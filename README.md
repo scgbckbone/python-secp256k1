@@ -378,6 +378,9 @@ CLI conventions:
 * Recoverable ECDSA signatures are supplied as `--sig <64-byte-compact-hex>`
   plus `--rec-id <0..3>`. Commands that emit a recoverable signature print
   `<compact-sig-hex> <rec-id>`.
+* Schnorr signatures are supplied and returned as 64-byte compact signature hex.
+  Schnorr signing commands accept `--seckey` and create a keypair internally;
+  verification accepts `--xonly-pubkey`.
 * Internal opaque secp256k1 objects are never exposed by the CLI.
 
 Exit codes:
@@ -414,6 +417,9 @@ ecdsa-recoverable-signature-convert
 ecdsa-recoverable-signature-serialize-compact
 ecdsa-sign-recoverable
 ecdsa-recover
+schnorrsig-sign32
+schnorrsig-sign-custom
+schnorrsig-verify
 xonly-pubkey-parse
 xonly-pubkey-serialize
 xonly-pubkey-cmp
@@ -481,6 +487,22 @@ python3 -m pysecp256k1 ecdsa-recoverable-signature-convert \
   --sig <compact-sig-hex> \
   --rec-id <0..3> \
   --der
+
+# Create a Schnorr signature over a 32-byte message.
+python3 -m pysecp256k1 schnorrsig-sign32 \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
+  --msg 1111111111111111111111111111111111111111111111111111111111111111
+
+# Create a Schnorr signature over an arbitrary-length message.
+python3 -m pysecp256k1 schnorrsig-sign-custom \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
+  --msg 6d657373616765
+
+# Verify a Schnorr signature.
+python3 -m pysecp256k1 schnorrsig-verify \
+  --sig <compact-schnorr-sig-hex> \
+  --msg <message-hex> \
+  --xonly-pubkey <32-byte-xonly-pubkey-hex>
 
 # Convert a serialized public key to x-only form. Output is "<xonly-hex> <parity>".
 python3 -m pysecp256k1 xonly-pubkey-from-pubkey \

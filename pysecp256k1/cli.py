@@ -7,6 +7,7 @@ from pysecp256k1.low_level import (
     has_secp256k1_ecdh,
     has_secp256k1_extrakeys,
     has_secp256k1_recovery,
+    has_secp256k1_schnorrsig,
 )
 
 if has_secp256k1_ecdh:
@@ -17,6 +18,9 @@ if has_secp256k1_extrakeys:
 
 if has_secp256k1_recovery:
     import pysecp256k1.recovery as recovery
+
+if has_secp256k1_schnorrsig:
+    import pysecp256k1.schnorrsig as schnorrsig
 
 
 def _bytes_from_hex(value):
@@ -214,6 +218,28 @@ def _handle_ecdsa_recover(args):
     pubkey = recovery.ecdsa_recover(rec_sig, _bytes_from_hex(args.msghash))
     print(secp.ec_pubkey_serialize(pubkey, compressed=args.compressed).hex())
     return 0
+
+
+def _handle_schnorrsig_sign32(args):
+    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
+    aux_rand = _bytes_from_hex(args.aux_rand) if args.aux_rand is not None else None
+    print(schnorrsig.schnorrsig_sign32(keypair, _bytes_from_hex(args.msg), aux_rand).hex())
+    return 0
+
+
+def _handle_schnorrsig_sign_custom(args):
+    keypair = extrakeys.keypair_create(_bytes_from_hex(args.seckey))
+    print(schnorrsig.schnorrsig_sign_custom(keypair, _bytes_from_hex(args.msg)).hex())
+    return 0
+
+
+def _handle_schnorrsig_verify(args):
+    xonly_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey))
+    ok = schnorrsig.schnorrsig_verify(
+        _bytes_from_hex(args.sig), _bytes_from_hex(args.msg), xonly_pubkey
+    )
+    print(ok)
+    return 0 if ok else 1
 
 
 def _handle_xonly_pubkey_parse(args):
@@ -426,6 +452,24 @@ def build_parser():
                            default=True, help="emit compressed public key hex")
         group.add_argument("--uncompressed", dest="compressed", action="store_false",
                            help="emit uncompressed public key hex")
+
+    if has_secp256k1_schnorrsig and has_secp256k1_extrakeys:
+        p = subparsers.add_parser("schnorrsig-sign32")
+        p.set_defaults(handler=_handle_schnorrsig_sign32)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+        p.add_argument("--msg", required=True, help="32-byte message hex")
+        p.add_argument("--aux-rand", help="optional 32-byte auxiliary randomness hex")
+
+        p = subparsers.add_parser("schnorrsig-sign-custom")
+        p.set_defaults(handler=_handle_schnorrsig_sign_custom)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+        p.add_argument("--msg", required=True, help="message hex")
+
+        p = subparsers.add_parser("schnorrsig-verify")
+        p.set_defaults(handler=_handle_schnorrsig_verify)
+        p.add_argument("--sig", required=True, help="64-byte Schnorr signature hex")
+        p.add_argument("--msg", required=True, help="message hex")
+        p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
 
     if has_secp256k1_extrakeys:
         p = subparsers.add_parser("xonly-pubkey-parse")

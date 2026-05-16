@@ -8,6 +8,7 @@ from pysecp256k1.low_level import (
     has_secp256k1_ecdh,
     has_secp256k1_extrakeys,
     has_secp256k1_recovery,
+    has_secp256k1_schnorrsig,
 )
 from tests import data
 
@@ -19,6 +20,9 @@ if has_secp256k1_extrakeys:
 
 if has_secp256k1_recovery:
     import pysecp256k1.recovery as recovery
+
+if has_secp256k1_schnorrsig:
+    import pysecp256k1.schnorrsig as schnorrsig
 
 
 CLI_COMMANDS = [
@@ -69,6 +73,12 @@ RECOVERY_CLI_COMMANDS = [
     "ecdsa-recover",
 ]
 
+SCHNORRSIG_CLI_COMMANDS = [
+    "schnorrsig-sign32",
+    "schnorrsig-sign-custom",
+    "schnorrsig-verify",
+]
+
 
 def run_cli(argv):
     stdout = io.StringIO()
@@ -97,6 +107,9 @@ class TestCLI(unittest.TestCase):
         if has_secp256k1_recovery:
             for command in RECOVERY_CLI_COMMANDS:
                 self.assertIn(command, out)
+        if has_secp256k1_schnorrsig and has_secp256k1_extrakeys:
+            for command in SCHNORRSIG_CLI_COMMANDS:
+                self.assertIn(command, out)
         for dropped in (
             "ec-pubkey-serialize",
             "ecdsa-signature-serialize-compact",
@@ -123,6 +136,12 @@ class TestCLI(unittest.TestCase):
                 self.assertIn("usage:", out)
         if has_secp256k1_recovery:
             for command in RECOVERY_CLI_COMMANDS:
+                code, out, err = run_cli([command, "--help"])
+                self.assertEqual(code, 0)
+                self.assertEqual(err, "")
+                self.assertIn("usage:", out)
+        if has_secp256k1_schnorrsig and has_secp256k1_extrakeys:
+            for command in SCHNORRSIG_CLI_COMMANDS:
                 code, out, err = run_cli([command, "--help"])
                 self.assertEqual(code, 0)
                 self.assertEqual(err, "")
@@ -477,6 +496,133 @@ class TestCLI(unittest.TestCase):
                 "--sig", (b"\x01" * 64).hex(),
                 "--rec-id", "0",
                 "--msghash", (b"\x01" * 31).hex(),
+            ],
+        ]
+        for argv in cases:
+            with self.subTest(argv=argv):
+                code, out, err = run_cli(argv)
+                self.assertEqual(code, 2)
+                self.assertEqual(out, "")
+                self.assertTrue(err.startswith("error:"))
+
+    @unittest.skipUnless(
+        has_secp256k1_schnorrsig and has_secp256k1_extrakeys,
+        "secp256k1 is not compiled with modules 'schnorrsig' and 'extrakeys'",
+    )
+    def test_schnorrsig_sign32_verify_round_trip(self):
+        seckey = data.valid_seckeys[0]
+        msg = b"\x66" * 32
+        aux_rand = b"\x77" * 32
+        keypair = extrakeys.keypair_create(seckey)
+        xonly_pubkey, _ = extrakeys.keypair_xonly_pub(keypair)
+        xonly_hex = extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex()
+
+        code, out, err = run_cli([
+            "schnorrsig-sign32",
+            "--seckey", seckey.hex(),
+            "--msg", msg.hex(),
+            "--aux-rand", aux_rand.hex(),
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        sig = out.strip()
+        self.assertEqual(
+            sig,
+            schnorrsig.schnorrsig_sign32(keypair, msg, aux_rand).hex(),
+        )
+        self.assertEqual(len(bytes.fromhex(sig)), 64)
+
+        code, out, err = run_cli([
+            "schnorrsig-verify",
+            "--sig", sig,
+            "--msg", msg.hex(),
+            "--xonly-pubkey", xonly_hex,
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), "True")
+
+        tampered = b"\x67" + msg[1:]
+        code, out, err = run_cli([
+            "schnorrsig-verify",
+            "--sig", sig,
+            "--msg", tampered.hex(),
+            "--xonly-pubkey", xonly_hex,
+        ])
+        self.assertEqual(code, 1)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), "False")
+
+    @unittest.skipUnless(
+        has_secp256k1_schnorrsig and has_secp256k1_extrakeys,
+        "secp256k1 is not compiled with modules 'schnorrsig' and 'extrakeys'",
+    )
+    def test_schnorrsig_sign_custom_variable_length_message(self):
+        seckey = data.valid_seckeys[0]
+        msg = b"variable length schnorr message"
+        keypair = extrakeys.keypair_create(seckey)
+        xonly_pubkey, _ = extrakeys.keypair_xonly_pub(keypair)
+        xonly_hex = extrakeys.xonly_pubkey_serialize(xonly_pubkey).hex()
+
+        code, out, err = run_cli([
+            "schnorrsig-sign-custom",
+            "--seckey", seckey.hex(),
+            "--msg", msg.hex(),
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        sig = out.strip()
+        self.assertEqual(len(bytes.fromhex(sig)), 64)
+
+        code, out, err = run_cli([
+            "schnorrsig-verify",
+            "--sig", sig,
+            "--msg", msg.hex(),
+            "--xonly-pubkey", xonly_hex,
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), "True")
+
+    @unittest.skipUnless(
+        has_secp256k1_schnorrsig and has_secp256k1_extrakeys,
+        "secp256k1 is not compiled with modules 'schnorrsig' and 'extrakeys'",
+    )
+    def test_schnorrsig_error_contract(self):
+        xonly = data.serialized_pubkeys_compressed[0][1:].hex()
+        cases = [
+            [
+                "schnorrsig-sign32",
+                "--seckey", "abc",
+                "--msg", (b"\x01" * 32).hex(),
+            ],
+            [
+                "schnorrsig-sign32",
+                "--seckey", data.valid_seckeys[0].hex(),
+                "--msg", (b"\x01" * 31).hex(),
+            ],
+            [
+                "schnorrsig-sign32",
+                "--seckey", data.invalid_seckeys[1].hex(),
+                "--msg", (b"\x01" * 32).hex(),
+            ],
+            [
+                "schnorrsig-sign32",
+                "--seckey", data.valid_seckeys[0].hex(),
+                "--msg", (b"\x01" * 32).hex(),
+                "--aux-rand", (b"\x01" * 31).hex(),
+            ],
+            [
+                "schnorrsig-verify",
+                "--sig", (b"\x01" * 63).hex(),
+                "--msg", (b"\x01" * 32).hex(),
+                "--xonly-pubkey", xonly,
+            ],
+            [
+                "schnorrsig-verify",
+                "--sig", (b"\x01" * 64).hex(),
+                "--msg", (b"\x01" * 32).hex(),
+                "--xonly-pubkey", (b"\x01" * 31).hex(),
             ],
         ]
         for argv in cases:
