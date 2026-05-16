@@ -6,6 +6,7 @@ from pysecp256k1.low_level import (
     Libsecp256k1Exception,
     has_secp256k1_ecdh,
     has_secp256k1_extrakeys,
+    has_secp256k1_recovery,
 )
 
 if has_secp256k1_ecdh:
@@ -13,6 +14,9 @@ if has_secp256k1_ecdh:
 
 if has_secp256k1_extrakeys:
     import pysecp256k1.extrakeys as extrakeys
+
+if has_secp256k1_recovery:
+    import pysecp256k1.recovery as recovery
 
 
 def _bytes_from_hex(value):
@@ -161,6 +165,54 @@ def _handle_tagged_sha256(args):
 def _handle_ecdh(args):
     pubkey = secp.ec_pubkey_parse(_bytes_from_hex(args.pubkey))
     print(ecdh_module.ecdh(_bytes_from_hex(args.seckey), pubkey).hex())
+    return 0
+
+
+def _handle_ecdsa_recoverable_signature_parse_compact(args):
+    rec_sig = recovery.ecdsa_recoverable_signature_parse_compact(
+        _bytes_from_hex(args.sig), args.rec_id
+    )
+    compact_sig, rec_id = recovery.ecdsa_recoverable_signature_serialize_compact(rec_sig)
+    print("{} {}".format(compact_sig.hex(), rec_id))
+    return 0
+
+
+def _handle_ecdsa_recoverable_signature_convert(args):
+    rec_sig = recovery.ecdsa_recoverable_signature_parse_compact(
+        _bytes_from_hex(args.sig), args.rec_id
+    )
+    sig = recovery.ecdsa_recoverable_signature_convert(rec_sig)
+    if args.der:
+        print(secp.ecdsa_signature_serialize_der(sig).hex())
+    else:
+        print(secp.ecdsa_signature_serialize_compact(sig).hex())
+    return 0
+
+
+def _handle_ecdsa_recoverable_signature_serialize_compact(args):
+    rec_sig = recovery.ecdsa_recoverable_signature_parse_compact(
+        _bytes_from_hex(args.sig), args.rec_id
+    )
+    compact_sig, rec_id = recovery.ecdsa_recoverable_signature_serialize_compact(rec_sig)
+    print("{} {}".format(compact_sig.hex(), rec_id))
+    return 0
+
+
+def _handle_ecdsa_sign_recoverable(args):
+    rec_sig = recovery.ecdsa_sign_recoverable(
+        _bytes_from_hex(args.seckey), _bytes_from_hex(args.msghash)
+    )
+    compact_sig, rec_id = recovery.ecdsa_recoverable_signature_serialize_compact(rec_sig)
+    print("{} {}".format(compact_sig.hex(), rec_id))
+    return 0
+
+
+def _handle_ecdsa_recover(args):
+    rec_sig = recovery.ecdsa_recoverable_signature_parse_compact(
+        _bytes_from_hex(args.sig), args.rec_id
+    )
+    pubkey = recovery.ecdsa_recover(rec_sig, _bytes_from_hex(args.msghash))
+    print(secp.ec_pubkey_serialize(pubkey, compressed=args.compressed).hex())
     return 0
 
 
@@ -341,6 +393,39 @@ def build_parser():
         p.set_defaults(handler=_handle_ecdh)
         p.add_argument("--seckey", required=True, help="32-byte secret key hex")
         p.add_argument("--pubkey", required=True, help="serialized public key hex")
+
+    if has_secp256k1_recovery:
+        p = subparsers.add_parser("ecdsa-recoverable-signature-parse-compact")
+        p.set_defaults(handler=_handle_ecdsa_recoverable_signature_parse_compact)
+        p.add_argument("--sig", required=True, help="64-byte compact signature hex")
+        p.add_argument("--rec-id", required=True, type=int, help="recovery id, 0 through 3")
+
+        p = subparsers.add_parser("ecdsa-recoverable-signature-convert")
+        p.set_defaults(handler=_handle_ecdsa_recoverable_signature_convert)
+        p.add_argument("--sig", required=True, help="64-byte compact recoverable signature hex")
+        p.add_argument("--rec-id", required=True, type=int, help="recovery id, 0 through 3")
+        p.add_argument("--der", action="store_true", help="emit DER signature hex")
+
+        p = subparsers.add_parser("ecdsa-recoverable-signature-serialize-compact")
+        p.set_defaults(handler=_handle_ecdsa_recoverable_signature_serialize_compact)
+        p.add_argument("--sig", required=True, help="64-byte compact recoverable signature hex")
+        p.add_argument("--rec-id", required=True, type=int, help="recovery id, 0 through 3")
+
+        p = subparsers.add_parser("ecdsa-sign-recoverable")
+        p.set_defaults(handler=_handle_ecdsa_sign_recoverable)
+        p.add_argument("--seckey", required=True, help="32-byte secret key hex")
+        p.add_argument("--msghash", required=True, help="32-byte message hash hex")
+
+        p = subparsers.add_parser("ecdsa-recover")
+        p.set_defaults(handler=_handle_ecdsa_recover)
+        p.add_argument("--sig", required=True, help="64-byte compact recoverable signature hex")
+        p.add_argument("--rec-id", required=True, type=int, help="recovery id, 0 through 3")
+        p.add_argument("--msghash", required=True, help="32-byte message hash hex")
+        group = p.add_mutually_exclusive_group()
+        group.add_argument("--compressed", dest="compressed", action="store_true",
+                           default=True, help="emit compressed public key hex")
+        group.add_argument("--uncompressed", dest="compressed", action="store_false",
+                           help="emit uncompressed public key hex")
 
     if has_secp256k1_extrakeys:
         p = subparsers.add_parser("xonly-pubkey-parse")

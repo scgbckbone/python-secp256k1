@@ -375,6 +375,9 @@ CLI conventions:
 * Commands returning an x-only pubkey with parity print `<xonly-pubkey-hex> <parity>`.
 * `ecdh` prints the 32-byte shared secret hex derived from `--seckey` and
   `--pubkey`.
+* Recoverable ECDSA signatures are supplied as `--sig <64-byte-compact-hex>`
+  plus `--rec-id <0..3>`. Commands that emit a recoverable signature print
+  `<compact-sig-hex> <rec-id>`.
 * Internal opaque secp256k1 objects are never exposed by the CLI.
 
 Exit codes:
@@ -406,6 +409,11 @@ ecdsa-signature-normalize
 context-randomize
 tagged-sha256
 ecdh
+ecdsa-recoverable-signature-parse-compact
+ecdsa-recoverable-signature-convert
+ecdsa-recoverable-signature-serialize-compact
+ecdsa-sign-recoverable
+ecdsa-recover
 xonly-pubkey-parse
 xonly-pubkey-serialize
 xonly-pubkey-cmp
@@ -456,6 +464,23 @@ python3 -m pysecp256k1 tagged-sha256 \
 python3 -m pysecp256k1 ecdh \
   --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
   --pubkey 02f008b4e5ade1236e97dc5d3d81eab7be8553ce88c5081cba7ce81143d3058029
+
+# Create a recoverable ECDSA signature. Output is "<compact-sig-hex> <rec-id>".
+python3 -m pysecp256k1 ecdsa-sign-recoverable \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
+  --msghash 1111111111111111111111111111111111111111111111111111111111111111
+
+# Recover a public key from a compact recoverable signature and message hash.
+python3 -m pysecp256k1 ecdsa-recover \
+  --sig <compact-sig-hex> \
+  --rec-id <0..3> \
+  --msghash <32-byte-message-hash-hex>
+
+# Convert a recoverable signature to a normal DER ECDSA signature.
+python3 -m pysecp256k1 ecdsa-recoverable-signature-convert \
+  --sig <compact-sig-hex> \
+  --rec-id <0..3> \
+  --der
 
 # Convert a serialized public key to x-only form. Output is "<xonly-hex> <parity>".
 python3 -m pysecp256k1 xonly-pubkey-from-pubkey \

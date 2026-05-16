@@ -4,7 +4,11 @@ import unittest
 
 import pysecp256k1 as secp
 from pysecp256k1 import cli
-from pysecp256k1.low_level import has_secp256k1_ecdh, has_secp256k1_extrakeys
+from pysecp256k1.low_level import (
+    has_secp256k1_ecdh,
+    has_secp256k1_extrakeys,
+    has_secp256k1_recovery,
+)
 from tests import data
 
 if has_secp256k1_ecdh:
@@ -12,6 +16,9 @@ if has_secp256k1_ecdh:
 
 if has_secp256k1_extrakeys:
     import pysecp256k1.extrakeys as extrakeys
+
+if has_secp256k1_recovery:
+    import pysecp256k1.recovery as recovery
 
 
 CLI_COMMANDS = [
@@ -54,6 +61,14 @@ ECDH_CLI_COMMANDS = [
     "ecdh",
 ]
 
+RECOVERY_CLI_COMMANDS = [
+    "ecdsa-recoverable-signature-parse-compact",
+    "ecdsa-recoverable-signature-convert",
+    "ecdsa-recoverable-signature-serialize-compact",
+    "ecdsa-sign-recoverable",
+    "ecdsa-recover",
+]
+
 
 def run_cli(argv):
     stdout = io.StringIO()
@@ -79,6 +94,9 @@ class TestCLI(unittest.TestCase):
         if has_secp256k1_extrakeys:
             for command in EXTRAKEYS_CLI_COMMANDS:
                 self.assertIn(command, out)
+        if has_secp256k1_recovery:
+            for command in RECOVERY_CLI_COMMANDS:
+                self.assertIn(command, out)
         for dropped in (
             "ec-pubkey-serialize",
             "ecdsa-signature-serialize-compact",
@@ -99,6 +117,12 @@ class TestCLI(unittest.TestCase):
                 self.assertIn("usage:", out)
         if has_secp256k1_extrakeys:
             for command in EXTRAKEYS_CLI_COMMANDS:
+                code, out, err = run_cli([command, "--help"])
+                self.assertEqual(code, 0)
+                self.assertEqual(err, "")
+                self.assertIn("usage:", out)
+        if has_secp256k1_recovery:
+            for command in RECOVERY_CLI_COMMANDS:
                 code, out, err = run_cli([command, "--help"])
                 self.assertEqual(code, 0)
                 self.assertEqual(err, "")
@@ -324,6 +348,135 @@ class TestCLI(unittest.TestCase):
             [
                 "ecdh", "--seckey", data.valid_seckeys[0].hex(),
                 "--pubkey", (b"\x01" * 33).hex(),
+            ],
+        ]
+        for argv in cases:
+            with self.subTest(argv=argv):
+                code, out, err = run_cli(argv)
+                self.assertEqual(code, 2)
+                self.assertEqual(out, "")
+                self.assertTrue(err.startswith("error:"))
+
+    @unittest.skipUnless(has_secp256k1_recovery, "secp256k1 is not compiled with module 'recovery'")
+    def test_recovery_sign_convert_and_recover_round_trip(self):
+        seckey = data.valid_seckeys[0]
+        msg = b"\x33" * 32
+        expected_pubkey = secp.ec_pubkey_serialize(secp.ec_pubkey_create(seckey)).hex()
+
+        code, out, err = run_cli([
+            "ecdsa-sign-recoverable", "--seckey", seckey.hex(), "--msghash", msg.hex()
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        sig, rec_id = out.strip().split()
+        self.assertEqual(len(bytes.fromhex(sig)), 64)
+        self.assertIn(int(rec_id), (0, 1, 2, 3))
+
+        code, out, err = run_cli([
+            "ecdsa-recoverable-signature-parse-compact",
+            "--sig", sig,
+            "--rec-id", rec_id,
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), "{} {}".format(sig, rec_id))
+
+        code, out, err = run_cli([
+            "ecdsa-recoverable-signature-serialize-compact",
+            "--sig", sig,
+            "--rec-id", rec_id,
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), "{} {}".format(sig, rec_id))
+
+        code, out, err = run_cli([
+            "ecdsa-recoverable-signature-convert",
+            "--sig", sig,
+            "--rec-id", rec_id,
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        converted = out.strip()
+        rec_sig = recovery.ecdsa_recoverable_signature_parse_compact(bytes.fromhex(sig), int(rec_id))
+        expected = secp.ecdsa_signature_serialize_compact(
+            recovery.ecdsa_recoverable_signature_convert(rec_sig)
+        ).hex()
+        self.assertEqual(converted, expected)
+
+        code, out, err = run_cli([
+            "ecdsa-recover",
+            "--sig", sig,
+            "--rec-id", rec_id,
+            "--msghash", msg.hex(),
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(out.strip(), expected_pubkey)
+
+        code, out, err = run_cli([
+            "ecdsa-recover",
+            "--sig", sig,
+            "--rec-id", rec_id,
+            "--msghash", msg.hex(),
+            "--uncompressed",
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        recovered_uncompressed = bytes.fromhex(out.strip())
+        self.assertEqual(len(recovered_uncompressed), 65)
+        self.assertEqual(recovered_uncompressed[0], 4)
+
+    @unittest.skipUnless(has_secp256k1_recovery, "secp256k1 is not compiled with module 'recovery'")
+    def test_recoverable_convert_der(self):
+        seckey = data.valid_seckeys[0]
+        msg = b"\x44" * 32
+        rec_sig = recovery.ecdsa_sign_recoverable(seckey, msg)
+        sig, rec_id = recovery.ecdsa_recoverable_signature_serialize_compact(rec_sig)
+
+        code, out, err = run_cli([
+            "ecdsa-recoverable-signature-convert",
+            "--sig", sig.hex(),
+            "--rec-id", str(rec_id),
+            "--der",
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        parsed = secp.ecdsa_signature_parse_der(bytes.fromhex(out.strip()))
+        expected = recovery.ecdsa_recoverable_signature_convert(rec_sig)
+        self.assertEqual(parsed.raw, expected.raw)
+
+    @unittest.skipUnless(has_secp256k1_recovery, "secp256k1 is not compiled with module 'recovery'")
+    def test_recovery_error_contract(self):
+        msg = b"\x55" * 32
+        cases = [
+            [
+                "ecdsa-sign-recoverable", "--seckey", "abc",
+                "--msghash", msg.hex(),
+            ],
+            [
+                "ecdsa-sign-recoverable", "--seckey", data.invalid_seckeys[1].hex(),
+                "--msghash", msg.hex(),
+            ],
+            [
+                "ecdsa-sign-recoverable", "--seckey", data.valid_seckeys[0].hex(),
+                "--msghash", (b"\x01" * 31).hex(),
+            ],
+            [
+                "ecdsa-recoverable-signature-parse-compact",
+                "--sig", (b"\x01" * 63).hex(),
+                "--rec-id", "0",
+            ],
+            [
+                "ecdsa-recoverable-signature-parse-compact",
+                "--sig", (b"\x01" * 64).hex(),
+                "--rec-id", "4",
+            ],
+            [
+                "ecdsa-recover",
+                "--sig", (b"\x01" * 64).hex(),
+                "--rec-id", "0",
+                "--msghash", (b"\x01" * 31).hex(),
             ],
         ]
         for argv in cases:
