@@ -374,7 +374,7 @@ def _handle_musig_partial_sig_verify(args):
     cache = _musig_keyagg_cache(args.keyagg_cache)
     sig = musig.musig_partial_sig_parse(_bytes_from_hex(args.sig))
     pubnonce = musig.musig_pubnonce_parse(_bytes_from_hex(args.pubnonce))
-    pubkey = secp.ec_pubkey_parse(_bytes_from_hex(args.signer_pubkey))
+    pubkey = secp.ec_pubkey_parse(_bytes_from_hex(args.pubkey))
     ok = musig.musig_partial_sig_verify(sig, pubnonce, pubkey, cache, _musig_session(args.session))
     print(ok)
     return 0 if ok else 1
@@ -666,7 +666,7 @@ def build_parser():
         p.set_defaults(handler=_handle_musig_partial_sig_verify)
         p.add_argument("--sig", required=True, help="32-byte partial signature hex")
         p.add_argument("--pubnonce", required=True, help="66-byte signer public nonce hex")
-        p.add_argument("--signer-pubkey", required=True, help=signer_pubkey_help)
+        p.add_argument("-p", "--pubkey", required=True, help=signer_pubkey_help)
         p.add_argument("--session", required=True, help=session_help)
         p.add_argument("--keyagg-cache", required=True, help=keyagg_cache_help)
 

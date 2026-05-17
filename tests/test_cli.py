@@ -866,7 +866,7 @@ class TestCLI(unittest.TestCase):
                 "musig-partial-sig-verify",
                 "--sig", partial_sig,
                 "--pubnonce", pubnonce,
-                "--signer-pubkey", pubkey,
+                "--pubkey", pubkey,
                 "--session", session,
                 "--keyagg-cache", keyagg_cache,
             ])
@@ -878,7 +878,7 @@ class TestCLI(unittest.TestCase):
             "musig-partial-sig-verify",
             "--sig", partial_sigs[0],
             "--pubnonce", pubnonces[1],
-            "--signer-pubkey", pubkeys[1],
+            "--pubkey", pubkeys[1],
             "--session", session,
             "--keyagg-cache", keyagg_cache,
         ])

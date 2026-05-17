@@ -559,6 +559,14 @@ python3 -m pysecp256k1 musig-partial-sign \
   --session <session-hex> \
   --keyagg-cache <keyagg-cache-hex>
 
+# Optional: verify an individual signer's partial signature.
+python3 -m pysecp256k1 musig-partial-sig-verify \
+  --sig <signer-partial-sig-hex> \
+  --pubnonce <signer-pubnonce-hex> \
+  --pubkey <signer-pubkey-hex> \
+  --session <session-hex> \
+  --keyagg-cache <keyagg-cache-hex>
+
 # Aggregate partial signatures into the final Schnorr signature.
 python3 -m pysecp256k1 musig-partial-sig-agg \
   --session <session-hex> \
