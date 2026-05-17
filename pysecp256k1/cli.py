@@ -609,7 +609,7 @@ def build_parser():
 
         p = subparsers.add_parser("musig-pubkey-ec-tweak-add")
         p.set_defaults(handler=_handle_musig_pubkey_ec_tweak_add)
-        p.add_argument("--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
         p.add_argument("--tweak", required=True, help=tweak_help)
         group = p.add_mutually_exclusive_group()
         group.add_argument("--compressed", dest="compressed", action="store_true",
@@ -619,7 +619,7 @@ def build_parser():
 
         p = subparsers.add_parser("musig-pubkey-xonly-tweak-add")
         p.set_defaults(handler=_handle_musig_pubkey_xonly_tweak_add)
-        p.add_argument("--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
         p.add_argument("--tweak", required=True, help=tweak_help)
         group = p.add_mutually_exclusive_group()
         group.add_argument("--compressed", dest="compressed", action="store_true",
@@ -633,7 +633,7 @@ def build_parser():
         p.add_argument("--session-secrand", help="optional 32-byte secret nonce randomness hex")
         p.add_argument("-s", "--seckey", help="optional {}".format(signer_seckey_help))
         p.add_argument("--msg", help="optional {}".format(msghash_help))
-        p.add_argument("--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
         p.add_argument("--extra-input", help="optional 32-byte extra input hex")
 
         p = subparsers.add_parser("musig-nonce-gen-counter")
@@ -641,7 +641,7 @@ def build_parser():
         p.add_argument("--counter", required=True, type=int, help="unique unsigned 64-bit counter")
         p.add_argument("-s", "--seckey", required=True, help=signer_seckey_help)
         p.add_argument("--msg", help="optional {}".format(msghash_help))
-        p.add_argument("--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
         p.add_argument("--extra-input", help="optional 32-byte extra input hex")
 
         p = subparsers.add_parser("musig-nonce-agg")
@@ -653,14 +653,14 @@ def build_parser():
         p.set_defaults(handler=_handle_musig_nonce_process)
         p.add_argument("--aggnonce", required=True, help="66-byte aggregate nonce hex")
         p.add_argument("--msg", required=True, help=msghash_help)
-        p.add_argument("--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
 
         p = subparsers.add_parser("musig-partial-sign")
         p.set_defaults(handler=_handle_musig_partial_sign)
         p.add_argument("--secnonce", required=True, help="132-byte secret nonce hex from musig-nonce-gen")
         p.add_argument("-s", "--seckey", required=True, help=signer_seckey_help)
         p.add_argument("--session", required=True, help=session_help)
-        p.add_argument("--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
 
         p = subparsers.add_parser("musig-partial-sig-verify")
         p.set_defaults(handler=_handle_musig_partial_sig_verify)
@@ -668,7 +668,7 @@ def build_parser():
         p.add_argument("--pubnonce", required=True, help="66-byte signer public nonce hex")
         p.add_argument("-p", "--pubkey", required=True, help=signer_pubkey_help)
         p.add_argument("--session", required=True, help=session_help)
-        p.add_argument("--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
 
         p = subparsers.add_parser("musig-partial-sig-agg")
         p.set_defaults(handler=_handle_musig_partial_sig_agg)

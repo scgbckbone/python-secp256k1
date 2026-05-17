@@ -800,7 +800,7 @@ class TestCLI(unittest.TestCase):
                 "--session-secrand", session_secrand.hex(),
                 "--seckey", seckey.hex(),
                 "--msg", msg.hex(),
-                "--keyagg-cache", keyagg_cache,
+                "-c", keyagg_cache,
             ])
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
@@ -834,7 +834,7 @@ class TestCLI(unittest.TestCase):
             "musig-nonce-process",
             "--aggnonce", aggnonce,
             "--msg", msg.hex(),
-            "--keyagg-cache", keyagg_cache,
+            "-c", keyagg_cache,
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -848,7 +848,7 @@ class TestCLI(unittest.TestCase):
                 "--secnonce", secnonce,
                 "--seckey", seckey.hex(),
                 "--session", session,
-                "--keyagg-cache", keyagg_cache,
+                "-c", keyagg_cache,
             ])
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
@@ -868,7 +868,7 @@ class TestCLI(unittest.TestCase):
                 "--pubnonce", pubnonce,
                 "--pubkey", pubkey,
                 "--session", session,
-                "--keyagg-cache", keyagg_cache,
+                "-c", keyagg_cache,
             ])
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
@@ -880,7 +880,7 @@ class TestCLI(unittest.TestCase):
             "--pubnonce", pubnonces[1],
             "--pubkey", pubkeys[1],
             "--session", session,
-            "--keyagg-cache", keyagg_cache,
+            "-c", keyagg_cache,
         ])
         self.assertEqual(code, 1)
         self.assertEqual(err, "")
@@ -932,7 +932,7 @@ class TestCLI(unittest.TestCase):
         for command in ("musig-pubkey-ec-tweak-add", "musig-pubkey-xonly-tweak-add"):
             code, out, err = run_cli([
                 command,
-                "--keyagg-cache", keyagg_cache,
+                "-c", keyagg_cache,
                 "--tweak", tweak.hex(),
             ])
             self.assertEqual(code, 0)
@@ -946,7 +946,7 @@ class TestCLI(unittest.TestCase):
             "--counter", "7",
             "--seckey", data.valid_seckeys[0].hex(),
             "--msg", msg.hex(),
-            "--keyagg-cache", keyagg_cache,
+            "-c", keyagg_cache,
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")

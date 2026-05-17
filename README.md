@@ -389,7 +389,7 @@ CLI conventions:
   verification accepts `--xonly-pubkey`.
 * `musig-pubkey-agg` prints `<agg-xonly-pubkey-hex> <keyagg-cache-hex>`. The
   key aggregation cache is raw internal hex and is passed back to later MuSig
-  commands with `--keyagg-cache`.
+  commands with `-c`/`--keyagg-cache`.
 * MuSig nonce generation prints `<secnonce-hex> <pubnonce-hex>`. The secret
   nonce is exposed only so the CLI can be used to learn the two-round protocol;
   reusing it across sessions can leak the secret key.
@@ -550,7 +550,7 @@ python3 -m pysecp256k1 musig-nonce-agg \
 python3 -m pysecp256k1 musig-nonce-process \
   --aggnonce <aggregate-nonce-hex> \
   --msg <32-byte-message-hash-hex> \
-  --keyagg-cache <keyagg-cache-hex>
+  -c <keyagg-cache-hex>
 
 # Round 2: each signer creates a partial signature using the saved secret nonce.
 python3 -m pysecp256k1 musig-partial-sign \
@@ -565,7 +565,7 @@ python3 -m pysecp256k1 musig-partial-sig-verify \
   --pubnonce <signer-pubnonce-hex> \
   --pubkey <signer-pubkey-hex> \
   --session <session-hex> \
-  --keyagg-cache <keyagg-cache-hex>
+  -c <keyagg-cache-hex>
 
 # Aggregate partial signatures into the final Schnorr signature.
 python3 -m pysecp256k1 musig-partial-sig-agg \
