@@ -65,7 +65,7 @@ Apart from `ctypes.c_char_Array` and `ctypes.c_void_p` this library uses a limit
 |                     Optional                      |                                              optional data not requires for operation                                               |
 
 ## Installation and dependencies
-Only dependency of `pysecp256k1` is `python3.6+` and `libsecp256k1` itself.
+Only dependency of `pysecp256k1` is `python3.7+` and `libsecp256k1` itself.
 To use full feature set build secp256k1 this way:
 ```shell
 git clone https://github.com/bitcoin-core/secp256k1.git
