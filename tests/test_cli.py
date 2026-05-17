@@ -242,14 +242,14 @@ class TestCLI(unittest.TestCase):
         raw_pubkey = secp.ec_pubkey_parse(bytes.fromhex(pubkey))
 
         code, out, err = run_cli([
-            "ec-seckey-tweak-mul", "--seckey", seckey.hex(), "--tweak", tweak.hex()
+            "ec-seckey-tweak-mul", "--seckey", seckey.hex(), "-t", tweak.hex()
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         self.assertEqual(out.strip(), secp.ec_seckey_tweak_mul(seckey, tweak).hex())
 
         code, out, err = run_cli([
-            "ec-pubkey-tweak-add", "--pubkey", pubkey, "--tweak", tweak.hex()
+            "ec-pubkey-tweak-add", "--pubkey", pubkey, "-t", tweak.hex()
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -259,7 +259,7 @@ class TestCLI(unittest.TestCase):
         )
 
         code, out, err = run_cli([
-            "ec-pubkey-tweak-mul", "--pubkey", pubkey, "--tweak", tweak.hex()
+            "ec-pubkey-tweak-mul", "--pubkey", pubkey, "-t", tweak.hex()
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -663,7 +663,7 @@ class TestCLI(unittest.TestCase):
         code, out, err = run_cli([
             "schnorrsig-sign",
             "--seckey", seckey.hex(),
-            "--msg", msg.hex(),
+            "-m", msg.hex(),
             "--aux-rand", aux_rand.hex(),
         ])
         self.assertEqual(code, 0)
@@ -678,7 +678,7 @@ class TestCLI(unittest.TestCase):
         code, out, err = run_cli([
             "schnorrsig-verify",
             "--sig", sig,
-            "--msg", msg.hex(),
+            "-m", msg.hex(),
             "--xonly-pubkey", xonly_hex,
         ])
         self.assertEqual(code, 0)
@@ -799,7 +799,7 @@ class TestCLI(unittest.TestCase):
                 "--pubkey", pubkey,
                 "--session-secrand", session_secrand.hex(),
                 "--seckey", seckey.hex(),
-                "--msg", msg.hex(),
+                "-m", msg.hex(),
                 "-c", keyagg_cache,
             ])
             self.assertEqual(code, 0)
@@ -833,7 +833,7 @@ class TestCLI(unittest.TestCase):
         code, out, err = run_cli([
             "musig-nonce-process",
             "--aggnonce", aggnonce,
-            "--msg", msg.hex(),
+            "-m", msg.hex(),
             "-c", keyagg_cache,
         ])
         self.assertEqual(code, 0)
@@ -900,7 +900,7 @@ class TestCLI(unittest.TestCase):
         code, out, err = run_cli([
             "schnorrsig-verify",
             "--sig", final_sig,
-            "--msg", msg.hex(),
+            "-m", msg.hex(),
             "--xonly-pubkey", agg_xonly,
         ])
         self.assertEqual(code, 0)
@@ -933,7 +933,7 @@ class TestCLI(unittest.TestCase):
             code, out, err = run_cli([
                 command,
                 "-c", keyagg_cache,
-                "--tweak", tweak.hex(),
+                "-t", tweak.hex(),
             ])
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
@@ -945,7 +945,7 @@ class TestCLI(unittest.TestCase):
             "musig-nonce-gen-counter",
             "--counter", "7",
             "--seckey", data.valid_seckeys[0].hex(),
-            "--msg", msg.hex(),
+            "-m", msg.hex(),
             "-c", keyagg_cache,
         ])
         self.assertEqual(code, 0)
@@ -1025,7 +1025,7 @@ class TestCLI(unittest.TestCase):
 
         code, out, err = run_cli([
             "xonly-pubkey-tweak-add", "--xonly-pubkey", xonly_hex,
-            "--tweak", tweak.hex()
+            "-t", tweak.hex()
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -1038,7 +1038,7 @@ class TestCLI(unittest.TestCase):
             "--tweaked-pubkey", tweaked_xonly_hex,
             "--parity", str(parity),
             "--internal-pubkey", xonly_hex,
-            "--tweak", tweak.hex(),
+            "-t", tweak.hex(),
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -1049,7 +1049,7 @@ class TestCLI(unittest.TestCase):
             "--tweaked-pubkey", tweaked_xonly_hex,
             "--parity", str(0 if parity else 1),
             "--internal-pubkey", xonly_hex,
-            "--tweak", tweak.hex(),
+            "-t", tweak.hex(),
         ])
         self.assertEqual(code, 1)
         self.assertEqual(err, "")
@@ -1071,7 +1071,7 @@ class TestCLI(unittest.TestCase):
 
         code, out, err = run_cli([
             "keypair-xonly-tweak-add", "--seckey", seckey.hex(),
-            "--tweak", tweak.hex()
+            "-t", tweak.hex()
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")

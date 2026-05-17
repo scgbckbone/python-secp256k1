@@ -365,7 +365,8 @@ CLI conventions:
 * Byte inputs are hex strings, except message-like fields that also accept
   plain ASCII after hex parsing fails: `tagged-sha256 --tag`, `tagged-sha256
   --msg`, and Schnorr `--msg`.
-* `--seckey` can be written as `-s`; `--pubkey` can be written as `-p`.
+* `--seckey` can be written as `-s`; `--pubkey` can be written as `-p`;
+  `--msg` can be written as `-m`; `--tweak` can be written as `-t`.
 * Byte outputs are printed as a single hex string on stdout.
 * `ecdsa-verify` prints text values.
 * Public keys are supplied and returned as serialized public key hex. Use
@@ -517,12 +518,12 @@ python3 -m pysecp256k1 ecdsa-recoverable-signature-convert \
 # Create a Schnorr signature over a message.
 python3 -m pysecp256k1 schnorrsig-sign \
   --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
-  --msg 6d657373616765
+  -m 6d657373616765
 
 # Verify a Schnorr signature.
 python3 -m pysecp256k1 schnorrsig-verify \
   --sig <compact-schnorr-sig-hex> \
-  --msg <message-hex> \
+  -m <message-hex> \
   --xonly-pubkey <32-byte-xonly-pubkey-hex>
 
 # Aggregate MuSig signer public keys into an x-only aggregate public key and cache.
@@ -538,8 +539,8 @@ python3 -m pysecp256k1 musig-nonce-gen \
   --pubkey <this-signer-pubkey-hex> \
   --session-secrand <unique-32-byte-random-hex> \
   --seckey <this-signer-seckey-hex> \
-  --msg <32-byte-message-hash-hex> \
-  --keyagg-cache <keyagg-cache-hex>
+  -m <32-byte-message-hash-hex> \
+  -c <keyagg-cache-hex>
 
 # Aggregate public nonces from all signers.
 python3 -m pysecp256k1 musig-nonce-agg \
@@ -549,7 +550,7 @@ python3 -m pysecp256k1 musig-nonce-agg \
 # Round 2 setup: create the session hex from the aggregate nonce.
 python3 -m pysecp256k1 musig-nonce-process \
   --aggnonce <aggregate-nonce-hex> \
-  --msg <32-byte-message-hash-hex> \
+  -m <32-byte-message-hash-hex> \
   -c <keyagg-cache-hex>
 
 # Round 2: each signer creates a partial signature using the saved secret nonce.
@@ -589,5 +590,5 @@ python3 -m pysecp256k1 xonly-pubkey-tweak-add \
 # Tweak a keypair created from a secret key and emit the tweaked secret key.
 python3 -m pysecp256k1 keypair-xonly-tweak-add \
   --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
-  --tweak d48c88512f15c628c611ae55d0b5609bcfc35a3127ec835308829c3ace32dc81
+  -t d48c88512f15c628c611ae55d0b5609bcfc35a3127ec835308829c3ace32dc81
 ```

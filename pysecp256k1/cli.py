@@ -482,12 +482,12 @@ def build_parser():
     p = subparsers.add_parser("ec-pubkey-tweak-add")
     p.set_defaults(handler=_handle_ec_pubkey_tweak_add)
     p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
-    p.add_argument("--tweak", required=True, help=tweak_help)
+    p.add_argument("-t", "--tweak", required=True, help=tweak_help)
 
     p = subparsers.add_parser("ec-pubkey-tweak-mul")
     p.set_defaults(handler=_handle_ec_pubkey_tweak_mul)
     p.add_argument("-p", "--pubkey", required=True, help=pubkey_help)
-    p.add_argument("--tweak", required=True, help=tweak_help)
+    p.add_argument("-t", "--tweak", required=True, help=tweak_help)
 
     p = subparsers.add_parser("ec-seckey-verify")
     p.set_defaults(handler=_handle_ec_seckey_verify)
@@ -500,12 +500,12 @@ def build_parser():
     p = subparsers.add_parser("ec-seckey-tweak-add")
     p.set_defaults(handler=_handle_ec_seckey_tweak_add)
     p.add_argument("-s", "--seckey", required=True, help=seckey_help)
-    p.add_argument("--tweak", required=True, help=tweak_help)
+    p.add_argument("-t", "--tweak", required=True, help=tweak_help)
 
     p = subparsers.add_parser("ec-seckey-tweak-mul")
     p.set_defaults(handler=_handle_ec_seckey_tweak_mul)
     p.add_argument("-s", "--seckey", required=True, help=seckey_help)
-    p.add_argument("--tweak", required=True, help=tweak_help)
+    p.add_argument("-t", "--tweak", required=True, help=tweak_help)
 
     p = subparsers.add_parser("ecdsa-sign")
     p.set_defaults(handler=_handle_ecdsa_sign)
@@ -539,7 +539,7 @@ def build_parser():
     p = subparsers.add_parser("tagged-sha256")
     p.set_defaults(handler=_handle_tagged_sha256)
     p.add_argument("--tag", required=True, help="tag hex")
-    p.add_argument("--msg", required=True, help=msg_help)
+    p.add_argument("-m", "--msg", required=True, help=msg_help)
 
     if has_secp256k1_ecdh:
         p = subparsers.add_parser("ecdh")
@@ -579,13 +579,13 @@ def build_parser():
         p = subparsers.add_parser("schnorrsig-sign")
         p.set_defaults(handler=_handle_schnorrsig_sign)
         p.add_argument("-s", "--seckey", required=True, help=seckey_help)
-        p.add_argument("--msg", required=True, help="message hex or ASCII")
+        p.add_argument("-m", "--msg", required=True, help="message hex or ASCII")
         p.add_argument("--aux-rand", help="optional 32-byte auxiliary randomness hex")
 
         p = subparsers.add_parser("schnorrsig-verify")
         p.set_defaults(handler=_handle_schnorrsig_verify)
         p.add_argument("--sig", required=True, help="64-byte Schnorr signature hex")
-        p.add_argument("--msg", required=True, help=msg_help)
+        p.add_argument("-m", "--msg", required=True, help=msg_help)
         p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
 
     if has_secp256k1_musig and has_secp256k1_extrakeys:
@@ -610,7 +610,7 @@ def build_parser():
         p = subparsers.add_parser("musig-pubkey-ec-tweak-add")
         p.set_defaults(handler=_handle_musig_pubkey_ec_tweak_add)
         p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
-        p.add_argument("--tweak", required=True, help=tweak_help)
+        p.add_argument("-t", "--tweak", required=True, help=tweak_help)
         group = p.add_mutually_exclusive_group()
         group.add_argument("--compressed", dest="compressed", action="store_true",
                            default=True, help=compressed_help)
@@ -620,7 +620,7 @@ def build_parser():
         p = subparsers.add_parser("musig-pubkey-xonly-tweak-add")
         p.set_defaults(handler=_handle_musig_pubkey_xonly_tweak_add)
         p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
-        p.add_argument("--tweak", required=True, help=tweak_help)
+        p.add_argument("-t", "--tweak", required=True, help=tweak_help)
         group = p.add_mutually_exclusive_group()
         group.add_argument("--compressed", dest="compressed", action="store_true",
                            default=True, help=compressed_help)
@@ -632,7 +632,7 @@ def build_parser():
         p.add_argument("-p", "--pubkey", required=True, help=signer_pubkey_help)
         p.add_argument("--session-secrand", help="optional 32-byte secret nonce randomness hex")
         p.add_argument("-s", "--seckey", help="optional {}".format(signer_seckey_help))
-        p.add_argument("--msg", help="optional {}".format(msghash_help))
+        p.add_argument("-m", "--msg", help="optional {}".format(msghash_help))
         p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
         p.add_argument("--extra-input", help="optional 32-byte extra input hex")
 
@@ -640,7 +640,7 @@ def build_parser():
         p.set_defaults(handler=_handle_musig_nonce_gen_counter)
         p.add_argument("--counter", required=True, type=int, help="unique unsigned 64-bit counter")
         p.add_argument("-s", "--seckey", required=True, help=signer_seckey_help)
-        p.add_argument("--msg", help="optional {}".format(msghash_help))
+        p.add_argument("-m", "--msg", help="optional {}".format(msghash_help))
         p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
         p.add_argument("--extra-input", help="optional 32-byte extra input hex")
 
@@ -652,7 +652,7 @@ def build_parser():
         p = subparsers.add_parser("musig-nonce-process")
         p.set_defaults(handler=_handle_musig_nonce_process)
         p.add_argument("--aggnonce", required=True, help="66-byte aggregate nonce hex")
-        p.add_argument("--msg", required=True, help=msghash_help)
+        p.add_argument("-m", "--msg", required=True, help=msghash_help)
         p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
 
         p = subparsers.add_parser("musig-partial-sign")
@@ -688,14 +688,14 @@ def build_parser():
         p = subparsers.add_parser("xonly-pubkey-tweak-add")
         p.set_defaults(handler=_handle_xonly_pubkey_tweak_add)
         p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
-        p.add_argument("--tweak", required=True, help=tweak_help)
+        p.add_argument("-t", "--tweak", required=True, help=tweak_help)
 
         p = subparsers.add_parser("xonly-pubkey-tweak-add-check")
         p.set_defaults(handler=_handle_xonly_pubkey_tweak_add_check)
         p.add_argument("--tweaked-pubkey", required=True, help="32-byte tweaked x-only public key hex")
         p.add_argument("--parity", required=True, type=int, help="tweaked public key parity, 0 or 1")
         p.add_argument("--internal-pubkey", required=True, help="32-byte internal x-only public key hex")
-        p.add_argument("--tweak", required=True, help=tweak_help)
+        p.add_argument("-t", "--tweak", required=True, help=tweak_help)
 
         p = subparsers.add_parser("keypair-xonly-pub")
         p.set_defaults(handler=_handle_keypair_xonly_pub)
@@ -704,7 +704,7 @@ def build_parser():
         p = subparsers.add_parser("keypair-xonly-tweak-add")
         p.set_defaults(handler=_handle_keypair_xonly_tweak_add)
         p.add_argument("-s", "--seckey", required=True, help=seckey_help)
-        p.add_argument("--tweak", required=True, help=tweak_help)
+        p.add_argument("-t", "--tweak", required=True, help=tweak_help)
 
     return parser
 
