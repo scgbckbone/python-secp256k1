@@ -387,13 +387,18 @@ CLI conventions:
 * Schnorr signatures are supplied and returned as 64-byte compact signature hex.
   Schnorr signing commands accept `--seckey` and create a keypair internally;
   verification accepts `--xonly-pubkey`.
+* `musig-pubkey-agg` prints `<agg-xonly-pubkey-hex> <keyagg-cache-hex>`. The
+  key aggregation cache is raw internal hex and is passed back to later MuSig
+  commands with `--keyagg-cache`.
 * MuSig nonce generation prints `<secnonce-hex> <pubnonce-hex>`. The secret
   nonce is exposed only so the CLI can be used to learn the two-round protocol;
   reusing it across sessions can leak the secret key.
 * MuSig sessions are printed as raw session hex by `musig-nonce-process` and are
   passed back to `musig-partial-sign`, `musig-partial-sig-verify`, and
   `musig-partial-sig-agg`.
-* Internal opaque secp256k1 objects are never exposed by the CLI.
+* MuSig secret nonces, sessions, and key aggregation caches are internal
+  libsecp256k1 blobs exposed only for this learning CLI. They are not stable
+  portable serializations.
 
 Exit codes:
 
@@ -520,7 +525,8 @@ python3 -m pysecp256k1 schnorrsig-verify \
   --msg <message-hex> \
   --xonly-pubkey <32-byte-xonly-pubkey-hex>
 
-# Aggregate MuSig signer public keys into an x-only aggregate public key.
+# Aggregate MuSig signer public keys into an x-only aggregate public key and cache.
+# Output is "<agg-xonly-pubkey-hex> <keyagg-cache-hex>".
 python3 -m pysecp256k1 musig-pubkey-agg \
   --pubkey <signer-0-pubkey-hex> \
   --pubkey <signer-1-pubkey-hex> \
@@ -533,9 +539,7 @@ python3 -m pysecp256k1 musig-nonce-gen \
   --session-secrand <unique-32-byte-random-hex> \
   --seckey <this-signer-seckey-hex> \
   --msg <32-byte-message-hash-hex> \
-  --agg-pubkey <signer-0-pubkey-hex> \
-  --agg-pubkey <signer-1-pubkey-hex> \
-  --sort
+  --keyagg-cache <keyagg-cache-hex>
 
 # Aggregate public nonces from all signers.
 python3 -m pysecp256k1 musig-nonce-agg \
@@ -546,18 +550,14 @@ python3 -m pysecp256k1 musig-nonce-agg \
 python3 -m pysecp256k1 musig-nonce-process \
   --aggnonce <aggregate-nonce-hex> \
   --msg <32-byte-message-hash-hex> \
-  --pubkey <signer-0-pubkey-hex> \
-  --pubkey <signer-1-pubkey-hex> \
-  --sort
+  --keyagg-cache <keyagg-cache-hex>
 
 # Round 2: each signer creates a partial signature using the saved secret nonce.
 python3 -m pysecp256k1 musig-partial-sign \
   --secnonce <this-signer-secnonce-hex> \
   --seckey <this-signer-seckey-hex> \
   --session <session-hex> \
-  --pubkey <signer-0-pubkey-hex> \
-  --pubkey <signer-1-pubkey-hex> \
-  --sort
+  --keyagg-cache <keyagg-cache-hex>
 
 # Aggregate partial signatures into the final Schnorr signature.
 python3 -m pysecp256k1 musig-partial-sig-agg \

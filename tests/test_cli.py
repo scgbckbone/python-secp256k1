@@ -787,8 +787,9 @@ class TestCLI(unittest.TestCase):
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
-        agg_xonly = out.strip()
+        agg_xonly, keyagg_cache = out.strip().split()
         self.assertEqual(len(bytes.fromhex(agg_xonly)), 32)
+        self.assertEqual(len(bytes.fromhex(keyagg_cache)), 197)
 
         secnonces = []
         pubnonces = []
@@ -799,9 +800,7 @@ class TestCLI(unittest.TestCase):
                 "--session-secrand", session_secrand.hex(),
                 "--seckey", seckey.hex(),
                 "--msg", msg.hex(),
-                "--agg-pubkey", pubkeys[0],
-                "--agg-pubkey", pubkeys[1],
-                "--sort",
+                "--keyagg-cache", keyagg_cache,
             ])
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
@@ -835,9 +834,7 @@ class TestCLI(unittest.TestCase):
             "musig-nonce-process",
             "--aggnonce", aggnonce,
             "--msg", msg.hex(),
-            "--pubkey", pubkeys[0],
-            "--pubkey", pubkeys[1],
-            "--sort",
+            "--keyagg-cache", keyagg_cache,
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -851,9 +848,7 @@ class TestCLI(unittest.TestCase):
                 "--secnonce", secnonce,
                 "--seckey", seckey.hex(),
                 "--session", session,
-                "--pubkey", pubkeys[0],
-                "--pubkey", pubkeys[1],
-                "--sort",
+                "--keyagg-cache", keyagg_cache,
             ])
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
@@ -873,9 +868,7 @@ class TestCLI(unittest.TestCase):
                 "--pubnonce", pubnonce,
                 "--signer-pubkey", pubkey,
                 "--session", session,
-                "--pubkey", pubkeys[0],
-                "--pubkey", pubkeys[1],
-                "--sort",
+                "--keyagg-cache", keyagg_cache,
             ])
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
@@ -887,9 +880,7 @@ class TestCLI(unittest.TestCase):
             "--pubnonce", pubnonces[1],
             "--signer-pubkey", pubkeys[1],
             "--session", session,
-            "--pubkey", pubkeys[0],
-            "--pubkey", pubkeys[1],
-            "--sort",
+            "--keyagg-cache", keyagg_cache,
         ])
         self.assertEqual(code, 1)
         self.assertEqual(err, "")
@@ -928,26 +919,34 @@ class TestCLI(unittest.TestCase):
         tweak = data.valid_seckeys[2]
         msg = b"\x92" * 32
 
+        code, out, err = run_cli([
+            "musig-pubkey-agg",
+            "--pubkey", pubkeys[0],
+            "--pubkey", pubkeys[1],
+            "--sort",
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        _, keyagg_cache = out.strip().split()
+
         for command in ("musig-pubkey-ec-tweak-add", "musig-pubkey-xonly-tweak-add"):
             code, out, err = run_cli([
                 command,
-                "--pubkey", pubkeys[0],
-                "--pubkey", pubkeys[1],
-                "--sort",
+                "--keyagg-cache", keyagg_cache,
                 "--tweak", tweak.hex(),
             ])
             self.assertEqual(code, 0)
             self.assertEqual(err, "")
-            self.assertEqual(len(bytes.fromhex(out.strip())), 33)
+            tweaked_pubkey, tweaked_cache = out.strip().split()
+            self.assertEqual(len(bytes.fromhex(tweaked_pubkey)), 33)
+            self.assertEqual(len(bytes.fromhex(tweaked_cache)), 197)
 
         code, out, err = run_cli([
             "musig-nonce-gen-counter",
             "--counter", "7",
             "--seckey", data.valid_seckeys[0].hex(),
             "--msg", msg.hex(),
-            "--agg-pubkey", pubkeys[0],
-            "--agg-pubkey", pubkeys[1],
-            "--sort",
+            "--keyagg-cache", keyagg_cache,
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -969,20 +968,21 @@ class TestCLI(unittest.TestCase):
             [
                 "musig-nonce-gen",
                 "--pubkey", pubkey,
-                "--session-secrand", (b"\x01" * 31).hex(),
+                "--session-secrand", (b"\x01" * 32).hex(),
+                "--keyagg-cache", (b"\x01" * 196).hex(),
             ],
             [
                 "musig-nonce-gen-counter",
                 "--counter", "-1",
                 "--seckey", data.valid_seckeys[0].hex(),
+                "--keyagg-cache", (b"\x01" * 197).hex(),
             ],
             [
                 "musig-partial-sign",
                 "--secnonce", (b"\x01" * 131).hex(),
                 "--seckey", data.valid_seckeys[0].hex(),
                 "--session", (b"\x01" * 133).hex(),
-                "--pubkey", pubkey,
-                "--pubkey", secp.ec_pubkey_serialize(secp.ec_pubkey_create(data.valid_seckeys[1])).hex(),
+                "--keyagg-cache", (b"\x01" * 197).hex(),
             ],
         ]
         for argv in cases:
