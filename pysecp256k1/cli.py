@@ -15,7 +15,6 @@ from pysecp256k1.low_level.constants import (
     INTERNAL_MUSIG_NONCE_LENGTH,
     INTERNAL_MUSIG_SESSION_LENGTH,
     MuSigKeyAggCache,
-    SCHNORRSIG_EXTRAPARAMS_MAGIC,
 )
 
 if has_secp256k1_ecdh:
@@ -41,15 +40,17 @@ def _bytes_from_hex(value):
         raise argparse.ArgumentTypeError(str(exc))
 
 
-def _hex_or_ascii(value):
-    try:
-        return bytes.fromhex(value)
-    except ValueError:
-        return value.encode()
-
-
 def _optional_hex(value):
     return _bytes_from_hex(value) if value is not None else None
+
+
+def _bytes_from_cli_text(value, ascii_mode=False):
+    if not ascii_mode:
+        return _bytes_from_hex(value)
+    try:
+        return value.encode("ascii")
+    except UnicodeEncodeError as exc:
+        raise argparse.ArgumentTypeError(str(exc))
 
 
 class _CLIArgumentParser(argparse.ArgumentParser):
@@ -65,6 +66,8 @@ def _musig_pubkeys(values, sort_pubkeys=False):
 
 
 def _musig_keyagg_cache(value):
+    if value is None:
+        return None
     raw = _bytes_from_hex(value)
     assert len(raw) == ctypes.sizeof(MuSigKeyAggCache)
     return ctypes.create_string_buffer(raw, ctypes.sizeof(MuSigKeyAggCache))
@@ -204,7 +207,10 @@ def _handle_ecdsa_signature_normalize(args):
 
 
 def _handle_tagged_sha256(args):
-    print(secp.tagged_sha256(_hex_or_ascii(args.tag), _hex_or_ascii(args.msg)).hex())
+    print(secp.tagged_sha256(
+        _bytes_from_cli_text(args.tag, args.tag_ascii),
+        _bytes_from_cli_text(args.msg, args.msg_ascii),
+    ).hex())
     return 0
 
 
@@ -259,19 +265,19 @@ def _handle_schnorrsig_sign(args):
     if args.aux_rand is not None:
         aux_rand = _bytes_from_hex(args.aux_rand)
         assert len(aux_rand) == 32
-        extraparams = schnorrsig.SchnorrsigExtraparams(
-            SCHNORRSIG_EXTRAPARAMS_MAGIC,
-            None,
-            ctypes.cast(ctypes.create_string_buffer(aux_rand), ctypes.c_void_p),
-        )
-    print(schnorrsig.schnorrsig_sign_custom(keypair, _hex_or_ascii(args.msg), extraparams).hex())
+        extraparams = schnorrsig.schnorrsig_extraparams_create(aux_rand)
+    print(schnorrsig.schnorrsig_sign_custom(
+        keypair,
+        _bytes_from_cli_text(args.msg, args.msg_ascii),
+        extraparams,
+    ).hex())
     return 0
 
 
 def _handle_schnorrsig_verify(args):
     xonly_pubkey = extrakeys.xonly_pubkey_parse(_bytes_from_hex(args.xonly_pubkey))
     ok = schnorrsig.schnorrsig_verify(
-        _bytes_from_hex(args.sig), _hex_or_ascii(args.msg), xonly_pubkey
+        _bytes_from_hex(args.sig), _bytes_from_cli_text(args.msg, args.msg_ascii), xonly_pubkey
     )
     print(ok)
     return 0 if ok else 1
@@ -444,6 +450,7 @@ def build_parser():
     tweak_help = "32-byte tweak hex"
     msghash_help = "32-byte message hash hex"
     msg_help = "message hex"
+    msg_ascii_help = "interpret --msg as ASCII instead of hex"
     sig_help = "signature hex"
     emit_der_help = "emit DER signature hex"
     compressed_help = "emit compressed public key hex"
@@ -540,6 +547,8 @@ def build_parser():
     p.set_defaults(handler=_handle_tagged_sha256)
     p.add_argument("--tag", required=True, help="tag hex")
     p.add_argument("-m", "--msg", required=True, help=msg_help)
+    p.add_argument("--tag-ascii", action="store_true", help="interpret --tag as ASCII instead of hex")
+    p.add_argument("--msg-ascii", action="store_true", help=msg_ascii_help)
 
     if has_secp256k1_ecdh:
         p = subparsers.add_parser("ecdh")
@@ -579,13 +588,15 @@ def build_parser():
         p = subparsers.add_parser("schnorrsig-sign")
         p.set_defaults(handler=_handle_schnorrsig_sign)
         p.add_argument("-s", "--seckey", required=True, help=seckey_help)
-        p.add_argument("-m", "--msg", required=True, help="message hex or ASCII")
+        p.add_argument("-m", "--msg", required=True, help=msg_help)
+        p.add_argument("--msg-ascii", action="store_true", help=msg_ascii_help)
         p.add_argument("--aux-rand", help="optional 32-byte auxiliary randomness hex")
 
         p = subparsers.add_parser("schnorrsig-verify")
         p.set_defaults(handler=_handle_schnorrsig_verify)
         p.add_argument("--sig", required=True, help="64-byte Schnorr signature hex")
         p.add_argument("-m", "--msg", required=True, help=msg_help)
+        p.add_argument("--msg-ascii", action="store_true", help=msg_ascii_help)
         p.add_argument("--xonly-pubkey", required=True, help="32-byte x-only public key hex")
 
     if has_secp256k1_musig and has_secp256k1_extrakeys:
@@ -633,7 +644,7 @@ def build_parser():
         p.add_argument("--session-secrand", help="optional 32-byte secret nonce randomness hex")
         p.add_argument("-s", "--seckey", help="optional {}".format(signer_seckey_help))
         p.add_argument("-m", "--msg", help="optional {}".format(msghash_help))
-        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", help="optional {}".format(keyagg_cache_help))
         p.add_argument("--extra-input", help="optional 32-byte extra input hex")
 
         p = subparsers.add_parser("musig-nonce-gen-counter")
@@ -641,7 +652,7 @@ def build_parser():
         p.add_argument("--counter", required=True, type=int, help="unique unsigned 64-bit counter")
         p.add_argument("-s", "--seckey", required=True, help=signer_seckey_help)
         p.add_argument("-m", "--msg", help="optional {}".format(msghash_help))
-        p.add_argument("-c", "--keyagg-cache", required=True, help=keyagg_cache_help)
+        p.add_argument("-c", "--keyagg-cache", help="optional {}".format(keyagg_cache_help))
         p.add_argument("--extra-input", help="optional 32-byte extra input hex")
 
         p = subparsers.add_parser("musig-nonce-agg")

@@ -6,13 +6,12 @@ from tests.data import (valid_seckeys, invalid_keypair_length, not_c_char_array,
                         invalid_seckey_length, invalid_pubkey_length, invalid_compact_sig_length)
 from pysecp256k1.low_level import (Libsecp256k1Exception, has_secp256k1_schnorrsig,
                                    has_secp256k1_extrakeys)
-from pysecp256k1.low_level.constants import SCHNORRSIG_EXTRAPARAMS_MAGIC
 
 if has_secp256k1_extrakeys:
     from pysecp256k1.extrakeys import keypair_create, keypair_xonly_pub
 if has_secp256k1_schnorrsig:
     from pysecp256k1.schnorrsig import (schnorrsig_sign32, schnorrsig_sign_custom, schnorrsig_verify,
-                                        SchnorrsigExtraparams)
+                                        schnorrsig_extraparams_create)
 
 
 skip_reason = "secp256k1 is not compiled with module 'schnorrsig'"
@@ -53,6 +52,15 @@ class TestPysecp256k1SchnorrsigValidation(unittest.TestCase):
         for invalid_type in not_bytes[1:]:  # omit None as it is optional
             with self.assertRaises(AssertionError):
                 schnorrsig_sign32(self.keypair, self.b32, aux_rand32=invalid_type)
+
+    def test_schnorrsig_extraparams_create_invalid_input_type_aux_rand32(self):
+        for invalid_msg in invalid_seckey_length:
+            with self.assertRaises(AssertionError):
+                schnorrsig_extraparams_create(invalid_msg)
+
+        for invalid_type in not_bytes:
+            with self.assertRaises(AssertionError):
+                schnorrsig_extraparams_create(invalid_type)
 
     def test_schnorrsig_sign_custom_invalid_input_type_keypair(self):
         for invalid_keypair in invalid_keypair_length:
@@ -111,11 +119,8 @@ class TestPysecp256k1Schnorrsig(unittest.TestCase):
             self.assertEqual(signature0, signature0_custom)
             random_32 = os.urandom(32)
             signature1 = schnorrsig_sign32(keypair, msg32, aux_rand32=random_32)
-            extraparams = SchnorrsigExtraparams(
-                SCHNORRSIG_EXTRAPARAMS_MAGIC,
-                None,  # custom nonce function goes here
-                ctypes.cast(ctypes.create_string_buffer(random_32), ctypes.c_void_p),
-            )
+            extraparams = schnorrsig_extraparams_create(random_32)
+            self.assertEqual(ctypes.string_at(extraparams.ndata, 32), random_32)
             signature1_custom = schnorrsig_sign_custom(
                 keypair, msg32, extraparams
             )

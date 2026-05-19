@@ -465,10 +465,40 @@ class TestCLI(unittest.TestCase):
         self.assertEqual(out0, out1)
         self.assertEqual(len(bytes.fromhex(out0.strip())), 32)
 
-        code, out, err = run_cli(["tagged-sha256", "--tag", "tag", "--msg", "message"])
+        code, out, err = run_cli([
+            "tagged-sha256",
+            "--tag", "tag",
+            "--tag-ascii",
+            "--msg", "message",
+            "--msg-ascii",
+        ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         self.assertEqual(out, out0)
+
+    def test_tagged_sha256_hex_is_not_implicit_ascii(self):
+        code, out, err = run_cli([
+            "tagged-sha256",
+            "--tag", "tag",
+            "--msg", "message",
+        ])
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+        self.assertTrue(err.startswith("error:"))
+
+        code, out, err = run_cli([
+            "tagged-sha256",
+            "--tag", "cafe",
+            "--tag-ascii",
+            "--msg", "deadbeef",
+            "--msg-ascii",
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(
+            out.strip(),
+            secp.tagged_sha256(b"cafe", b"deadbeef").hex(),
+        )
 
     @unittest.skipUnless(has_secp256k1_ecdh, "secp256k1 is not compiled with module 'ecdh'")
     def test_ecdh_shared_secret_round_trip(self):
@@ -711,6 +741,7 @@ class TestCLI(unittest.TestCase):
             "schnorrsig-sign",
             "--seckey", seckey.hex(),
             "--msg", msg.decode(),
+            "--msg-ascii",
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
@@ -721,11 +752,42 @@ class TestCLI(unittest.TestCase):
             "schnorrsig-verify",
             "--sig", sig,
             "--msg", msg.decode(),
+            "--msg-ascii",
             "--xonly-pubkey", xonly_hex,
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")
         self.assertEqual(out.strip(), "True")
+
+    @unittest.skipUnless(
+        has_secp256k1_schnorrsig and has_secp256k1_extrakeys,
+        "secp256k1 is not compiled with modules 'schnorrsig' and 'extrakeys'",
+    )
+    def test_schnorrsig_ascii_message_is_explicit(self):
+        seckey = data.valid_seckeys[0]
+        keypair = extrakeys.keypair_create(seckey)
+
+        code, out, err = run_cli([
+            "schnorrsig-sign",
+            "--seckey", seckey.hex(),
+            "--msg", "cafe",
+            "--msg-ascii",
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        self.assertEqual(
+            out.strip(),
+            schnorrsig.schnorrsig_sign_custom(keypair, b"cafe").hex(),
+        )
+
+        code, out, err = run_cli([
+            "schnorrsig-sign",
+            "--seckey", seckey.hex(),
+            "--msg", "hello",
+        ])
+        self.assertEqual(code, 2)
+        self.assertEqual(out, "")
+        self.assertTrue(err.startswith("error:"))
 
     @unittest.skipUnless(
         has_secp256k1_schnorrsig and has_secp256k1_extrakeys,
@@ -947,6 +1009,31 @@ class TestCLI(unittest.TestCase):
             "--seckey", data.valid_seckeys[0].hex(),
             "-m", msg.hex(),
             "-c", keyagg_cache,
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        secnonce, pubnonce = out.strip().split()
+        self.assertEqual(len(bytes.fromhex(secnonce)), 132)
+        self.assertEqual(len(bytes.fromhex(pubnonce)), 66)
+
+        code, out, err = run_cli([
+            "musig-nonce-gen",
+            "--pubkey", pubkeys[0],
+            "--session-secrand", (b"\x93" * 32).hex(),
+            "--seckey", data.valid_seckeys[0].hex(),
+            "-m", msg.hex(),
+        ])
+        self.assertEqual(code, 0)
+        self.assertEqual(err, "")
+        secnonce, pubnonce = out.strip().split()
+        self.assertEqual(len(bytes.fromhex(secnonce)), 132)
+        self.assertEqual(len(bytes.fromhex(pubnonce)), 66)
+
+        code, out, err = run_cli([
+            "musig-nonce-gen-counter",
+            "--counter", "8",
+            "--seckey", data.valid_seckeys[0].hex(),
+            "-m", msg.hex(),
         ])
         self.assertEqual(code, 0)
         self.assertEqual(err, "")

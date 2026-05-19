@@ -362,9 +362,9 @@ CLI conventions:
 
 * Subcommand names are function names with underscores replaced by dashes
   (`ecdsa_sign` -> `ecdsa-sign`).
-* Byte inputs are hex strings, except message-like fields that also accept
-  plain ASCII after hex parsing fails: `tagged-sha256 --tag`, `tagged-sha256
-  --msg`, and Schnorr `--msg`.
+* Byte inputs are hex strings. `tagged-sha256 --tag`, `tagged-sha256 --msg`,
+  and Schnorr `--msg` can be interpreted as ASCII with `--tag-ascii` or
+  `--msg-ascii`.
 * `--seckey` can be written as `-s`; `--pubkey` can be written as `-p`;
   `--msg` can be written as `-m`; `--tweak` can be written as `-t`.
 * Byte outputs are printed as a single hex string on stdout.
@@ -493,6 +493,13 @@ python3 -m pysecp256k1 tagged-sha256 \
   --tag 746167 \
   --msg 6d657373616765
 
+# Compute the same tagged hash using ASCII inputs.
+python3 -m pysecp256k1 tagged-sha256 \
+  --tag tag \
+  --tag-ascii \
+  --msg message \
+  --msg-ascii
+
 # Compute an ECDH shared secret from a secret key and the peer public key.
 python3 -m pysecp256k1 ecdh \
   --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
@@ -519,6 +526,12 @@ python3 -m pysecp256k1 ecdsa-recoverable-signature-convert \
 python3 -m pysecp256k1 schnorrsig-sign \
   --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
   -m 6d657373616765
+
+# Create a Schnorr signature over an ASCII message.
+python3 -m pysecp256k1 schnorrsig-sign \
+  --seckey 97e07bd67fe1c532283581c9fe675f8d1b30ec77769af5fdae09f079dc195ade \
+  -m message \
+  --msg-ascii
 
 # Verify a Schnorr signature.
 python3 -m pysecp256k1 schnorrsig-verify \

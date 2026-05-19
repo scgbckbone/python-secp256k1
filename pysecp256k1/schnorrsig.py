@@ -4,7 +4,8 @@ from pysecp256k1.low_level import (lib, secp256k1_context_sign, secp256k1_contex
                                    assert_zero_return_code, has_secp256k1_schnorrsig,
                                    Libsecp256k1Exception, ctypes_functype)
 from pysecp256k1.low_level.constants import (Secp256k1Keypair, Secp256k1XonlyPubkey,
-                                             COMPACT_SIGNATURE_LENGTH, HASH32)
+                                             COMPACT_SIGNATURE_LENGTH, HASH32,
+                                             SCHNORRSIG_EXTRAPARAMS_MAGIC)
 
 
 if not has_secp256k1_schnorrsig:
@@ -34,6 +35,26 @@ class SchnorrsigExtraparams(ctypes.Structure):
         ("noncefp", ctypes.c_void_p),
         ("ndata", ctypes.c_void_p),
     ]
+
+
+def schnorrsig_extraparams_create(aux_rand32: bytes) -> SchnorrsigExtraparams:
+    """
+    Create default Schnorr signing extraparams from 32 bytes of auxiliary randomness.
+
+    :param aux_rand32: 32 bytes of auxiliary randomness
+    :return: initialized SchnorrsigExtraparams
+    :raises AssertionError: if aux_rand32 is not of type bytes and length 32
+    """
+    assert isinstance(aux_rand32, bytes) and len(aux_rand32) == HASH32
+
+    aux_rand_buf = ctypes.create_string_buffer(aux_rand32)
+    extraparams = SchnorrsigExtraparams(
+        SCHNORRSIG_EXTRAPARAMS_MAGIC,
+        None,
+        ctypes.cast(aux_rand_buf, ctypes.c_void_p),
+    )
+    extraparams._aux_rand_buf = aux_rand_buf
+    return extraparams
 
 
 def schnorrsig_sign32(keypair: Secp256k1Keypair, msg32: bytes, aux_rand32: Optional[bytes] = None) -> bytes:
@@ -145,6 +166,7 @@ __all__ = (
     "schnorrsig_sign32",
     "schnorrsig_sign_custom",
     "schnorrsig_verify",
+    "schnorrsig_extraparams_create",
     "SchnorrsigExtraparams",
     "SCHNORRSIG_NONCEFP_CLS",
 )
